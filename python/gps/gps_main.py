@@ -25,6 +25,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 class GPSMain(object):
     """ Main class to run algorithms and experiments. """
     def __init__(self, config):
+
         self._hyperparams = config
         self._conditions = config['common']['conditions']
         # TODO: add default
@@ -38,13 +39,21 @@ class GPSMain(object):
             self._test_idx = self._train_idx
 
         self._data_files_dir = config['common']['data_files_dir']
-
-        self.agent = config['agent']['type'](config['agent'])
+        self.num_robots = config['common']['num_robots']
+        self.agent = [ag['type'](ag) for ag in config['agent']]
         self.data_logger = DataLogger()
-        self.gui = GPSTrainingGUI(config['common']) if config['gui_on'] else None
-
-        config['algorithm']['agent'] = self.agent
-        self.algorithm = config['algorithm']['type'](config['algorithm'])
+        self.gui = [GPSTrainingGUI(config['common']) for r in range(self.num_robots)] if config['gui_on'] else None   
+        for alg, ag in zip(config['algorithm'], self.agent):
+            alg['agent'] = ag
+        dU = [ag.dU for ag in self.agent]
+        
+        dO = [ag.dO for ag in self.agent]
+        self.policy_opt =  self._hyperparams['common']['policy_opt']['type'](
+           self._hyperparams['common']['policy_opt'], dO, dU
+        )
+        self.algorithm = []
+        for robot_number, alg in enumerate(config['algorithm']):
+            self.algorithm.append(alg['type'](alg, self.policy_opt, robot_number))
 
     def run(self, itr_load=None):
         """
@@ -54,24 +63,35 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
-        itr_start = self._initialize(itr_load)
+        #CHANGED
+        for robot_number in range(self.num_robots):
+            #CHANGED
+            itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         for itr in range(itr_start, self._hyperparams['iterations']):
-            for cond in self._train_idx:
-                for i in range(self._hyperparams['num_samples']):
-                    self._take_sample(itr, cond, i)
-
-            traj_sample_lists = [
-                self.agent.get_samples(cond, -self._hyperparams['num_samples'])
-                for cond in self._train_idx
-            ]
-            self._take_iteration(itr, traj_sample_lists)
-            pol_sample_lists = self._take_policy_samples()
-            self._log_data(itr, traj_sample_lists, pol_sample_lists)
-
+            #CHANGED
+            for robot_number in range(self.num_robots):
+                for cond in self._train_idx:
+                    for i in range(self._hyperparams['num_samples']):
+                        #CHANGED
+                        self._take_sample(itr, cond, i, robot_number=robot_number)
+                #CHANGED
+                traj_sample_lists = [
+                    self.agent[robot_number].get_samples(cond, -self._hyperparams['num_samples'])
+                    for cond in self._train_idx
+                ]
+                #CHANGED
+                self._take_iteration(itr, traj_sample_lists, robot_number=robot_number)
+                #CHANGED
+                pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
+                #CHANGED
+                self._log_data(itr, traj_sample_lists, pol_sample_lists, robot_number=robot_number)
+            if itr % 5 == 0:
+                import IPython
+                IPython.embed()
         self._end()
 
-    def _initialize(self, itr_load):
+    def _initialize(self, itr_load, robot_number):
         """
         Initialize from the specified iteration.
         Args:
@@ -81,8 +101,10 @@ class GPSMain(object):
             itr_start: Iteration to start from.
         """
         if itr_load is None:
-            if self.gui:
-                self.gui.set_status_text('Press \'go\' to begin.')
+            #CHANGED
+            if self.gui[robot_number]:
+                #CHANGED
+                self.gui[robot_number].set_status_text('Press \'go\' to begin.')
             return 0
         else:
             algorithm_file = self._data_files_dir + 'algorithm_i_%02d.pkl' % itr_load
@@ -96,14 +118,16 @@ class GPSMain(object):
                     ('traj_sample_itr_%02d.pkl' % itr_load))
                 pol_sample_lists = self.data_logger.unpickle(self._data_files_dir +
                     ('pol_sample_itr_%02d.pkl' % itr_load))
-                self.gui.update(itr_load, self.algorithm, self.agent,
+                #CHANGED
+                self.gui[robot_number].update(itr_load, self.algorithm[robot_number], self.agent[robot_number],
                     traj_sample_lists, pol_sample_lists)
-                self.gui.set_status_text(
+                #CHANGED
+                self.gui[robot_number].set_status_text(
                     ('Resuming training from algorithm state at iteration %d.\n' +
                     'Press \'go\' to begin.') % itr_load)
             return itr_load + 1
 
-    def _take_sample(self, itr, cond, i):
+    def _take_sample(self, itr, cond, i, robot_number):
         """
         Collect a sample from the agent.
         Args:
@@ -112,47 +136,47 @@ class GPSMain(object):
             i: Sample number.
         Returns: None
         """
-        pol = self.algorithm.cur[cond].traj_distr
+        pol = self.algorithm[robot_number].cur[cond].traj_distr
         if self.gui:
-            self.gui.set_image_overlays(cond)   # Must call for each new cond.
+            self.gui[robot_number].set_image_overlays(cond)   # Must call for each new cond.
             redo = True
             while redo:
-                while self.gui.mode in ('wait', 'request', 'process'):
-                    if self.gui.mode in ('wait', 'process'):
+                while self.gui[robot_number].mode in ('wait', 'request', 'process'):
+                    if self.gui[robot_number].mode in ('wait', 'process'):
                         time.sleep(0.01)
                         continue
                     # 'request' mode.
-                    if self.gui.request == 'reset':
+                    if self.gui[robot_number].request == 'reset':
                         try:
-                            self.agent.reset(cond)
+                            self.agent[robot_number].reset(cond)
                         except NotImplementedError:
-                            self.gui.err_msg = 'Agent reset unimplemented.'
-                    elif self.gui.request == 'fail':
-                        self.gui.err_msg = 'Cannot fail before sampling.'
-                    self.gui.process_mode()  # Complete request.
+                            self.gui[robot_number].err_msg = 'Agent reset unimplemented.'
+                    elif self.gui[robot_number].request == 'fail':
+                        self.gui[robot_number].err_msg = 'Cannot fail before sampling.'
+                    self.gui[robot_number].process_mode()  # Complete request.
 
-                self.gui.set_status_text(
-                    'Sampling: iteration %d, condition %d, sample %d.' %
-                    (itr, cond, i)
+                self.gui[robot_number].set_status_text(
+                    'Sampling: iteration %d, condition %d, sample %d robot_number %d' %
+                    (itr, cond, i, robot_number)
                 )
-                self.agent.sample(
+                self.agent[robot_number].sample(
                     pol, cond,
                     verbose=(i < self._hyperparams['verbose_trials'])
                 )
 
-                if self.gui.mode == 'request' and self.gui.request == 'fail':
+                if self.gui[robot_number].mode == 'request' and self.gui[robot_number].request == 'fail':
                     redo = True
-                    self.gui.process_mode()
-                    self.agent.delete_last_sample(cond)
+                    self.gui[robot_number].process_mode()
+                    self.agent[robot_number].delete_last_sample(cond)
                 else:
                     redo = False
         else:
-            self.agent.sample(
+            self.agent[robot_number].sample(
                 pol, cond,
                 verbose=(i < self._hyperparams['verbose_trials'])
             )
 
-    def _take_iteration(self, itr, sample_lists):
+    def _take_iteration(self, itr, sample_lists, robot_number):
         """
         Take an iteration of the algorithm.
         Args:
@@ -160,25 +184,25 @@ class GPSMain(object):
         Returns: None
         """
         if self.gui:
-            self.gui.set_status_text('Calculating.')
-        self.algorithm.iteration(sample_lists)
+            self.gui[robot_number].set_status_text('Calculating.')
+        self.algorithm[robot_number].iteration(sample_lists)
 
-    def _take_policy_samples(self):
+    def _take_policy_samples(self, robot_number):
         """ Take samples from the policy to see how it's doing. """
         if 'verbose_policy_trials' not in self._hyperparams:
             return None
         if self.gui:
-            self.gui.set_status_text('Taking policy samples.')
+            self.gui[robot_number].set_status_text('Taking policy samples.')
         pol_samples = [[None for _ in range(self._hyperparams['verbose_policy_trials'])]
                        for _ in self._test_idx]
         for cond in range(len(self._test_idx)):
             for i in range(self._hyperparams['verbose_policy_trials']):
-                pol_samples[cond][i] = self.agent.sample(
-                    self.algorithm.policy_opt.policy, self._test_idx[cond],
+                pol_samples[cond][i] = self.agent[robot_number].sample(
+                    self.algorithm.policy_opt.policy[robot_number], self._test_idx[cond],
                     verbose=True, save=False)
         return [SampleList(samples) for samples in pol_samples]
 
-    def _log_data(self, itr, traj_sample_lists, pol_sample_lists=None):
+    def _log_data(self, itr, traj_sample_lists, pol_sample_lists=None, robot_number=0):
         """
         Log data and algorithm, and update the GUI.
         Args:
@@ -188,17 +212,17 @@ class GPSMain(object):
         Returns: None
         """
         if self.gui:
-            self.gui.set_status_text('Logging data and updating GUI.')
-            self.gui.update(itr, self.algorithm, self.agent,
+            self.gui[robot_number].set_status_text('Logging data and updating GUI.')
+            self.gui[robot_number].update(itr, self.algorithm[robot_number], self.agent[robot_number],
                 traj_sample_lists, pol_sample_lists)
-            self.gui.save_figure(
+            self.gui[robot_number].save_figure(
                 self._data_files_dir + ('figure_itr_%02d.png' % itr)
             )
         if 'no_sample_logging' in self._hyperparams['common']:
             return
         self.data_logger.pickle(
             self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
-            copy.copy(self.algorithm)
+            copy.copy(self.algorithm[robot_number])
         )
         self.data_logger.pickle(
             self._data_files_dir + ('traj_sample_itr_%02d.pkl' % itr),
@@ -213,8 +237,9 @@ class GPSMain(object):
     def _end(self):
         """ Finish running and exit. """
         if self.gui:
-            self.gui.set_status_text('Training complete.')
-            self.gui.end_mode()
+            for robot_number in range(self.num_robots):
+                self.gui[robot_number].set_status_text('Training complete.')
+                self.gui[robot_number].end_mode()
 
 
 def main():

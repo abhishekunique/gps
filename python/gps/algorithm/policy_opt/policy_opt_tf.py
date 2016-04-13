@@ -21,61 +21,67 @@ class PolicyOptTf(PolicyOpt):
         config.update(hyperparams)
 
         PolicyOpt.__init__(self, config, dO, dU)
-
-        self.tf_iter = 0
+        self.num_robots = len(dU)
+        self.tf_iter = [0 for r_no in range(len(dU))]
         self.checkpoint_file = self._hyperparams['checkpoint_prefix']
         self.batch_size = self._hyperparams['batch_size']
         self.device_string = "/cpu:0"
         if self._hyperparams['use_gpu'] == 1:
             self.gpu_device = self._hyperparams['gpu_id']
             self.device_string = "/gpu:" + str(self.gpu_device)
-        self.act_op = None  # mu_hat
-        self.loss_scalar = None
-        self.obs_tensor = None
-        self.precision_tensor = None
-        self.action_tensor = None  # mu true
-        self.solver = None
+        self.act_ops = [None]*len(dU)  # mu_hat
+        self.loss_scalars = [None]*len(dU) 
+        self.obs_tensors = [None]*len(dU) 
+        self.precision_tensors = [None]*len(dU) 
+        self.action_tensors = [None]*len(dU)   # mu true
+        self.solvers = [None]*len(dU) 
         self.init_network()
         self.init_solver()
-        self.var = self._hyperparams['init_var'] * np.ones(dU)
+        self.var = [self._hyperparams['init_var'] * np.ones(dU_ind) for dU_ind in dU]
         self.sess = tf.Session()
-        self.policy = TfPolicy(dU, self.obs_tensor, self.act_op, np.zeros(dU), self.sess, self.device_string)
+        self.policy = [TfPolicy(dU_ind, obs_tensor, act_op, np.zeros(dU_ind), self.sess, self.device_string) for dU_ind, obs_tensor, act_op in zip(dU, self.obs_tensors, self.act_ops)]
         # List of indices for state (vector) data and image (tensor) data in observation.
-        self.st_idx, self.im_idx, i = [], [], 0
-        for sensor in self._hyperparams['network_params']['obs_include']:
-            dim = self._hyperparams['network_params']['sensor_dims'][sensor]
-            if sensor in self._hyperparams['network_params']['obs_image_data']:
-                self.im_idx = self.im_idx + list(range(i, i+dim))
-            else:
-                self.st_idx = self.st_idx + list(range(i, i+dim))
-            i += dim
+        self.st_idx, self.im_idx, i = [[]]*self.num_robots, [[]]*self.num_robots, [0]*self.num_robots
+        # TODO: Need to fix this
+        #need to fix whatever this is 
+        for robot_number, robot_params in enumerate(self._hyperparams['network_params']):
+            for sensor in robot_params['obs_include']:
+                dim = robot_params['sensor_dims'][sensor]
+                if sensor in robot_params['obs_image_data']:
+                    self.im_idx[robot_number] = self.im_idx[robot_number] + list(range(i[robot_number], i[robot_number]+dim))
+                else:
+                    self.st_idx[robot_number] = self.st_idx[robot_number] + list(range(i[robot_number], i[robot_number]+dim))
+                i[robot_number] += dim
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        tf_map = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
-                                  network_config=self._hyperparams['network_params'])
-        self.obs_tensor = tf_map.get_input_tensor()
-        self.action_tensor = tf_map.get_target_output_tensor()
-        self.precision_tensor = tf_map.get_precision_tensor()
-        self.act_op = tf_map.get_output_op()
-        self.loss_scalar = tf_map.get_loss_op()
+        # tf_map = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
+                                  # network_config=self._hyperparams['network_params'])
+        # TODO, pass across the network configuration
+        tf_maps = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size)
+        self.obs_tensors = [tf_map.get_input_tensor() for tf_map in tf_maps]
+        self.action_tensors = [tf_map.get_target_output_tensor() for tf_map in tf_maps]
+        self.precision_tensors = [tf_map.get_precision_tensor() for tf_map in tf_maps]
+        self.act_ops = [tf_map.get_output_op() for tf_map in tf_maps]
+        self.loss_scalars = [tf_map.get_loss_op() for tf_map in tf_maps]
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver = TfSolver(loss_scalar=self.loss_scalar,
+        self.solvers = [TfSolver(loss_scalar=ls,
                                solver_name=self._hyperparams['solver_type'],
                                base_lr=self._hyperparams['lr'],
                                lr_policy=self._hyperparams['lr_policy'],
                                momentum=self._hyperparams['momentum'],
-                               weight_decay=self._hyperparams['weight_decay'])
+                               weight_decay=self._hyperparams['weight_decay']) for ls in self.loss_scalars]
+
 
     # TODO - This assumes that the obs is a vector being passed into the
     #        network in the same place.
     #        (won't work with images or multimodal networks)
-    def update(self, obs, tgt_mu, tgt_prc, tgt_wt, itr, inner_itr):
+    def update(self, obs, tgt_mu, tgt_prc, tgt_wt, itr, inner_itr, robot_number):
         """
         Update policy.
         Args:
@@ -87,7 +93,7 @@ class PolicyOptTf(PolicyOpt):
             A tensorflow object with updated weights.
         """
         N, T = obs.shape[:2]
-        dU, dO = self._dU, self._dO
+        dU, dO = self._dU[robot_number], self._dO[robot_number]
 
         # TODO - Make sure all weights are nonzero?
 
@@ -117,10 +123,11 @@ class PolicyOptTf(PolicyOpt):
 
         # Normalize obs, but only compute normalzation at the beginning.
         if itr == 0 and inner_itr == 1:
-            self.policy.st_idx = self.st_idx
-            self.policy.scale = np.diag(1.0 / np.std(obs[:, self.st_idx], axis=0))
-            self.policy.bias = -np.mean(obs[:, self.st_idx].dot(self.policy.scale), axis=0)
-        obs[:, self.st_idx] = obs[:, self.st_idx].dot(self.policy.scale) + self.policy.bias
+            #TODO: may need to change this
+            self.policy[robot_number].st_idx = self.st_idx[robot_number]
+            self.policy[robot_number].scale = np.diag(1.0 / np.std(obs[:, self.st_idx[robot_number]], axis=0))
+            self.policy[robot_number].bias = -np.mean(obs[:, self.st_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)
+        obs[:, self.st_idx[robot_number]] = obs[:, self.st_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
 
         # Assuming that N*T >= self.batch_size.
         batches_per_epoch = np.floor(N*T / self.batch_size)
@@ -134,10 +141,11 @@ class PolicyOptTf(PolicyOpt):
             start_idx = int(i * self.batch_size %
                             (batches_per_epoch * self.batch_size))
             idx_i = idx[start_idx:start_idx+self.batch_size]
-            feed_dict = {self.obs_tensor: obs[idx_i],
-                         self.action_tensor: tgt_mu[idx_i],
-                         self.precision_tensor: tgt_prc[idx_i]}
-            train_loss = self.solver(feed_dict, self.sess)
+            #TODO: Make sure this stuff is reading in the correct stuff
+            feed_dict = {self.obs_tensors[robot_number]: obs[idx_i],
+                         self.action_tensors[robot_number]: tgt_mu[idx_i],
+                         self.precision_tensors[robot_number]: tgt_prc[idx_i]}
+            train_loss = self.solvers[robot_number](feed_dict, self.sess)
 
             average_loss += train_loss
             if i % 500 == 0 and i != 0:
@@ -148,7 +156,8 @@ class PolicyOptTf(PolicyOpt):
                 average_loss = 0
 
         # Keep track of tensorflow iterations for loading solver states.
-        self.tf_iter += self._hyperparams['iterations']
+        #TODO: Need to figure this out, not going to work
+        self.tf_iter[robot_number] += self._hyperparams['iterations']
 
         # Optimize variance.
         A = np.sum(tgt_prc_orig, 0) + 2 * N * T * \
@@ -156,24 +165,24 @@ class PolicyOptTf(PolicyOpt):
         A = A / np.sum(tgt_wt)
 
         # TODO - Use dense covariance?
-        self.var = 1 / np.diag(A)
+        self.var[robot_number] = 1 / np.diag(A)
 
-        return self.policy
+        return self.policy[robot_number]
 
-    def prob(self, obs):
+    def prob(self, obs, robot_number):
         """
         Run policy forward.
         Args:
             obs: Numpy array of observations that is N x T x dO.
         """
-        dU = self._dU
+        dU = self._dU[robot_number]
         N, T = obs.shape[:2]
 
         # Normalize obs.
         try:
             for n in range(N):
-                if self.policy.scale is not None and self.policy.bias is not None:
-                    obs[n, :, self.st_idx] = (obs[n, :, self.st_idx].T.dot(self.policy.scale) + self.policy.bias).T
+                if self.policy[robot_number].scale is not None and self.policy[robot_number].bias is not None:
+                    obs[n, :, self.st_idx[robot_number]] = (obs[n, :, self.st_idx[robot_number]].T.dot(self.policy[robot_number].scale) + self.policy[robot_number].bias).T
                     #obs[n, :, :] = obs[n, :, :].dot(self.policy.scale) + self.policy.bias
         except AttributeError:
             pass  # TODO: Should prob be called before update?
@@ -183,20 +192,23 @@ class PolicyOptTf(PolicyOpt):
         for i in range(N):
             for t in range(T):
                 # Feed in data.
-                feed_dict = {self.obs_tensor: np.expand_dims(obs[i, t], axis=0)}
+                feed_dict = {self.obs_tensors[robot_number]: np.expand_dims(obs[i, t], axis=0)}
                 with tf.device(self.device_string):
-                    output[i, t, :] = self.sess.run(self.act_op, feed_dict=feed_dict)
+                    output[i, t, :] = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
 
-        pol_sigma = np.tile(np.diag(self.var), [N, T, 1, 1])
-        pol_prec = np.tile(np.diag(1.0 / self.var), [N, T, 1, 1])
-        pol_det_sigma = np.tile(np.prod(self.var), [N, T])
+        pol_sigma = np.tile(np.diag(self.var[robot_number]), [N, T, 1, 1])
+        pol_prec = np.tile(np.diag(1.0 / self.var[robot_number]), [N, T, 1, 1])
+        pol_det_sigma = np.tile(np.prod(self.var[robot_number]), [N, T])
 
         return output, pol_sigma, pol_prec, pol_det_sigma
 
-    def set_ent_reg(self, ent_reg):
+    def set_ent_reg(self, ent_reg, robot_number):
         """ Set the entropy regularization. """
         self._hyperparams['ent_reg'] = ent_reg
 
+
+    #TODO: Get all the saving and loading to work
+    
     def auto_save_state(self, pickle_hyperparams_path=None):
         """ auto-pickle including hyper params. Useful for debugging. """
 
@@ -206,8 +218,8 @@ class PolicyOptTf(PolicyOpt):
             'hyperparams': self._hyperparams,
             'dO': self._dO,
             'dU': self._dU,
-            'scale': self.policy.scale,
-            'bias': self.policy.bias,
+            'scale': [pol.scale for pol in self.policy],
+            'bias': [pol.bias for pol in self.policy],
             'tf_iter': self.tf_iter,
         }
 
@@ -222,13 +234,15 @@ class PolicyOptTf(PolicyOpt):
             'hyperparams': self._hyperparams,
             'dO': self._dO,
             'dU': self._dU,
-            'scale': self.policy.scale,
-            'bias': self.policy.bias,
+            'scale': [pol.scale for pol in self.policy],
+            'bias': [pol.bias for pol in self.policy],
             'tf_iter': self.tf_iter,
         }
 
     # For unpickling.
     def __setstate__(self, state):
+        import IPython
+        IPython.embed()
         from tensorflow.python.framework import ops
         ops.reset_default_graph()  # we need to destroy the default graph before re_init or checkpoint won't restore.
         self.__init__(state['hyperparams'], state['dO'], state['dU'])

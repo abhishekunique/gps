@@ -44,7 +44,7 @@ class PolicyPriorGMM(object):
         self._max_clusters = self._hyperparams['max_clusters']
         self._strength = self._hyperparams['strength']
 
-    def update(self, samples, policy_opt, all_samples, retrain=True, m=None):
+    def update(self, samples, policy_opt, all_samples, retrain=True, m=None, robot_number=0):
         """ Update prior with additional data. """
         X, obs = samples.get_X(), samples.get_obs()
         all_X, all_obs = all_samples.get_X(), all_samples.get_obs()
@@ -66,14 +66,14 @@ class PolicyPriorGMM(object):
             self.obs = self.obs[start:, :, :]
             # Evaluate policy at samples to get mean policy action.
             if m is not None:
-                Upol = policy_opt.prob(self.obs.copy(), m)[0]
-            Upol = policy_opt.prob(self.obs.copy())[0]
+                Upol = policy_opt.prob(self.obs.copy(), m, robot_number=robot_number)[0]
+            Upol = policy_opt.prob(self.obs.copy(), robot_number=robot_number)[0]
             # Create dataset.
             N = self.X.shape[0]
             XU = np.reshape(np.concatenate([self.X, Upol], axis=2), [T * N, dO])
         else:
             # Simply use the dataset that is already there.
-            all_U = policy_opt.prob(all_obs.copy())[0]
+            all_U = policy_opt.prob(all_obs.copy(), robot_number=robot_number)[0]
             N = all_X.shape[0]
             XU = np.reshape(np.concatenate([all_X, all_U], axis=2), [T * N, dO])
         # Choose number of clusters.

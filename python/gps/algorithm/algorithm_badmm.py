@@ -19,20 +19,21 @@ class AlgorithmBADMM(Algorithm):
     Sample-based joint policy learning and trajectory optimization with
     BADMM-based guided policy search algorithm.
     """
-    def __init__(self, hyperparams):
+    def __init__(self, hyperparams, policy_opt, robot_number):
         config = copy.deepcopy(ALG_BADMM)
         config.update(hyperparams)
         Algorithm.__init__(self, config)
-
+        self.robot_number = robot_number
         for m in range(self.M):
             self.cur[m].pol_info = PolicyInfo(self._hyperparams)
             policy_prior = self._hyperparams['policy_prior']
             self.cur[m].pol_info.policy_prior = \
                     policy_prior['type'](policy_prior)
 
-        self.policy_opt = self._hyperparams['policy_opt']['type'](
-            self._hyperparams['policy_opt'], self.dO, self.dU
-        )
+        self.policy_opt = policy_opt
+        # self.policy_opt = self._hyperparams['policy_opt']['type'](
+        #     self._hyperparams['policy_opt'], self.dO, self.dU
+        # )
 
     def iteration(self, sample_lists):
         """
@@ -76,12 +77,12 @@ class AlgorithmBADMM(Algorithm):
                 (self._hyperparams['iterations'] - 1), 1)
         # Perform iteration-based interpolation of entropy penalty.
         if type(self._hyperparams['ent_reg_schedule']) in (int, float):
-            self.policy_opt.set_ent_reg(self._hyperparams['ent_reg_schedule'])
+            self.policy_opt.set_ent_reg(self._hyperparams['ent_reg_schedule'], robot_number=self.robot_number)
         else:
             sch = self._hyperparams['ent_reg_schedule']
             self.policy_opt.set_ent_reg(
                 np.exp(np.interp(t, np.linspace(0, 1, num=len(sch)),
-                                 np.log(sch)))
+                                 np.log(sch))), robot_number=self.robot_number
             )
         # Perform iteration-based interpolation of Lagrange multiplier.
         if type(self._hyperparams['lg_step_schedule']) in (int, float):
@@ -150,7 +151,7 @@ class AlgorithmBADMM(Algorithm):
             tgt_wt = np.concatenate((tgt_wt, wt))
             obs_data = np.concatenate((obs_data, samples.get_obs()))
         self.policy_opt.update(obs_data, tgt_mu, tgt_prc, tgt_wt,
-                               itr, inner_itr)
+                               itr, inner_itr, robot_number=self.robot_number)
 
     def _update_policy_fit(self, m, init=False):
         """
@@ -166,18 +167,20 @@ class AlgorithmBADMM(Algorithm):
         N = len(samples)
         pol_info = self.cur[m].pol_info
         X = samples.get_X()
-        pol_mu, pol_sig = self.policy_opt.prob(samples.get_obs().copy())[:2]
+        pol_mu, pol_sig = self.policy_opt.prob(samples.get_obs().copy(), robot_number=self.robot_number)[:2]
         pol_info.pol_mu, pol_info.pol_sig = pol_mu, pol_sig
         # Update policy prior.
         if init:
+            #TODO: Need to make sure this is correct
             self.cur[m].pol_info.policy_prior.update(
                 samples, self.policy_opt,
-                SampleList(self.cur[m].pol_info.policy_samples)
+                SampleList(self.cur[m].pol_info.policy_samples), robot_number=self.robot_number
             )
         else:
+            #TODO: Need to make sure this is correct
             self.cur[m].pol_info.policy_prior.update(
                 SampleList([]), self.policy_opt,
-                SampleList(self.cur[m].pol_info.policy_samples)
+                SampleList(self.cur[m].pol_info.policy_samples), robot_number=self.robot_number
             )
         # Collapse policy covariances. This is not really correct, but
         # it works fine so long as the policy covariance doesn't depend
@@ -398,7 +401,7 @@ class AlgorithmBADMM(Algorithm):
         kl, kl_m = np.zeros((N, T)), np.zeros(T)
         kl_l, kl_lm = np.zeros((N, T)), np.zeros(T)
         # Compute policy mean and covariance at each sample.
-        pol_mu, _, pol_prec, pol_det_sigma = self.policy_opt.prob(obs.copy())
+        pol_mu, _, pol_prec, pol_det_sigma = self.policy_opt.prob(obs.copy(), robot_number=self.robot_number)
         # Compute KL divergence.
         for t in range(T):
             # Compute trajectory action at sample.

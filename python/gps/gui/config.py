@@ -116,16 +116,16 @@ def generate_experiment_info(config):
     common = config['common']
     algorithm = config['algorithm']
 
-    algorithm_cost_type = algorithm['cost']['type'].__name__
-    if (algorithm_cost_type) == 'CostSum':
-        algorithm_cost_type += '(%s)' % ', '.join(
-                map(lambda cost: cost['type'].__name__, algorithm['cost']['costs']))
+    # algorithm_cost_type = algorithm['cost']['type'].__name__
+    # if (algorithm_cost_type) == 'CostSum':
+    #     algorithm_cost_type += '(%s)' % ', '.join(
+    #             map(lambda cost: cost['type'].__name__, algorithm['cost']['costs']))
     return (
         'exp_name:   ' + str(common['experiment_name'])              + '\n' +
-        'alg_type:   ' + str(algorithm['type'].__name__)             + '\n' +
-        'alg_dyn:    ' + str(algorithm['dynamics']['type'].__name__) + '\n' +
-        'alg_cost:   ' + str(algorithm_cost_type)                    + '\n' +
+        # 'alg_type:   ' + str(algorithm['type'].__name__)             + '\n' +
+        # 'alg_dyn:    ' + str(algorithm['dynamics']['type'].__name__) + '\n' +
+        # 'alg_cost:   ' + str(algorithm_cost_type)                    + '\n' +
         'iterations: ' + str(config['iterations'])                   + '\n' +
-        'conditions: ' + str(algorithm['conditions'])                + '\n' +
+        'conditions: ' + str(config['conditions'])                + '\n' +
         'samples:    ' + str(config['num_samples'])                  + '\n'
     )
