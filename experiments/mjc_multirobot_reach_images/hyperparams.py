@@ -18,9 +18,15 @@ from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
 from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
+from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared
+
+
+IMAGE_WIDTH = 80
+IMAGE_HEIGHT = 64
+IMAGE_CHANNELS = 3
 
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
-        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, ACTION
+        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
 from gps.gui.config import generate_experiment_info
 
 SENSOR_DIMS = [{
@@ -29,6 +35,8 @@ SENSOR_DIMS = [{
     END_EFFECTOR_POINTS: 3,
     END_EFFECTOR_POINT_VELOCITIES: 3,
     ACTION: 3,
+    RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
+    RGB_IMAGE_SIZE: 3,
 },
 {
     JOINT_ANGLES: 4,
@@ -36,12 +44,14 @@ SENSOR_DIMS = [{
     END_EFFECTOR_POINTS: 3,
     END_EFFECTOR_POINT_VELOCITIES: 3,
     ACTION: 4,
+    RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
+    RGB_IMAGE_SIZE: 3,
 }]
 
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
-EXP_DIR = BASE_DIR + '/../experiments/mjc_multirobot_reach/'
+EXP_DIR = BASE_DIR + '/../experiments/mjc_multirobot_reach_images/'
 
 
 common = {
@@ -56,19 +66,28 @@ common = {
     #need to fix this to be appropriate
     'policy_opt': {
         'type': PolicyOptTf,
+        'network_model': multi_input_multi_output_images_shared,
         'network_params': [{
             'dim_hidden': [10],
-            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES],
+            'num_filters': [5, 10],
+            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, RGB_IMAGE],
             'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES],
-            'obs_image_data': [],
+            'obs_image_data':[RGB_IMAGE],
+            'image_width': IMAGE_WIDTH,
+            'image_height': IMAGE_HEIGHT,
+            'image_channels': IMAGE_CHANNELS,
             'sensor_dims': SENSOR_DIMS[0],
             'batch_size': 25,
         },
         {
             'dim_hidden': [10],
-            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES],
+            'num_filters': [5, 10],
+            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, RGB_IMAGE],
             'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES],
-            'obs_image_data': [],
+            'obs_image_data':[RGB_IMAGE],
+            'image_width': IMAGE_WIDTH,
+            'image_height': IMAGE_HEIGHT,
+            'image_channels': IMAGE_CHANNELS,
             'sensor_dims': SENSOR_DIMS[1],
             'batch_size': 25,
         }],
@@ -87,13 +106,17 @@ agent = [{
     'dt': 0.05,
     'substeps': 5,
     'conditions': common['conditions'],
-
+    'image_width': IMAGE_WIDTH,
+    'image_height': IMAGE_HEIGHT,
+    'image_channels': IMAGE_CHANNELS,
     'T': 100,
     'sensor_dims': SENSOR_DIMS[0],
     'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
                       END_EFFECTOR_POINT_VELOCITIES],
                       #include the camera images appropriately here
-    'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES],
+    'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, RGB_IMAGE],
+    'meta_include': [RGB_IMAGE_SIZE],
+    'camera_pos': np.array([3., 4., 3., 0., 0., 0.]),
 }, 
 {
     'type': AgentMuJoCo,
@@ -102,13 +125,18 @@ agent = [{
     'dt': 0.05,
     'substeps': 5,
     'conditions': common['conditions'],
+    'image_width': IMAGE_WIDTH,
+    'image_height': IMAGE_HEIGHT,
+    'image_channels': IMAGE_CHANNELS,
 
     'T': 100,
     'sensor_dims': SENSOR_DIMS[1],
     'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
                       END_EFFECTOR_POINT_VELOCITIES],
                       #include the camera images appropriately here
-    'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES],
+    'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, RGB_IMAGE],
+    'meta_include': [RGB_IMAGE_SIZE],
+    'camera_pos': np.array([3., 4., 3., 0., 0., 0.]),
 }]
 
 algorithm = [{

@@ -29,19 +29,35 @@ class PolicyOptTf(PolicyOpt):
         if self._hyperparams['use_gpu'] == 1:
             self.gpu_device = self._hyperparams['gpu_id']
             self.device_string = "/gpu:" + str(self.gpu_device)
-        self.act_ops = [None]*len(dU)  # mu_hat
-        self.loss_scalars = [None]*len(dU) 
-        self.obs_tensors = [None]*len(dU) 
-        self.precision_tensors = [None]*len(dU) 
-        self.action_tensors = [None]*len(dU)   # mu true
-        self.solvers = [None]*len(dU) 
+        self.act_ops = []
+        self.loss_scalars = []
+        self.obs_tensors = []
+        self.precision_tensors = []
+        self.action_tensors = []
+        self.solvers = []
+        self.var = []
+        for i, dU_ind in enumerate(dU):
+            self.act_ops.append(None)
+            self.loss_scalars.append(None)
+            self.obs_tensors.append(None)
+            self.precision_tensors.append(None)
+            self.action_tensors.append(None)
+            self.solvers.append(None) 
+            self.var.append(self._hyperparams['init_var'] * np.ones(dU_ind))
         self.init_network()
         self.init_solver()
-        self.var = [self._hyperparams['init_var'] * np.ones(dU_ind) for dU_ind in dU]
         self.sess = tf.Session()
-        self.policy = [TfPolicy(dU_ind, obs_tensor, act_op, np.zeros(dU_ind), self.sess, self.device_string) for dU_ind, obs_tensor, act_op in zip(dU, self.obs_tensors, self.act_ops)]
+        self.policy = []
+        for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
+            self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string))
         # List of indices for state (vector) data and image (tensor) data in observation.
-        self.st_idx, self.im_idx, i = [[]]*self.num_robots, [[]]*self.num_robots, [0]*self.num_robots
+        self.st_idx = []
+        self.im_idx = []
+        i = []
+        for robot_number in range(self.num_robots):
+            self.st_idx.append([])
+            self.im_idx.append([])
+            i.append(0)
         # TODO: Need to fix this
         #need to fix whatever this is 
         for robot_number, robot_params in enumerate(self._hyperparams['network_params']):
@@ -54,28 +70,36 @@ class PolicyOptTf(PolicyOpt):
                 i[robot_number] += dim
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
+        merged = tf.merge_all_summaries()
+        writer = tf.train.SummaryWriter('~/tensorboard_data', graph_def=self.sess.graph)
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        # tf_map = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
-                                  # network_config=self._hyperparams['network_params'])
         # TODO, pass across the network configuration
-        tf_maps = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size)
-        self.obs_tensors = [tf_map.get_input_tensor() for tf_map in tf_maps]
-        self.action_tensors = [tf_map.get_target_output_tensor() for tf_map in tf_maps]
-        self.precision_tensors = [tf_map.get_precision_tensor() for tf_map in tf_maps]
-        self.act_ops = [tf_map.get_output_op() for tf_map in tf_maps]
-        self.loss_scalars = [tf_map.get_loss_op() for tf_map in tf_maps]
+        tf_maps, self.variable_separations = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, network_config=self._hyperparams['network_params'])
+        self.obs_tensors = []
+        self.action_tensors = []
+        self.precision_tensors = []
+        self.act_ops = []
+        self.loss_scalars = []
+        for tf_map in tf_maps:
+            self.obs_tensors.append(tf_map.get_input_tensor())
+            self.action_tensors.append(tf_map.get_target_output_tensor())
+            self.precision_tensors.append(tf_map.get_precision_tensor())
+            self.act_ops.append(tf_map.get_output_op())
+            self.loss_scalars.append(tf_map.get_loss_op())
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solvers = [TfSolver(loss_scalar=ls,
+        self.solvers = []
+        for robot_number, ls in enumerate(self.loss_scalars):
+            self.solvers.append(TfSolver(loss_scalar=ls,
                                solver_name=self._hyperparams['solver_type'],
                                base_lr=self._hyperparams['lr'],
                                lr_policy=self._hyperparams['lr_policy'],
                                momentum=self._hyperparams['momentum'],
-                               weight_decay=self._hyperparams['weight_decay']) for ls in self.loss_scalars]
+                               weight_decay=self._hyperparams['weight_decay'], robot_number=robot_number, variables_train=self.variable_separations[robot_number]))
 
 
     # TODO - This assumes that the obs is a vector being passed into the
@@ -230,6 +254,7 @@ class PolicyOptTf(PolicyOpt):
 
     # For pickling.
     def __getstate__(self):
+        print("GETTING STATE")
         return {
             'hyperparams': self._hyperparams,
             'dO': self._dO,
@@ -241,8 +266,6 @@ class PolicyOptTf(PolicyOpt):
 
     # For unpickling.
     def __setstate__(self, state):
-        import IPython
-        IPython.embed()
         from tensorflow.python.framework import ops
         ops.reset_default_graph()  # we need to destroy the default graph before re_init or checkpoint won't restore.
         self.__init__(state['hyperparams'], state['dO'], state['dU'])

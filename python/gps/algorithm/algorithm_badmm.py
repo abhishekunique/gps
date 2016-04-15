@@ -96,6 +96,7 @@ class AlgorithmBADMM(Algorithm):
     def _update_policy_samples(self):
         """ Update the list of samples to use with the policy. """
         #TODO: Handle synthetic samples.
+        #TODO: Deal with importance sampling
         max_policy_samples = self._hyperparams['max_policy_samples']
         if self._hyperparams['policy_sample_mode'] == 'add':
             for m in range(self.M):
@@ -150,6 +151,7 @@ class AlgorithmBADMM(Algorithm):
             tgt_prc = np.concatenate((tgt_prc, prc))
             tgt_wt = np.concatenate((tgt_wt, wt))
             obs_data = np.concatenate((obs_data, samples.get_obs()))
+        print("POLICY" + str(self.robot_number))
         self.policy_opt.update(obs_data, tgt_mu, tgt_prc, tgt_wt,
                                itr, inner_itr, robot_number=self.robot_number)
 

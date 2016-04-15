@@ -61,7 +61,7 @@ class TfMap:
 class TfSolver:
     """ A container for holding solver hyperparams in tensorflow. Used to execute backwards pass. """
     def __init__(self, loss_scalar, solver_name='adam', base_lr=None, lr_policy=None,
-                 momentum=None, weight_decay=None):
+                 momentum=None, weight_decay=None, robot_number=0, variables_train=None):
         self.base_lr = base_lr
         self.lr_policy = lr_policy
         self.momentum = momentum
@@ -72,10 +72,14 @@ class TfSolver:
 
         self.weight_decay = weight_decay
         if weight_decay is not None:
-            trainable_vars = tf.trainable_variables()
+            #need to replace this
+            import IPython
+            IPython.embed()
+            trainable_vars = variables_train
             loss_with_reg = self.loss_scalar
-            for var in trainable_vars:
-                loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
+            with tf.name_scope("vars"):
+                for var in trainable_vars:
+                    loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
             self.loss_scalar = loss_with_reg
 
         self.solver_op = self.get_solver_op()
