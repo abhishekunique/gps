@@ -301,7 +301,8 @@ config = {
     'agent': agent,
     'gui_on': True,
     'algorithm': algorithm,
-    'conditions': common['conditions']
+    'conditions': common['conditions'],
+    'inner_iterations': 4
 }
 
 common['info'] = generate_experiment_info(config)

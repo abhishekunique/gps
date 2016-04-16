@@ -73,9 +73,9 @@ class TfSolver:
         self.weight_decay = weight_decay
         if weight_decay is not None:
             #need to replace this
-            import IPython
-            IPython.embed()
-            trainable_vars = variables_train
+            # import IPython
+            # IPython.embed()
+            trainable_vars = tf.trainable_variables()
             loss_with_reg = self.loss_scalar
             with tf.name_scope("vars"):
                 for var in trainable_vars:

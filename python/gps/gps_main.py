@@ -56,6 +56,45 @@ class GPSMain(object):
         for robot_number, alg in enumerate(config['algorithm']):
             self.algorithm.append(alg['type'](alg, self.policy_opt, robot_number))
 
+    # def run(self, itr_load=None):
+    #     """
+    #     Run training by iteratively sampling and taking an iteration.
+    #     Args:
+    #         itr_load: If specified, loads algorithm state from that
+    #             iteration, and resumes training at the next iteration.
+    #     Returns: None
+    #     """
+    #     #CHANGED
+    #     for robot_number in range(self.num_robots):
+    #         #CHANGED
+    #         itr_start = self._initialize(itr_load, robot_number=robot_number)
+
+    #     for itr in range(itr_start, self._hyperparams['iterations']):
+    #         #CHANGED            
+    #         traj_sample_lists = [None]*self.num_robots
+    #         thread_samples = []
+    #         for robot_number in range(self.num_robots):
+    #             thread_samples.append(threading.Thread(target=self.collect_samples, args=(itr, robot_number, traj_sample_lists)))
+    #             thread_samples[robot_number].start()
+    #         for robot_number in range(self.num_robots):
+    #             thread_samples[robot_number].join()
+
+    #         for robot_number in range(self.num_robots):            
+    #             self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+
+    #         thread_samples = []
+    #         for robot_number in range(self.num_robots):
+    #             thread_samples.append(threading.Thread(target=self.take_policy_samples_and_log, args=(itr, robot_number, traj_sample_lists[robot_number])))
+    #             thread_samples[robot_number].start()
+    #         for robot_number in range(self.num_robots):
+    #             thread_samples[robot_number].join()
+
+
+
+    #         import IPython
+    #         IPython.embed()
+    #     self._end()
+
     def run(self, itr_load=None):
         """
         Run training by iteratively sampling and taking an iteration.
@@ -80,7 +119,9 @@ class GPSMain(object):
                 thread_samples[robot_number].join()
 
             for robot_number in range(self.num_robots):            
-                self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+                self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+
+            self._take_iteration_shared(itr, traj_sample_lists)
 
             thread_samples = []
             for robot_number in range(self.num_robots):
@@ -207,6 +248,59 @@ class GPSMain(object):
         if self.gui:
             self.gui[robot_number].set_status_text('Calculating.')
         self.algorithm[robot_number].iteration(sample_lists)
+
+    def _take_iteration_start(self, itr, sample_lists, robot_number):
+        """
+        Take an iteration of the algorithm.
+        Args:
+            itr: Iteration number.
+        Returns: None
+        """
+        if self.gui:
+            self.gui[robot_number].set_status_text('Calculating.')
+        self.algorithm[robot_number].iteration_start(sample_lists)
+
+    def _take_iteration_shared(self, itr, sample_lists):
+        """
+        Take an iteration of the algorithm.
+        Args:
+            itr: Iteration number.
+        Returns: None
+        """
+        # Run inner loop to compute new policies.
+        for inner_itr in range(self._hyperparams['inner_iterations']):
+            #TODO: Could start from init controller.
+            obs_full = [None]*self.num_robots
+            tgt_mu_full = [None]*self.num_robots
+            tgt_prc_full = [None]*self.num_robots
+            tgt_wt_full = [None]*self.num_robots
+            itr_full = [None]*self.num_robots
+            for robot_number in range(self.num_robots):
+                if self.algorithm[robot_number].iteration_count > 0 or inner_itr > 0:
+                    # Update the policy.
+                    obs, tgt_mu, tgt_prc, tgt_wt = self.algorithm[robot_number]._update_policy_lists(self.algorithm[robot_number].iteration_count, inner_itr)
+                    obs_full[robot_number] = obs
+                    tgt_mu_full[robot_number] = tgt_mu
+                    tgt_prc_full[robot_number] = tgt_prc
+                    tgt_wt_full[robot_number] = tgt_wt
+                    itr_full[robot_number] = self.algorithm[robot_number].iteration_count
+
+
+            if self.algorithm[0].iteration_count > 0 or inner_itr > 0:
+                self.policy_opt.update(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr)
+            for robot_number in range(self.num_robots):
+                for m in range(self._conditions):
+                    self.algorithm[robot_number]._update_policy_fit(m)  # Update policy priors.
+            for robot_number in range(self.num_robots):
+                if self.algorithm[robot_number].iteration_count > 0 or inner_itr > 0:
+                    step = (inner_itr == self._hyperparams['inner_iterations'] - 1)
+                    # Update dual variables.
+                    for m in range(self._conditions):
+                        self.algorithm[robot_number]._policy_dual_step(m, step=step)
+            for robot_number in range(self.num_robots):
+                self.algorithm[robot_number]._update_trajectories()
+        for robot_number in range(self.num_robots):
+            self.algorithm[robot_number]._advance_iteration_variables()
 
     def _take_policy_samples(self, robot_number):
         """ Take samples from the policy to see how it's doing. """
