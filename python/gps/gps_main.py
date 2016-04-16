@@ -79,8 +79,15 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 thread_samples[robot_number].join()
 
-            for robot_number in range(self.num_robots):            
-                self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+            thread_samples = []
+            for robot_number in range(self.num_robots):
+                thread_samples.append(threading.Thread(target=self._take_iteration_start, args=(itr, traj_sample_lists[robot_number], robot_number)))
+                thread_samples[robot_number].start()
+            for robot_number in range(self.num_robots):
+                thread_samples[robot_number].join()
+            # for robot_number in range(self.num_robots):
+            #     self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number)
+            self._take_iteration_shared()
 
             thread_samples = []
             for robot_number in range(self.num_robots):
@@ -197,16 +204,51 @@ class GPSMain(object):
                 verbose=(i < self._hyperparams['verbose_trials'])
             )
 
-    def _take_iteration(self, itr, sample_lists, robot_number):
-        """
-        Take an iteration of the algorithm.
-        Args:
-            itr: Iteration number.
-        Returns: None
-        """
+    def _take_iteration_start(self, itr, sample_lists, robot_number):
         if self.gui:
             self.gui[robot_number].set_status_text('Calculating.')
-        self.algorithm[robot_number].iteration(sample_lists)
+        self.algorithm[robot_number].iteration_start(sample_lists)
+
+    def _take_iteration_shared(self):
+        for inner_itr in range(self._hyperparams['inner_iterations']):
+            #TODO: Could start from init controller.
+            obs_data_full = [None]*self.num_robots
+            tgt_mu_full = [None]*self.num_robots
+            tgt_prc_full = [None]*self.num_robots
+            tgt_wt_full = [None]*self.num_robots
+            #Can parallelize this
+            for r_no in range(self.num_robots):
+                if self.algorithm[r_no].iteration_count > 0 or inner_itr > 0:
+                    # Update the policy.
+                    
+                    obs_data, tgt_mu, tgt_prc, tgt_wt = self.algorithm[r_no]._write_policy_samples(self.algorithm[r_no].iteration_count, inner_itr)
+                    obs_data_full[r_no] = obs_data
+                    tgt_mu_full[r_no] = tgt_mu
+                    tgt_prc_full[r_no] = tgt_prc
+                    tgt_wt_full[r_no] = tgt_wt
+            full_iteration_count = [self.algorithm[r_no].iteration_count for r_no in range(self.num_robots)]
+            #TODO: Make this better
+            if self.algorithm[0].iteration_count > 0 or inner_itr > 0:
+                self.policy_opt.update(obs_data_full, tgt_mu_full, tgt_prc_full, tgt_wt_full,
+                   full_iteration_count, inner_itr)
+           
+            for r_no in range(self.num_robots):
+                for m in range(self._conditions):
+                    self.algorithm[r_no]._update_policy_fit(m)  # Update policy priors.
+            
+            for r_no in range(self.num_robots):
+                if self.algorithm[r_no].iteration_count > 0 or inner_itr > 0:
+                    step = (inner_itr == self._hyperparams['inner_iterations'] - 1)
+                    # Update dual variables.
+                    for m in range(self._conditions):
+                        self.algorithm[r_no]._policy_dual_step(m, step=step)
+
+            for r_no in range(self.num_robots):
+                self.algorithm[r_no]._update_trajectories()
+        for r_no in range(self.num_robots):   
+            self.algorithm[r_no]._advance_iteration_variables()
+     
+
 
     def _take_policy_samples(self, robot_number):
         """ Take samples from the policy to see how it's doing. """

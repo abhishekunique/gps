@@ -67,6 +67,22 @@ class AlgorithmBADMM(Algorithm):
 
         self._advance_iteration_variables()
 
+    def iteration_start(self, sample_lists):
+        """
+        Run iteration of BADMM-based guided policy search.
+
+        Args:
+            sample_lists: List of SampleList objects for each condition.
+        """
+        for m in range(self.M):
+            self.cur[m].sample_list = sample_lists[m]
+
+        self._set_interp_values()
+        self._update_dynamics()  # Update dynamics model using all sample.
+        self._update_policy_samples()  # Choose samples to use with the policy.
+        self._update_step_size()  # KL Divergence step size.
+
+
     def _set_interp_values(self):
         """
         Use iteration-based interpolation to set values of some
@@ -119,7 +135,43 @@ class AlgorithmBADMM(Algorithm):
             if self.iteration_count >= 1 and self.prev[m].sample_list:
                 self._stepadjust(m)
 
-    def _update_policy(self, itr, inner_itr):
+    # def _update_policy(self, itr, inner_itr):
+    #     """ Compute the new policy. """
+    #     dU, dO, T = self.dU, self.dO, self.T
+    #     # Compute target mean, cov, and weight for each sample.
+    #     obs_data, tgt_mu = np.zeros((0, T, dO)), np.zeros((0, T, dU))
+    #     tgt_prc, tgt_wt = np.zeros((0, T, dU, dU)), np.zeros((0, T))
+    #     for m in range(self.M):
+    #         samples = self.cur[m].sample_list
+    #         X = samples.get_X()
+    #         N = len(samples)
+    #         traj, pol_info = self.cur[m].traj_distr, self.cur[m].pol_info
+    #         mu = np.zeros((N, T, dU))
+    #         prc = np.zeros((N, T, dU, dU))
+    #         wt = np.zeros((N, T))
+    #         # Get time-indexed actions.
+    #         for t in range(T):
+    #             # Compute actions along this trajectory.
+    #             prc[:, t, :, :] = np.tile(traj.inv_pol_covar[t, :, :],
+    #                                       [N, 1, 1])
+    #             for i in range(N):
+    #                 mu[i, t, :] = \
+    #                         (traj.K[t, :, :].dot(X[i, t, :]) + traj.k[t, :]) - \
+    #                         np.linalg.solve(
+    #                             prc[i, t, :, :],  #TODO: Divide by pol_wt[t].
+    #                             pol_info.lambda_K[t, :, :].dot(X[i, t, :]) + \
+    #                                     pol_info.lambda_k[t, :]
+    #                         )
+    #             wt[:, t].fill(pol_info.pol_wt[t])
+    #         tgt_mu = np.concatenate((tgt_mu, mu))
+    #         tgt_prc = np.concatenate((tgt_prc, prc))
+    #         tgt_wt = np.concatenate((tgt_wt, wt))
+    #         obs_data = np.concatenate((obs_data, samples.get_obs()))
+    #     print("POLICY" + str(self.robot_number))
+    #     self.policy_opt.update(obs_data, tgt_mu, tgt_prc, tgt_wt,
+    #                            itr, inner_itr, robot_number=self.robot_number)
+
+    def _write_policy_samples(self, itr, inner_itr):
         """ Compute the new policy. """
         dU, dO, T = self.dU, self.dO, self.T
         # Compute target mean, cov, and weight for each sample.
@@ -151,9 +203,11 @@ class AlgorithmBADMM(Algorithm):
             tgt_prc = np.concatenate((tgt_prc, prc))
             tgt_wt = np.concatenate((tgt_wt, wt))
             obs_data = np.concatenate((obs_data, samples.get_obs()))
-        print("POLICY" + str(self.robot_number))
-        self.policy_opt.update(obs_data, tgt_mu, tgt_prc, tgt_wt,
-                               itr, inner_itr, robot_number=self.robot_number)
+        return obs_data, tgt_mu, tgt_prc, tgt_wt
+
+        # print("POLICY" + str(self.robot_number))
+        # self.policy_opt.update(obs_data, tgt_mu, tgt_prc, tgt_wt,
+        #                        itr, inner_itr, robot_number=self.robot_number)
 
     def _update_policy_fit(self, m, init=False):
         """

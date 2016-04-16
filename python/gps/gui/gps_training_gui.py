@@ -267,6 +267,9 @@ class GPSTrainingGUI(object):
         if self._first_update:
             self._output_column_titles(algorithm)
             self._first_update = False
+        print("TRAINING GUI")
+        import IPython
+        IPython.embed()
 
         costs = [np.mean(np.sum(algorithm.prev[m].cs, axis=1)) for m in range(algorithm.M)]
         self._update_iteration_data(itr, algorithm, costs)

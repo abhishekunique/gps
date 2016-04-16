@@ -34,7 +34,7 @@ class PolicyOptTf(PolicyOpt):
         self.obs_tensors = []
         self.precision_tensors = []
         self.action_tensors = []
-        self.solvers = []
+        self.solver = None
         self.var = []
         for i, dU_ind in enumerate(dU):
             self.act_ops.append(None)
@@ -42,7 +42,6 @@ class PolicyOptTf(PolicyOpt):
             self.obs_tensors.append(None)
             self.precision_tensors.append(None)
             self.action_tensors.append(None)
-            self.solvers.append(None) 
             self.var.append(self._hyperparams['init_var'] * np.ones(dU_ind))
         self.init_network()
         self.init_solver()
@@ -89,23 +88,22 @@ class PolicyOptTf(PolicyOpt):
             self.precision_tensors.append(tf_map.get_precision_tensor())
             self.act_ops.append(tf_map.get_output_op())
             self.loss_scalars.append(tf_map.get_loss_op())
+        self.combined_loss_scalar = tf.add_n(self.loss_scalars)
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solvers = []
-        for robot_number, ls in enumerate(self.loss_scalars):
-            self.solvers.append(TfSolver(loss_scalar=ls,
+        self.solver = TfSolver(loss_scalar=self.combined_loss_scalar,
                                solver_name=self._hyperparams['solver_type'],
                                base_lr=self._hyperparams['lr'],
                                lr_policy=self._hyperparams['lr_policy'],
                                momentum=self._hyperparams['momentum'],
-                               weight_decay=self._hyperparams['weight_decay'], robot_number=robot_number, variables_train=self.variable_separations[robot_number]))
+                               weight_decay=self._hyperparams['weight_decay'])
 
 
     # TODO - This assumes that the obs is a vector being passed into the
     #        network in the same place.
     #        (won't work with images or multimodal networks)
-    def update(self, obs, tgt_mu, tgt_prc, tgt_wt, itr, inner_itr, robot_number):
+    def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
         Update policy.
         Args:
@@ -116,60 +114,85 @@ class PolicyOptTf(PolicyOpt):
         Returns:
             A tensorflow object with updated weights.
         """
-        N, T = obs.shape[:2]
-        dU, dO = self._dU[robot_number], self._dO[robot_number]
+        tgt_prc_orig_full = [None]*self.num_robots
+        N_full = [None]*self.num_robots
+        T_full = [None]*self.num_robots
+        batches_per_epoch = [None]*self.num_robots
+        idx_full = [None]*self.num_robots
+        obs_reshaped = [None]*self.num_robots
+        tgt_mu_reshaped = [None]*self.num_robots
+        tgt_prc_reshaped = [None]*self.num_robots
+        tgt_wt_reshaped = [None]*self.num_robots
+        for robot_number in range(self.num_robots):
+            obs = obs_full[robot_number]
+            tgt_mu = tgt_mu_full[robot_number]
+            tgt_prc = tgt_prc_full[robot_number]
+            tgt_wt = tgt_wt_full[robot_number]
+            itr = itr_full[robot_number]
+            N, T = obs.shape[:2]
+            N_full[robot_number] = N
+            T_full[robot_number] = T
+            dU, dO = self._dU[robot_number], self._dO[robot_number]
 
-        # TODO - Make sure all weights are nonzero?
+            # TODO - Make sure all weights are nonzero?
 
-        # Save original tgt_prc.
-        tgt_prc_orig = np.reshape(tgt_prc, [N*T, dU, dU])
+            # Save original tgt_prc.
+            tgt_prc_orig = np.reshape(tgt_prc, [N*T, dU, dU])
+            tgt_prc_orig_full[robot_number] = tgt_prc_orig
 
-        # Renormalize weights.
-        tgt_wt *= (float(N * T) / np.sum(tgt_wt))
-        # Allow weights to be at most twice the robust median.
-        mn = np.median(tgt_wt[(tgt_wt > 1e-2).nonzero()])
-        for n in range(N):
-            for t in range(T):
-                tgt_wt[n, t] = min(tgt_wt[n, t], 2 * mn)
-        # Robust median should be around one.
-        tgt_wt /= mn
+            # Renormalize weights.
+            tgt_wt *= (float(N * T) / np.sum(tgt_wt))
+            # Allow weights to be at most twice the robust median.
+            mn = np.median(tgt_wt[(tgt_wt > 1e-2).nonzero()])
+            for n in range(N):
+                for t in range(T):
+                    tgt_wt[n, t] = min(tgt_wt[n, t], 2 * mn)
+            # Robust median should be around one.
+            tgt_wt /= mn
 
-        # Reshape inputs.
-        obs = np.reshape(obs, (N*T, dO))
-        tgt_mu = np.reshape(tgt_mu, (N*T, dU))
-        tgt_prc = np.reshape(tgt_prc, (N*T, dU, dU))
-        tgt_wt = np.reshape(tgt_wt, (N*T, 1, 1))
+            # Reshape inputs.
+            obs = np.reshape(obs, (N*T, dO))
+            tgt_mu = np.reshape(tgt_mu, (N*T, dU))
+            tgt_prc = np.reshape(tgt_prc, (N*T, dU, dU))
+            tgt_wt = np.reshape(tgt_wt, (N*T, 1, 1))
 
-        # Fold weights into tgt_prc.
-        tgt_prc = tgt_wt * tgt_prc
+            # Fold weights into tgt_prc.
+            tgt_prc = tgt_wt * tgt_prc
 
-        # TODO: Find entries with very low weights?
+            # TODO: Find entries with very low weights?
 
-        # Normalize obs, but only compute normalzation at the beginning.
-        if itr == 0 and inner_itr == 1:
-            #TODO: may need to change this
-            self.policy[robot_number].st_idx = self.st_idx[robot_number]
-            self.policy[robot_number].scale = np.diag(1.0 / np.std(obs[:, self.st_idx[robot_number]], axis=0))
-            self.policy[robot_number].bias = -np.mean(obs[:, self.st_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)
-        obs[:, self.st_idx[robot_number]] = obs[:, self.st_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
+            # Normalize obs, but only compute normalzation at the beginning.
+            if itr == 0 and inner_itr == 1:
+                #TODO: may need to change this
+                self.policy[robot_number].st_idx = self.st_idx[robot_number]
+                self.policy[robot_number].scale = np.diag(1.0 / np.std(obs[:, self.st_idx[robot_number]], axis=0))
+                self.policy[robot_number].bias = -np.mean(obs[:, self.st_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)
+            obs[:, self.st_idx[robot_number]] = obs[:, self.st_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
 
-        # Assuming that N*T >= self.batch_size.
-        batches_per_epoch = np.floor(N*T / self.batch_size)
-        idx = range(N*T)
+            # Assuming that N*T >= self.batch_size.
+            batches_per_epoch[robot_number] = np.floor(N*T / self.batch_size)
+            idx_full[robot_number] = range(N*T)
+            np.random.shuffle(idx_full[robot_number])
+            obs_reshaped[robot_number] = obs
+            tgt_mu_reshaped[robot_number] = tgt_mu
+            tgt_prc_reshaped[robot_number] = tgt_prc
+            tgt_wt_reshaped[robot_number] = tgt_wt
+
         average_loss = 0
-        np.random.shuffle(idx)
-
         # actual training.
+
         for i in range(self._hyperparams['iterations']):
             # Load in data for this batch.
-            start_idx = int(i * self.batch_size %
-                            (batches_per_epoch * self.batch_size))
-            idx_i = idx[start_idx:start_idx+self.batch_size]
+           
             #TODO: Make sure this stuff is reading in the correct stuff
-            feed_dict = {self.obs_tensors[robot_number]: obs[idx_i],
-                         self.action_tensors[robot_number]: tgt_mu[idx_i],
-                         self.precision_tensors[robot_number]: tgt_prc[idx_i]}
-            train_loss = self.solvers[robot_number](feed_dict, self.sess)
+            feed_dict = {}
+            for robot_number in range(self.num_robots):
+                start_idx = int(i * self.batch_size % (batches_per_epoch[robot_number] * self.batch_size))
+                idx_i = idx_full[robot_number][start_idx:start_idx+self.batch_size]
+                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+                feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+            train_loss = self.solver(feed_dict, self.sess)
 
             average_loss += train_loss
             if i % 500 == 0 and i != 0:
@@ -179,19 +202,22 @@ class PolicyOptTf(PolicyOpt):
                 print average_loss
                 average_loss = 0
 
-        # Keep track of tensorflow iterations for loading solver states.
-        #TODO: Need to figure this out, not going to work
-        self.tf_iter[robot_number] += self._hyperparams['iterations']
+        for robot_number in range(self.num_robots):
+            # Keep track of tensorflow iterations for loading solver states.
+            #TODO: Need to figure this out, not going to work
+            N = N_full[robot_number]
+            T = T_full[robot_number]
+            self.tf_iter[robot_number] += self._hyperparams['iterations']
 
-        # Optimize variance.
-        A = np.sum(tgt_prc_orig, 0) + 2 * N * T * \
-                                      self._hyperparams['ent_reg'] * np.ones((dU, dU))
-        A = A / np.sum(tgt_wt)
+            # Optimize variance.
+            A = np.sum(tgt_prc_orig_full[robot_number], 0) + 2 * N * T * \
+                                          self._hyperparams['ent_reg'] * np.ones((self._dU[robot_number], self._dU[robot_number]))
+            A = A / np.sum(tgt_wt_reshaped[robot_number])
 
-        # TODO - Use dense covariance?
-        self.var[robot_number] = 1 / np.diag(A)
+            # TODO - Use dense covariance?
+            self.var[robot_number] = 1 / np.diag(A)
 
-        return self.policy[robot_number]
+        return self.policy
 
     def prob(self, obs, robot_number):
         """

@@ -18,7 +18,7 @@ from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
 from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
-from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared
+from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images
 
 
 IMAGE_WIDTH = 80
@@ -66,7 +66,7 @@ common = {
     #need to fix this to be appropriate
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': multi_input_multi_output_images_shared,
+        'network_model': multi_input_multi_output_images,
         'network_params': [{
             'dim_hidden': [10],
             'num_filters': [5, 10],
@@ -301,7 +301,8 @@ config = {
     'agent': agent,
     'gui_on': True,
     'algorithm': algorithm,
-    'conditions': common['conditions']
+    'conditions': common['conditions'],
+    'inner_iterations': 4
 }
 
 common['info'] = generate_experiment_info(config)
