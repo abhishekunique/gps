@@ -71,7 +71,7 @@ class PolicyOptTf(PolicyOpt):
         self.sess.run(init_op)
         merged = tf.merge_all_summaries()
         writer = tf.train.SummaryWriter('~/tensorboard_data', graph_def=self.sess.graph)
-
+        
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']

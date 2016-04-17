@@ -331,21 +331,21 @@ class GPSMain(object):
             self.gui[robot_number].update(itr, self.algorithm[robot_number], self.agent[robot_number],
                 traj_sample_lists, pol_sample_lists)
             self.gui[robot_number].save_figure(
-                self._data_files_dir + ('figure_itr_%02d.png' % itr)
+                self._data_files_dir + ('figure_itr_%02d_rn%02d.png' % (itr, robot_number))
             )
         if 'no_sample_logging' in self._hyperparams['common']:
             return
         self.data_logger.pickle(
-            self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
+            self._data_files_dir + ('algorithm_itr_%02d_rn%02d.pkl' % (itr, robot_number)),
             copy.copy(self.algorithm[robot_number])
         )
         self.data_logger.pickle(
-            self._data_files_dir + ('traj_sample_itr_%02d.pkl' % itr),
+            self._data_files_dir + ('traj_sample_itr_%02d_rn%02d.pkl' % (itr, robot_number)),
             copy.copy(traj_sample_lists)
         )
         if pol_sample_lists:
             self.data_logger.pickle(
-                self._data_files_dir + ('pol_sample_itr_%02d.pkl' % itr),
+                self._data_files_dir + ('pol_sample_itr_%02d_rn%02d.pkl' % (itr, robot_number)),
                 copy.copy(pol_sample_lists)
             )
 
