@@ -77,7 +77,7 @@ class TfSolver:
             # IPython.embed()
             trainable_vars = tf.trainable_variables()
             loss_with_reg = self.loss_scalar
-            with tf.name_scope("vars"):
+            with tf.name_scope("loss_vars"):
                 for var in trainable_vars:
                     loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
             self.loss_scalar = loss_with_reg

@@ -285,7 +285,7 @@ class GPSMain(object):
                     tgt_wt_full[robot_number] = tgt_wt
                     itr_full[robot_number] = self.algorithm[robot_number].iteration_count
 
-
+            #May want to make this shared across robots
             if self.algorithm[0].iteration_count > 0 or inner_itr > 0:
                 self.policy_opt.update(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr)
             for robot_number in range(self.num_robots):
@@ -313,7 +313,7 @@ class GPSMain(object):
         for cond in range(len(self._test_idx)):
             for i in range(self._hyperparams['verbose_policy_trials']):
                 pol_samples[cond][i] = self.agent[robot_number].sample(
-                    self.algorithm.policy_opt.policy[robot_number], self._test_idx[cond],
+                    self.algorithm[robot_number].policy_opt.policy[robot_number], self._test_idx[cond],
                     verbose=True, save=False)
         return [SampleList(samples) for samples in pol_samples]
 
