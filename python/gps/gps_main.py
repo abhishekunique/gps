@@ -113,10 +113,11 @@ class GPSMain(object):
             traj_sample_lists = [None]*self.num_robots
             thread_samples = []
             for robot_number in range(self.num_robots):
-                thread_samples.append(threading.Thread(target=self.collect_samples, args=(itr, robot_number, traj_sample_lists)))
-                thread_samples[robot_number].start()
-            for robot_number in range(self.num_robots):
-                thread_samples[robot_number].join()
+                self.collect_samples(itr, robot_number, traj_sample_lists)
+            #     thread_samples.append(threading.Thread(target=self.collect_samples, args=(itr, robot_number, traj_sample_lists)))
+            #     thread_samples[robot_number].start()
+            # for robot_number in range(self.num_robots):
+            #     thread_samples[robot_number].join()
 
             for robot_number in range(self.num_robots):            
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
@@ -125,13 +126,14 @@ class GPSMain(object):
 
             thread_samples = []
             for robot_number in range(self.num_robots):
-                thread_samples.append(threading.Thread(target=self.take_policy_samples_and_log, args=(itr, robot_number, traj_sample_lists[robot_number])))
-                thread_samples[robot_number].start()
-            for robot_number in range(self.num_robots):
-                thread_samples[robot_number].join()
+                self.take_policy_samples_and_log(itr, robot_number, traj_sample_lists[robot_number])
+            #     thread_samples.append(threading.Thread(target=self.take_policy_samples_and_log, args=(itr, robot_number, traj_sample_lists[robot_number])))
+            #     thread_samples[robot_number].start()
+            # for robot_number in range(self.num_robots):
+            #     thread_samples[robot_number].join()
 
 
-
+        
             import IPython
             IPython.embed()
         self._end()
