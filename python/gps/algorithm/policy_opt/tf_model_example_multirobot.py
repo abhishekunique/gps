@@ -320,7 +320,7 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
     return nnets, variable_separations
 
-def multi_input_multi_output_images_shared_more(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
+def multi_input_multi_output_images_shared_multitask(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None, same_task_idx=None):
     """
     An example a network in theano that has both state and image inputs.
 
@@ -343,6 +343,13 @@ def multi_input_multi_output_images_shared_more(dim_input=[27, 27], dim_output=[
         st_idx.append([])
         im_idx.append([])
         i.append(0)
+
+    robot_task_mapping = {}
+    task_num = 0
+    for task_robots in same_task_idx:
+        for robot_number in task_robots:
+            robot_task_mapping[robot_number] = task_num
+        task_num += 1
     #need to fix whatever this is 
     variable_separations = []
     with tf.variable_scope("shared_wts"):
@@ -370,10 +377,10 @@ def multi_input_multi_output_images_shared_more(dim_input=[27, 27], dim_output=[
 
             #need to resolve this
             dim_hidden = 42
-            pool_size = 4
+            pool_size = 2
             filter_size = 3
             # we pool twice, each time reducing the image size by a factor of 2.
-            conv_out_size = int(im_width/(2.0*pool_size)*im_height/(2.0*pool_size)*num_filters[3])
+            conv_out_size = int(im_width/(2.0*pool_size)*im_height/(2.0*pool_size)*num_filters[1])
             #print conv_out_size
             #print len(st_idx)
             print state_input.get_shape().dims[1].value
@@ -382,22 +389,18 @@ def multi_input_multi_output_images_shared_more(dim_input=[27, 27], dim_output=[
             # Store layers weight & bias
 
             weights = {
-                'wc1': get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
-                'wc2': get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
                 'wd1': init_weights([first_dense_size, dim_hidden], name='wd1rn' + str(robot_number)),
                 'out': init_weights([dim_hidden, dim_output[robot_number]], name='outwrn' + str(robot_number))
             }
 
             biases = {
-                'bc1': init_bias([num_filters[0]], name='bc1rn' + str(robot_number)),
-                'bc2': init_bias([num_filters[1]], name='bc2rn' + str(robot_number)),
                 'bd1': init_bias([dim_hidden], name='bd1rn' + str(robot_number)),
                 'out': init_bias([dim_output[robot_number]], name='outbrn' + str(robot_number))
             }
-            weights['wc3'] = get_xavier_weights_shared([filter_size, filter_size, num_filters[1], num_filters[2]], (pool_size, pool_size), name='wc3rnshared') # 5x5 conv, 32 inputs, 64 outputs
-            biases['bc3'] = init_bias_shared([num_filters[2]], name='bc3rnshared')
-            weights['wc4'] = get_xavier_weights_shared([filter_size, filter_size, num_filters[2], num_filters[3]], (pool_size, pool_size), name='wc4rnshared') # 5x5 conv, 32 inputs, 64 outputs
-            biases['bc4'] = init_bias_shared([num_filters[3]], name='bc4rnshared')
+            weights['wc1'] = get_xavier_weights_shared([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1tasknum' + str(robot_task_mapping[robot_number])), # 5x5 conv, 1 input, 32 outputs
+            weights['bc1'] = init_bias_shared([num_filters[0]], name='bc1tasknum' + str(robot_task_mapping[robot_number])),
+            weights['wc2'] = get_xavier_weights_shared([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2rnshared') # 5x5 conv, 32 inputs, 64 outputs
+            biases['bc2'] = init_bias_shared([num_filters[1]], name='bc2rnshared')
             tf.get_variable_scope().reuse_variables()
             conv_layer_0 = conv2d(img=image_input, w=weights['wc1'], b=biases['bc1'])
 
@@ -407,15 +410,7 @@ def multi_input_multi_output_images_shared_more(dim_input=[27, 27], dim_output=[
 
             conv_layer_1 = max_pool(conv_layer_1, k=pool_size)
 
-            conv_layer_2 = conv2d(img=conv_layer_1, w=weights['wc3'], b=biases['bc3'])
-
-            conv_layer_2 = max_pool(conv_layer_2, k=pool_size)
-
-            conv_layer_3 = conv2d(img=conv_layer_2, w=weights['wc4'], b=biases['bc4'])
-
-            conv_layer_3 = max_pool(conv_layer_3, k=pool_size)
-
-            conv_out_flat = tf.reshape(conv_layer_3, [-1, conv_out_size])
+            conv_out_flat = tf.reshape(conv_layer_1, [-1, conv_out_size])
 
             fc_input = tf.concat(concat_dim=1, values=[conv_out_flat, state_input])
 

@@ -133,9 +133,9 @@ class GPSMain(object):
             #     thread_samples[robot_number].join()
 
 
-        
-            import IPython
-            IPython.embed()
+            if itr>0 and itr%5 == 0:
+                import IPython
+                IPython.embed()
         self._end()
 
     def collect_samples(self, itr, robot_number, traj_sample_lists):

@@ -259,13 +259,13 @@ algorithm[0]['cost'] = [{
     'type': CostSum,
     'costs': [torque_cost_1[i], fk_cost_1[i]],
     'weights': [1.0, 1.0],
-} for i in range(common['num_robots'])]
+} for i in range(common['conditions'])]
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
     'costs': [torque_cost_2[i], fk_cost_2[i]],
     'weights': [1.0, 1.0],
-} for i in range(common['num_robots'])]
+} for i in range(common['conditions'])]
 
 
 
