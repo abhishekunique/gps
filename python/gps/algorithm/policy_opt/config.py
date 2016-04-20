@@ -7,7 +7,7 @@ except ImportError:
 try:
     from gps.algorithm.policy_opt.tf_model_example import example_tf_network
     from gps.algorithm.policy_opt.tf_model_example import multi_modal_network
-    from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output
+    from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared
 except ImportError:
     example_tf_network = None
 
@@ -24,7 +24,7 @@ GENERIC_CONFIG = {
     'lr': 0.001,  # Base learning rate (by default it's fixed).
     'lr_policy': 'fixed',  # Learning rate policy.
     'momentum': 0.9,  # Momentum.
-    'weight_decay': None,  # Weight decay.
+    'weight_decay': 1e-6,  # Weight decay.
     'solver_type': 'Adam',  # Solver type (e.g. 'SGD', 'Adam', etc.).
     # set gpu usage.
     'use_gpu': 1,  # Whether or not to use the GPU for caffe training.
@@ -48,9 +48,9 @@ checkpoint_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                '..', 'policy_opt/tf_checkpoint/policy_checkpoint.ckpt'))
 POLICY_OPT_TF = {
     # Other hyperparameters.
-    'network_model': multi_input_multi_output, #multi_modal_network,  # should return TfMap object from tf_utils. See example.
-    'checkpoint_prefix': checkpoint_path,
     'fc_only_iterations': 0,
+    'network_model': multi_input_multi_output_images_shared, #multi_modal_network,  # should return TfMap object from tf_utils. See example.
+    'checkpoint_prefix': checkpoint_path
 }
 
 POLICY_OPT_TF.update(GENERIC_CONFIG)
