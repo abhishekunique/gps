@@ -76,6 +76,7 @@ class PolicyOptTf(PolicyOpt):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
         # TODO, pass across the network configuration
+        # tf_maps, self.variable_separations, self.shared_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, network_config=self._hyperparams['network_params'])
         tf_maps, self.variable_separations = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
@@ -98,6 +99,13 @@ class PolicyOptTf(PolicyOpt):
                                lr_policy=self._hyperparams['lr_policy'],
                                momentum=self._hyperparams['momentum'],
                                weight_decay=self._hyperparams['weight_decay'])
+
+        # self.solver = TfSolver(loss_scalar=self.combined_loss,
+        #                        solver_name=self._hyperparams['solver_type'],
+        #                        base_lr=self._hyperparams['lr'],
+        #                        lr_policy=self._hyperparams['lr_policy'],
+        #                        momentum=self._hyperparams['momentum'],
+        #                        weight_decay=self._hyperparams['weight_decay'], shared_vars=self.shared_vars, sparsity_param=self._hyperparams['sparsity_param'])
 
 
     # TODO - This assumes that the obs is a vector being passed into the

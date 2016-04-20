@@ -24,7 +24,7 @@ GENERIC_CONFIG = {
     'lr': 0.001,  # Base learning rate (by default it's fixed).
     'lr_policy': 'fixed',  # Learning rate policy.
     'momentum': 0.9,  # Momentum.
-    'weight_decay': None,  # Weight decay.
+    'weight_decay': 1e-6,  # Weight decay.
     'solver_type': 'Adam',  # Solver type (e.g. 'SGD', 'Adam', etc.).
     # set gpu usage.
     'use_gpu': 1,  # Whether or not to use the GPU for caffe training.

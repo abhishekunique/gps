@@ -29,11 +29,11 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
 from gps.gui.config import generate_experiment_info
 
 SENSOR_DIMS = [{
-    JOINT_ANGLES: 3,
-    JOINT_VELOCITIES: 3,
+    JOINT_ANGLES: 4,
+    JOINT_VELOCITIES: 4,
     END_EFFECTOR_POINTS: 3,
     END_EFFECTOR_POINT_VELOCITIES: 3,
-    ACTION: 3,
+    ACTION: 4,
     RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
     RGB_IMAGE_SIZE: 3,
 }]
@@ -79,12 +79,12 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = [{
     'type': AgentMuJoCo,
-    'filename': './mjc_models/arm_3link_reach.xml',
-    'x0': np.zeros(6),
+    'filename': './mjc_models/arm_4link_reach.xml',
+    'x0': np.zeros(8),
     'dt': 0.05,
     'substeps': 5,
-    'pos_body_offset': [np.array([0, 0.0, 0]), np.array([0, 0., 0.15])],
-    'pos_body_idx': np.array([6]),
+    'pos_body_offset': [np.array([0, 0.0, 0]), np.array([0., 0., 0.15])],
+    'pos_body_idx': np.array([7]),
     'conditions': common['conditions'],
     'image_width': IMAGE_WIDTH,
     'image_height': IMAGE_HEIGHT,
@@ -131,14 +131,13 @@ algorithm[0]['init_traj_distr'] = {
     'T': agent[0]['T'],
 }
 
-
 torque_cost_1 = [{
     'type': CostAction,
-    'wu': 5e-5 / PR2_GAINS[0],
+    'wu': 5e-5 / PR2_GAINS[1],
 },
 {
     'type': CostAction,
-    'wu': 5e-5 / PR2_GAINS[0],
+    'wu': 5e-5 / PR2_GAINS[1],
 }]
 
 fk_cost_1 = [{
@@ -163,7 +162,6 @@ algorithm[0]['cost'] = [{
     'costs': [torque_cost_1[i], fk_cost_1[i]],
     'weights': [1.0, 1.0],
 } for i in range(common['conditions'])]
-
 
 algorithm[0]['dynamics'] = {
     'type': DynamicsLRPrior,
