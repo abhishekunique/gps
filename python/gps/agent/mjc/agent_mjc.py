@@ -128,7 +128,7 @@ class AgentMuJoCo(Agent):
             X_t = new_sample.get_X(t=t)
             obs_t = new_sample.get_obs(t=t)
             img = self._get_image_from_obs(obs_t)
-            plt.imsave('/home/abhigupta/gps_images/finger_reaching'+str(t)+'.png', img)
+            # plt.imsave('/home/abhigupta/gps_images/finger_reaching'+str(t)+'.png', img)
             meta = new_sample.get_meta()
             mj_U = policy.act(X_t, obs_t, t, noise[t, :])
             U[t, :] = mj_U

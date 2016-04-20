@@ -76,12 +76,14 @@ class PolicyOptTf(PolicyOpt):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
         # TODO, pass across the network configuration
-        tf_maps, self.variable_separations = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, network_config=self._hyperparams['network_params'])
+        tf_maps, self.variable_separations, fc_vars, last_conv_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
         self.precision_tensors = []
         self.act_ops = []
         self.loss_scalars = []
+        self.fc_vars = fc_vars
+        self.last_conv_vars = last_conv_vars
         for tf_map in tf_maps:
             self.obs_tensors.append(tf_map.get_input_tensor())
             self.action_tensors.append(tf_map.get_target_output_tensor())
@@ -90,6 +92,7 @@ class PolicyOptTf(PolicyOpt):
             self.loss_scalars.append(tf_map.get_loss_op())
         self.combined_loss = tf.add_n(self.loss_scalars)
 
+
     def init_solver(self):
         """ Helper method to initialize the solver. """        
         self.solver = TfSolver(loss_scalar=self.combined_loss,
@@ -97,9 +100,10 @@ class PolicyOptTf(PolicyOpt):
                                base_lr=self._hyperparams['lr'],
                                lr_policy=self._hyperparams['lr_policy'],
                                momentum=self._hyperparams['momentum'],
-                               weight_decay=self._hyperparams['weight_decay'])
-
-
+                               weight_decay=self._hyperparams['weight_decay'],
+                               fc_vars=self.fc_vars,
+                               last_conv_vars=self.last_conv_vars
+        )
     # TODO - This assumes that the obs is a vector being passed into the
     #        network in the same place.
     #        (won't work with images or multimodal networks)
@@ -285,13 +289,28 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                 feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-            train_loss = self.solver(feed_dict, self.sess)
+            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
             average_loss += train_loss
             if i % 500 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_loss / 500)
                 print 'supervised tf loss is '
+                print average_loss
+                average_loss = 0
+
+        average_loss = 0
+        if self._hyperparams['fc_only_iterations'] > 0:
+            last_conv_values = self.solver.get_last_conv_values(feed_dict)
+        for i in range(self._hyperparams['fc_only_iterations']):
+            feed_dict = dict(zip(last_conv_vars, last_conv_values))
+            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_fc_solver=True)
+            
+            average_loss += train_loss
+            if i % 500 == 0 and i != 0:
+                LOGGER.debug('tensorflow iteration %d, average loss %f',
+                             i, average_loss / 500)
+                print 'supervised fc_only tf loss is '
                 print average_loss
                 average_loss = 0
 
@@ -337,6 +356,21 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict = {self.obs_tensors[robot_number]: np.expand_dims(obs[i, t], axis=0)}
                 with tf.device(self.device_string):
                     output[i, t, :] = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
+        
+        # Arbitrary batch size of 10
+        # input_vector = np.reshape(obs, (10, N*T/10, dU))
+        
+        # feed_dict = {self.obs_tensors[robot_number]: input_vector}
+        # import pdb
+        # pdb.set_trace()
+        
+
+        for i in range(N):
+            for t in range(T):
+                # Feed in data.
+                with tf.device(self.device_string):
+                    output[i, t, :] = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
+
 
         pol_sigma = np.tile(np.diag(self.var[robot_number]), [N, T, 1, 1])
         pol_prec = np.tile(np.diag(1.0 / self.var[robot_number]), [N, T, 1, 1])

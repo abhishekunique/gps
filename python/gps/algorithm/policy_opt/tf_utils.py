@@ -17,6 +17,8 @@ class TfMap:
         self.precision_tensor = precision_tensor
         self.output_op = output_op
         self.loss_op = loss_op
+        # self.fc_vars = fc_vars
+        # self.last_conv_vars = last_conv_vars
 
     @classmethod
     def init_from_lists(cls, inputs, outputs, loss):
@@ -61,7 +63,7 @@ class TfMap:
 class TfSolver:
     """ A container for holding solver hyperparams in tensorflow. Used to execute backwards pass. """
     def __init__(self, loss_scalar, solver_name='adam', base_lr=None, lr_policy=None,
-                 momentum=None, weight_decay=None, robot_number=0, variables_train=None):
+                 momentum=None, weight_decay=None, robot_number=0, variables_train=None, fc_vars=None, last_conv_vars=None):
         self.base_lr = base_lr
         self.lr_policy = lr_policy
         self.momentum = momentum
@@ -82,29 +84,41 @@ class TfSolver:
                     loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
             self.loss_scalar = loss_with_reg
 
-        self.solver_op = self.get_solver_op()
+        self.solver_op = self.get_solver_op(variables_train)
+        if fc_vars is not None:
+            self.fc_vars = fc_vars
+            self.last_conv_vars = last_conv_vars
+            self.fc_solver_op = self.get_solver_op(fc_vars)
 
-    def get_solver_op(self):
+    def get_solver_op(self, var_list=None):
         solver_string = self.solver_name.lower()
+        print "VAR NAME", var_list
         if solver_string == 'adam':
             return tf.train.AdamOptimizer(learning_rate=self.base_lr,
-                                          beta1=self.momentum).minimize(self.loss_scalar)
+                                          beta1=self.momentum).minimize(self.loss_scalar, var_list=var_list)
         elif solver_string == 'rmsprop':
             return tf.train.RMSPropOptimizer(learning_rate=self.base_lr,
-                                             decay=self.momentum).minimize(self.loss_scalar)
+                                             decay=self.momentum).minimize(self.loss_scalar, var_list=var_list)
         elif solver_string == 'momentum':
             return tf.train.MomentumOptimizer(learning_rate=self.base_lr,
-                                              momentum=self.momentum).minimize(self.loss_scalar)
+                                              momentum=self.momentum).minimize(self.loss_scalar, var_list=var_list)
         elif solver_string == 'adagrad':
             return tf.train.AdagradOptimizer(learning_rate=self.base_lr,
-                                             initial_accumulator_value=self.momentum).minimize(self.loss_scalar)
+                                             initial_accumulator_value=self.momentum).minimize(self.loss_scalar, var_list=var_list)
         elif solver_string == 'sgd':
-            return tf.train.GradientDescentOptimizer(learning_rate=self.base_lr).minimize(self.loss_scalar)
+            return tf.train.GradientDescentOptimizer(learning_rate=self.base_lr).minimize(self.loss_scalar, var_list=var_list)
         else:
             raise NotImplementedError("Please select a valid optimizer.")
 
-    def __call__(self, feed_dict, sess, device_string="/cpu:0"):
+    def get_last_conv_values(self, feed_dict):
+        values = sess.run(self.last_conv_vars, feed_dict)
+        return values
+
+    def __call__(self, feed_dict, sess, device_string="/cpu:0", use_fc_solver=False):
         with tf.device(device_string):
-            loss = sess.run([self.loss_scalar, self.solver_op], feed_dict)
+            if use_fc_solver:
+                loss = sess.run([self.loss_scalar, self.fc_solver_op], feed_dict)
+            else:
+                loss = sess.run([self.loss_scalar, self.solver_op], feed_dict)
             return loss[0]
 
