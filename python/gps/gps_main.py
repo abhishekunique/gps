@@ -19,7 +19,8 @@ sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
 from gps.gui.gps_training_gui import GPSTrainingGUI
 from gps.utility.data_logger import DataLogger
 from gps.sample.sample_list import SampleList
-
+from gps.algorithm.algorithm_badmm import AlgorithmBADMM
+from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
@@ -56,44 +57,36 @@ class GPSMain(object):
         for robot_number, alg in enumerate(config['algorithm']):
             self.algorithm.append(alg['type'](alg, self.policy_opt, robot_number))
 
-    # def run(self, itr_load=None):
-    #     """
-    #     Run training by iteratively sampling and taking an iteration.
-    #     Args:
-    #         itr_load: If specified, loads algorithm state from that
-    #             iteration, and resumes training at the next iteration.
-    #     Returns: None
-    #     """
-    #     #CHANGED
-    #     for robot_number in range(self.num_robots):
-    #         #CHANGED
-    #         itr_start = self._initialize(itr_load, robot_number=robot_number)
+    def run_trajopt(self, itr_load=None):
+        """
+        Run training by iteratively sampling and taking an iteration.
+        Args:
+            itr_load: If specified, loads algorithm state from that
+                iteration, and resumes training at the next iteration.
+        Returns: None
+        """
+        for robot_number in range(self.num_robots):
+            itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-    #     for itr in range(itr_start, self._hyperparams['iterations']):
-    #         #CHANGED            
-    #         traj_sample_lists = [None]*self.num_robots
-    #         thread_samples = []
-    #         for robot_number in range(self.num_robots):
-    #             thread_samples.append(threading.Thread(target=self.collect_samples, args=(itr, robot_number, traj_sample_lists)))
-    #             thread_samples[robot_number].start()
-    #         for robot_number in range(self.num_robots):
-    #             thread_samples[robot_number].join()
+        for itr in range(itr_start, self._hyperparams['iterations']):
+            traj_sample_lists = [None]*self.num_robots
+            thread_samples = []
+            for robot_number in range(self.num_robots):
+                thread_samples.append(threading.Thread(target=self.collect_samples, args=(itr, robot_number, traj_sample_lists)))
+                thread_samples[robot_number].start()
+            for robot_number in range(self.num_robots):
+                thread_samples[robot_number].join()
 
-    #         for robot_number in range(self.num_robots):            
-    #             self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+            for robot_number in range(self.num_robots):            
+                self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
-    #         thread_samples = []
-    #         for robot_number in range(self.num_robots):
-    #             thread_samples.append(threading.Thread(target=self.take_policy_samples_and_log, args=(itr, robot_number, traj_sample_lists[robot_number])))
-    #             thread_samples[robot_number].start()
-    #         for robot_number in range(self.num_robots):
-    #             thread_samples[robot_number].join()
-
-
-
-    #         import IPython
-    #         IPython.embed()
-    #     self._end()
+            thread_samples = []
+            for robot_number in range(self.num_robots):
+                thread_samples.append(threading.Thread(target=self.take_policy_samples_and_log, args=(itr, robot_number, traj_sample_lists[robot_number])))
+                thread_samples[robot_number].start()
+            for robot_number in range(self.num_robots):
+                thread_samples[robot_number].join()
+        self._end()
 
     def run(self, itr_load=None):
         """
@@ -103,13 +96,10 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
-        #CHANGED
         for robot_number in range(self.num_robots):
-            #CHANGED
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         for itr in range(itr_start, self._hyperparams['iterations']):
-            #CHANGED       
             start_time_overall = time.time()
 
 
@@ -444,9 +434,14 @@ def main():
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:
-            run_gps = threading.Thread(
-                target=lambda: gps.run(itr_load=resume_training_itr)
-            )
+            if isinstance(hyperparams.config['algorithm'][0], AlgorithmTrajOpt):
+                run_gps = threading.Thread(
+                    target=lambda: gps.run_trajopt(itr_load=resume_training_itr)
+                )
+            else:
+                run_gps = threading.Thread(
+                    target=lambda: gps.run(itr_load=resume_training_itr)
+                )
             run_gps.daemon = True
             run_gps.start()
 

@@ -17,8 +17,6 @@ class TfMap:
         self.precision_tensor = precision_tensor
         self.output_op = output_op
         self.loss_op = loss_op
-        # self.fc_vars = fc_vars
-        # self.last_conv_vars = last_conv_vars
 
     @classmethod
     def init_from_lists(cls, inputs, outputs, loss):
@@ -63,7 +61,7 @@ class TfMap:
 class TfSolver:
     """ A container for holding solver hyperparams in tensorflow. Used to execute backwards pass. """
     def __init__(self, loss_scalar, solver_name='adam', base_lr=None, lr_policy=None,
-                 momentum=None, weight_decay=None, robot_number=0, variables_train=None, fc_vars=None, last_conv_vars=None,
+                 momentum=None, weight_decay=None, robot_number=0, fc_vars=None, last_conv_vars=None,
                  shared_vars=None, sparsity_param=None):
         self.base_lr = base_lr
         self.lr_policy = lr_policy
@@ -74,29 +72,19 @@ class TfSolver:
             raise NotImplementedError('learning rate policies other than fixed are not implemented')
 
         self.weight_decay = weight_decay
-        # self.sparsity_param = sparsity_param
-        # if weight_decay is not None:
-        #     #need to replace this
-        #     # import IPython
-        #     # IPython.embed()
-        #     trainable_vars = tf.trainable_variables()
-        #     loss_with_reg = self.loss_scalar
-        #     with tf.name_scope("loss_vars"):
-        #         for var in trainable_vars:
-        #             loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
-        #     self.loss_scalar = loss_with_reg
+        if weight_decay is not None:
+            trainable_vars = tf.trainable_variables()
+            loss_with_reg = self.loss_scalar
+            with tf.name_scope("loss_vars"):
+                for var in trainable_vars:
+                    loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
+            self.loss_scalar = loss_with_reg
 
-        self.solver_op = self.get_solver_op(variables_train)
+        self.solver_op = self.get_solver_op()
         if fc_vars is not None:
             self.fc_vars = fc_vars
             self.last_conv_vars = last_conv_vars
             self.fc_solver_op = self.get_solver_op(fc_vars)
-        # if sparsity_param is not None:
-        #     loss_with_sparsity = self.loss_scalar
-        #     with tf.name_scope("sparse_vars"):
-        #         for var in shared_vars:
-        #             loss_with_sparsity += self.sparsity_param*tf.nn.l1_loss(var)
-        #     self.loss_scalar = loss_with_reg
 
     def get_solver_op(self, var_list=None):
         solver_string = self.solver_name.lower()
