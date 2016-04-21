@@ -18,7 +18,7 @@ from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
 from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
-from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared
+from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_inidividual
 
 
 IMAGE_WIDTH = 80

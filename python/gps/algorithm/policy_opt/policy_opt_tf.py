@@ -5,6 +5,7 @@ import logging
 import numpy as np
 
 import tensorflow as tf
+import time
 
 from gps.algorithm.policy.tf_policy import TfPolicy
 from gps.algorithm.policy_opt.policy_opt import PolicyOpt
@@ -47,6 +48,7 @@ class PolicyOptTf(PolicyOpt):
         self.init_solver()
         self.sess = tf.Session()
         self.policy = []
+
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
             self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string))
         # List of indices for state (vector) data and image (tensor) data in observation.
@@ -80,13 +82,16 @@ class PolicyOptTf(PolicyOpt):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
         # TODO, pass across the network configuration
+        tf_maps, self.variable_separations, fc_vars, last_conv_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, network_config=self._hyperparams['network_params'])
         # tf_maps, self.variable_separations, self.shared_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, network_config=self._hyperparams['network_params'])
-        tf_maps, self.variable_separations = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, network_config=self._hyperparams['network_params'])
+        # tf_maps, self.variable_separations = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
         self.precision_tensors = []
         self.act_ops = []
         self.loss_scalars = []
+        self.fc_vars = fc_vars
+        self.last_conv_vars = last_conv_vars
         for tf_map in tf_maps:
             self.obs_tensors.append(tf_map.get_input_tensor())
             self.action_tensors.append(tf_map.get_target_output_tensor())
@@ -95,6 +100,7 @@ class PolicyOptTf(PolicyOpt):
             self.loss_scalars.append(tf_map.get_loss_op())
         self.combined_loss = tf.add_n(self.loss_scalars)
 
+
     def init_solver(self):
         """ Helper method to initialize the solver. """        
         self.solver = TfSolver(loss_scalar=self.combined_loss,
@@ -102,8 +108,10 @@ class PolicyOptTf(PolicyOpt):
                                base_lr=self._hyperparams['lr'],
                                lr_policy=self._hyperparams['lr_policy'],
                                momentum=self._hyperparams['momentum'],
-                               weight_decay=self._hyperparams['weight_decay'])
-
+                               weight_decay=self._hyperparams['weight_decay'],
+                               fc_vars=self.fc_vars,
+                               last_conv_vars=self.last_conv_vars
+        )
         # self.solver = TfSolver(loss_scalar=self.combined_loss,
         #                        solver_name=self._hyperparams['solver_type'],
         #                        base_lr=self._hyperparams['lr'],
@@ -123,7 +131,7 @@ class PolicyOptTf(PolicyOpt):
         Returns:
             A tensorflow object with updated weights.
         """
-
+        time0 = time.clock()
         N_reshaped = []
         T_reshaped = []
         obs_reshaped = []
@@ -192,6 +200,42 @@ class PolicyOptTf(PolicyOpt):
             idx_reshaped.append(idx)
             batches_per_epoch_reshaped.append(batches_per_epoch)
             tgt_prc_orig_reshaped.append(tgt_prc_orig)
+
+        average_loss = 0
+        time1 = time.clock()
+        feed_dict = {}
+        for robot_number in range(self.num_robots):
+            feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number]
+            feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number]
+            feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number]
+
+        conv_values = self.solver.get_last_conv_values(self.sess, feed_dict)
+        time2 = time.clock()
+        conv_time = time2-time1
+        for i in range(self._hyperparams['fc_only_iterations']):
+
+            feed_dict = {}
+            for robot_number in range(self.num_robots):
+                start_idx = int(i * self.batch_size %
+                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                #TODO: Make sure this stuff is reading in the correct stuff
+                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+                feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+                # for idx, var in enumerate(self.solver.last_conv_vars):
+                #     feed_dict[var] = conv_values[idx][idx_i]
+            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_fc_solver=True)
+            
+            average_loss += train_loss
+            if i % 500 == 0 and i != 0:
+                LOGGER.debug('tensorflow iteration %d, average loss %f',
+                             i, average_loss / 500)
+                print 'supervised fc_only tf loss is '
+                print average_loss
+                average_loss = 0
+        time3 = time.clock()
+        fc_time = time3 - time2
         average_loss = 0
         # actual training.
         for i in range(self._hyperparams['iterations']):
@@ -205,7 +249,7 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                 feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-            train_loss = self.solver(feed_dict, self.sess)
+            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
             average_loss += train_loss
             if i % 500 == 0 and i != 0:
@@ -214,6 +258,7 @@ class PolicyOptTf(PolicyOpt):
                 print 'supervised tf loss is '
                 print average_loss
                 average_loss = 0
+
 
         for robot_number in range(self.num_robots):
             # Keep track of tensorflow iterations for loading solver states.
@@ -227,7 +272,11 @@ class PolicyOptTf(PolicyOpt):
 
             # TODO - Use dense covariance?
             self.var[robot_number] = 1 / np.diag(A)
-
+        time4 = time.clock()
+        # print "Total update time:", time4-time0
+        # print "Time getting conv layers:", conv_time
+        # print "Time optimizing fc", fc_time, "for", self._hyperparams['fc_only_iterations'], "iterations:", fc_time/self._hyperparams['fc_only_iterations']
+        # print "Time optimizing whole", time4-time3, "for", self._hyperparams['iterations'], "iterations:", (time4-time3)/self._hyperparams['iterations']
         return self.policy
 
 
@@ -257,6 +306,21 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict = {self.obs_tensors[robot_number]: np.expand_dims(obs[i, t], axis=0)}
                 with tf.device(self.device_string):
                     output[i, t, :] = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
+        
+        # Arbitrary batch size of 10
+        # input_vector = np.reshape(obs, (10, N*T/10, dU))
+        
+        # feed_dict = {self.obs_tensors[robot_number]: input_vector}
+        # import pdb
+        # pdb.set_trace()
+        
+
+        for i in range(N):
+            for t in range(T):
+                # Feed in data.
+                with tf.device(self.device_string):
+                    output[i, t, :] = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
+
 
         pol_sigma = np.tile(np.diag(self.var[robot_number]), [N, T, 1, 1])
         pol_prec = np.tile(np.diag(1.0 / self.var[robot_number]), [N, T, 1, 1])

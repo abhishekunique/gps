@@ -18,7 +18,8 @@ from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
 from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
-from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared
+from gps.algorithm.policy_opt.tf_model_sergey_hack import multi_input_multi_output_images_shared_fcvars
+
 
 
 IMAGE_WIDTH = 80
@@ -66,7 +67,7 @@ common = {
     #need to fix this to be appropriate
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': multi_input_multi_output_images_shared,
+        'network_model': multi_input_multi_output_images_shared_fcvars,
         'network_params': [{
             'dim_hidden': [10],
             'num_filters': [5, 10],
@@ -91,7 +92,8 @@ common = {
             'sensor_dims': SENSOR_DIMS[1],
             'batch_size': 25,
         }],
-        'iterations': 1000,
+        'iterations': 501,
+        'fc_only_iterations': 501,
         'weights_file_prefix': EXP_DIR + 'policy',
     }
 }
@@ -119,7 +121,7 @@ agent = [{
     'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, RGB_IMAGE],
     'meta_include': [RGB_IMAGE_SIZE],
     'camera_pos': np.array([3., 4., 3., 0., 0., 0.]),
-}, 
+},
 {
     'type': AgentMuJoCo,
     'filename': './mjc_models/arm_4link_reach.xml',

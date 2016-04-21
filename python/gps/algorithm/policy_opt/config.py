@@ -48,6 +48,7 @@ checkpoint_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                '..', 'policy_opt/tf_checkpoint/policy_checkpoint.ckpt'))
 POLICY_OPT_TF = {
     # Other hyperparameters.
+    'fc_only_iterations': 0,
     'network_model': multi_input_multi_output_images_shared, #multi_modal_network,  # should return TfMap object from tf_utils. See example.
     'checkpoint_prefix': checkpoint_path
 }
