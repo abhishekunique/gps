@@ -23,6 +23,9 @@
                         <body name="distal_3" pos="0.4 0 0">
                             <joint name="distal_j_3" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.3213 2.3" damping="1.0"/>
                             <geom type="capsule" fromto="0 0 0 0.4 0 0" size="0.04" contype="1" conaffinity="1"/>
+                            <body name="distal_4" pos="0.4 0 0">
+                                <site name="tip arm" pos="0 0 0" size="0.01" />
+                            </body>
                         </body>
                     </body>
                 </body>
@@ -33,7 +36,7 @@
             <joint name="obj_slidez" type="slide" pos="0.1 0.05 0.05" axis="0 0 1" range="-10.3213 10.3" damping="0.5"/>
             <joint name="obj_slidex" type="slide" pos="0.1 0.05 0.05" axis="1 0 0" range="-10.3213 10.3" damping="0.5"/>
             <joint name="obj_hinge" type="hinge" pos="0.1 0.05 0.05" axis="0 1 0" range="-10.3213 10.3" damping="0.1"/>
-            <body name="distal_4" pos="0 0 0">
+            <body name="distal_5" pos="0 0 0">
                 <site name="obj_pos" pos="0.1 0.05 0.05" size="0.01" />
             </body>
         </body>

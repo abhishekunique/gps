@@ -19,7 +19,8 @@ sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
 from gps.gui.gps_training_gui import GPSTrainingGUI
 from gps.utility.data_logger import DataLogger
 from gps.sample.sample_list import SampleList
-
+from gps.algorithm.algorithm_badmm import AlgorithmBADMM
+from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
@@ -56,44 +57,36 @@ class GPSMain(object):
         for robot_number, alg in enumerate(config['algorithm']):
             self.algorithm.append(alg['type'](alg, self.policy_opt, robot_number))
 
-    # def run(self, itr_load=None):
-    #     """
-    #     Run training by iteratively sampling and taking an iteration.
-    #     Args:
-    #         itr_load: If specified, loads algorithm state from that
-    #             iteration, and resumes training at the next iteration.
-    #     Returns: None
-    #     """
-    #     #CHANGED
-    #     for robot_number in range(self.num_robots):
-    #         #CHANGED
-    #         itr_start = self._initialize(itr_load, robot_number=robot_number)
+    def run_trajopt(self, itr_load=None):
+        """
+        Run training by iteratively sampling and taking an iteration.
+        Args:
+            itr_load: If specified, loads algorithm state from that
+                iteration, and resumes training at the next iteration.
+        Returns: None
+        """
+        for robot_number in range(self.num_robots):
+            itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-    #     for itr in range(itr_start, self._hyperparams['iterations']):
-    #         #CHANGED            
-    #         traj_sample_lists = [None]*self.num_robots
-    #         thread_samples = []
-    #         for robot_number in range(self.num_robots):
-    #             thread_samples.append(threading.Thread(target=self.collect_samples, args=(itr, robot_number, traj_sample_lists)))
-    #             thread_samples[robot_number].start()
-    #         for robot_number in range(self.num_robots):
-    #             thread_samples[robot_number].join()
+        for itr in range(itr_start, self._hyperparams['iterations']):
+            traj_sample_lists = [None]*self.num_robots
+            thread_samples = []
+            for robot_number in range(self.num_robots):
+                thread_samples.append(threading.Thread(target=self.collect_samples, args=(itr, robot_number, traj_sample_lists)))
+                thread_samples[robot_number].start()
+            for robot_number in range(self.num_robots):
+                thread_samples[robot_number].join()
 
-    #         for robot_number in range(self.num_robots):            
-    #             self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+            for robot_number in range(self.num_robots):            
+                self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
-    #         thread_samples = []
-    #         for robot_number in range(self.num_robots):
-    #             thread_samples.append(threading.Thread(target=self.take_policy_samples_and_log, args=(itr, robot_number, traj_sample_lists[robot_number])))
-    #             thread_samples[robot_number].start()
-    #         for robot_number in range(self.num_robots):
-    #             thread_samples[robot_number].join()
-
-
-
-    #         import IPython
-    #         IPython.embed()
-    #     self._end()
+            thread_samples = []
+            for robot_number in range(self.num_robots):
+                thread_samples.append(threading.Thread(target=self.take_policy_samples_and_log, args=(itr, robot_number, traj_sample_lists[robot_number])))
+                thread_samples[robot_number].start()
+            for robot_number in range(self.num_robots):
+                thread_samples[robot_number].join()
+        self._end()
 
     def run(self, itr_load=None):
         """
@@ -103,36 +96,62 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
-        #CHANGED
         for robot_number in range(self.num_robots):
-            #CHANGED
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         for itr in range(itr_start, self._hyperparams['iterations']):
-            #CHANGED            
-            traj_sample_lists = [None]*self.num_robots
-            thread_samples = []
-            for robot_number in range(self.num_robots):
-                self.collect_samples(itr, robot_number, traj_sample_lists)
-            #     thread_samples.append(threading.Thread(target=self.collect_samples, args=(itr, robot_number, traj_sample_lists)))
-            #     thread_samples[robot_number].start()
-            # for robot_number in range(self.num_robots):
-            #     thread_samples[robot_number].join()
+            start_time_overall = time.time()
 
+
+
+            traj_sample_lists = [None]*self.num_robots
+
+
+
+            thread_samples = []
+            print("doing sample collection")
+            start_time_sampling = time.time()
+            for robot_number in range(self.num_robots):
+                thread_samples.append(threading.Thread(target=self.collect_samples, args=(itr, robot_number, traj_sample_lists)))
+                thread_samples[robot_number].start()
+            for robot_number in range(self.num_robots):
+                thread_samples[robot_number].join()
+            end_time_sampling = time.time()
+            time_elapsed_sampling = end_time_sampling - start_time_sampling
+            print("sampling" + str(time_elapsed_sampling))
+            
+
+
+            print("doing LQR")
+            start_time_lqr = time.time()
             for robot_number in range(self.num_robots):            
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+            end_time_lqr = time.time()
+            time_elapsed_lqr = end_time_lqr - start_time_lqr
+            print("LQR" + str(time_elapsed_lqr))
+            
 
+
+            print("doing policy opt")
+            start_time_po = time.time()
             self._take_iteration_shared(itr, traj_sample_lists)
+            end_time_po = time.time()
+            time_elapsed_po = end_time_po - start_time_po
+            print("PO" + str(time_elapsed_po))
 
-            thread_samples = []
+
+
+            start_time_log = time.time()
             for robot_number in range(self.num_robots):
                 self.take_policy_samples_and_log(itr, robot_number, traj_sample_lists[robot_number])
-            #     thread_samples.append(threading.Thread(target=self.take_policy_samples_and_log, args=(itr, robot_number, traj_sample_lists[robot_number])))
-            #     thread_samples[robot_number].start()
-            # for robot_number in range(self.num_robots):
-            #     thread_samples[robot_number].join()
+            end_time_log = time.time()
+            time_elapsed_log = end_time_log - start_time_log
+            print("log " + str(time_elapsed_log))
 
 
+            end_time_overall = time.time()  
+            time_elapsed_overall = end_time_overall - start_time_overall
+            print("Overall" + str(time_elapsed_overall))
             if itr>0 and itr%5 == 0:
                 import IPython
                 IPython.embed()
@@ -335,21 +354,21 @@ class GPSMain(object):
             self.gui[robot_number].save_figure(
                 self._data_files_dir + ('figure_itr_%02d_rn%02d.png' % (itr, robot_number))
             )
-        if 'no_sample_logging' in self._hyperparams['common']:
-            return
-        self.data_logger.pickle(
-            self._data_files_dir + ('algorithm_itr_%02d_rn%02d.pkl' % (itr, robot_number)),
-            copy.copy(self.algorithm[robot_number])
-        )
-        self.data_logger.pickle(
-            self._data_files_dir + ('traj_sample_itr_%02d_rn%02d.pkl' % (itr, robot_number)),
-            copy.copy(traj_sample_lists)
-        )
-        if pol_sample_lists:
-            self.data_logger.pickle(
-                self._data_files_dir + ('pol_sample_itr_%02d_rn%02d.pkl' % (itr, robot_number)),
-                copy.copy(pol_sample_lists)
-            )
+        # if 'no_sample_logging' in self._hyperparams['common']:
+        #     return
+        # self.data_logger.pickle(
+        #     self._data_files_dir + ('algorithm_itr_%02d_rn%02d.pkl' % (itr, robot_number)),
+        #     copy.copy(self.algorithm[robot_number])
+        # )
+        # self.data_logger.pickle(
+        #     self._data_files_dir + ('traj_sample_itr_%02d_rn%02d.pkl' % (itr, robot_number)),
+        #     copy.copy(traj_sample_lists)
+        # )
+        # if pol_sample_lists:
+        #     self.data_logger.pickle(
+        #         self._data_files_dir + ('pol_sample_itr_%02d_rn%02d.pkl' % (itr, robot_number)),
+        #         copy.copy(pol_sample_lists)
+        #     )
 
     def _end(self):
         """ Finish running and exit. """
@@ -415,9 +434,14 @@ def main():
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:
-            run_gps = threading.Thread(
-                target=lambda: gps.run(itr_load=resume_training_itr)
-            )
+            if isinstance(hyperparams.config['algorithm'][0], AlgorithmTrajOpt):
+                run_gps = threading.Thread(
+                    target=lambda: gps.run_trajopt(itr_load=resume_training_itr)
+                )
+            else:
+                run_gps = threading.Thread(
+                    target=lambda: gps.run(itr_load=resume_training_itr)
+                )
             run_gps.daemon = True
             run_gps.start()
 
