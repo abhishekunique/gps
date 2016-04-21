@@ -5,6 +5,7 @@ import logging
 import numpy as np
 
 import tensorflow as tf
+import time
 
 from gps.algorithm.policy.tf_policy import TfPolicy
 from gps.algorithm.policy_opt.policy_opt import PolicyOpt
@@ -47,6 +48,7 @@ class PolicyOptTf(PolicyOpt):
         self.init_solver()
         self.sess = tf.Session()
         self.policy = []
+
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
             self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string))
         # List of indices for state (vector) data and image (tensor) data in observation.
@@ -217,7 +219,7 @@ class PolicyOptTf(PolicyOpt):
         Returns:
             A tensorflow object with updated weights.
         """
-
+        time0 = time.clock()
         N_reshaped = []
         T_reshaped = []
         obs_reshaped = []
@@ -286,6 +288,42 @@ class PolicyOptTf(PolicyOpt):
             idx_reshaped.append(idx)
             batches_per_epoch_reshaped.append(batches_per_epoch)
             tgt_prc_orig_reshaped.append(tgt_prc_orig)
+
+        average_loss = 0
+        time1 = time.clock()
+        feed_dict = {}
+        for robot_number in range(self.num_robots):
+            feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number]
+            feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number]
+            feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number]
+
+        conv_values = self.solver.get_last_conv_values(self.sess, feed_dict)
+        time2 = time.clock()
+        conv_time = time2-time1
+        for i in range(self._hyperparams['fc_only_iterations']):
+
+            feed_dict = {}
+            for robot_number in range(self.num_robots):
+                start_idx = int(i * self.batch_size %
+                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                #TODO: Make sure this stuff is reading in the correct stuff
+                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+                feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+                # for idx, var in enumerate(self.solver.last_conv_vars):
+                #     feed_dict[var] = conv_values[idx][idx_i]
+            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_fc_solver=True)
+            
+            average_loss += train_loss
+            if i % 500 == 0 and i != 0:
+                LOGGER.debug('tensorflow iteration %d, average loss %f',
+                             i, average_loss / 500)
+                print 'supervised fc_only tf loss is '
+                print average_loss
+                average_loss = 0
+        time3 = time.clock()
+        fc_time = time3 - time2
         average_loss = 0
         # actual training.
         for i in range(self._hyperparams['iterations']):
@@ -309,20 +347,6 @@ class PolicyOptTf(PolicyOpt):
                 print average_loss
                 average_loss = 0
 
-        average_loss = 0
-        if self._hyperparams['fc_only_iterations'] > 0:
-            last_conv_values = self.solver.get_last_conv_values(feed_dict)
-        for i in range(self._hyperparams['fc_only_iterations']):
-            feed_dict = dict(zip(last_conv_vars, last_conv_values))
-            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_fc_solver=True)
-            
-            average_loss += train_loss
-            if i % 500 == 0 and i != 0:
-                LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 500)
-                print 'supervised fc_only tf loss is '
-                print average_loss
-                average_loss = 0
 
         for robot_number in range(self.num_robots):
             # Keep track of tensorflow iterations for loading solver states.
@@ -336,7 +360,11 @@ class PolicyOptTf(PolicyOpt):
 
             # TODO - Use dense covariance?
             self.var[robot_number] = 1 / np.diag(A)
-
+        time4 = time.clock()
+        # print "Total update time:", time4-time0
+        # print "Time getting conv layers:", conv_time
+        # print "Time optimizing fc", fc_time, "for", self._hyperparams['fc_only_iterations'], "iterations:", fc_time/self._hyperparams['fc_only_iterations']
+        # print "Time optimizing whole", time4-time3, "for", self._hyperparams['iterations'], "iterations:", (time4-time3)/self._hyperparams['iterations']
         return self.policy
 
 

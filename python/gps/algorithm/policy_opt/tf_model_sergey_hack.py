@@ -99,8 +99,8 @@ def multi_input_multi_output_images_shared_fcvars(dim_input=[27, 27], dim_output
 
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
             variable_separations.append([weights['wc1'], biases['bc1'], weights['wc2'], biases['bc2'], weights['wd1'], biases['bd1'], weights['out'], biases['out']])
-
+            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
             last_conv_vars+= [weights['wc2'], biases['bc2']]
             fc_vars += [weights['wd1'], biases['bd1'], weights['out'], biases['out']]
-            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
-            return nnets, variable_separations, fc_vars, last_conv_vars
+
+    return nnets, variable_separations, fc_vars, last_conv_vars

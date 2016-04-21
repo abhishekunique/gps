@@ -75,16 +75,16 @@ class TfSolver:
 
         self.weight_decay = weight_decay
         # self.sparsity_param = sparsity_param
-        if weight_decay is not None:
-            #need to replace this
-            # import IPython
-            # IPython.embed()
-            trainable_vars = tf.trainable_variables()
-            loss_with_reg = self.loss_scalar
-            with tf.name_scope("loss_vars"):
-                for var in trainable_vars:
-                    loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
-            self.loss_scalar = loss_with_reg
+        # if weight_decay is not None:
+        #     #need to replace this
+        #     # import IPython
+        #     # IPython.embed()
+        #     trainable_vars = tf.trainable_variables()
+        #     loss_with_reg = self.loss_scalar
+        #     with tf.name_scope("loss_vars"):
+        #         for var in trainable_vars:
+        #             loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
+        #     self.loss_scalar = loss_with_reg
 
         self.solver_op = self.get_solver_op(variables_train)
         if fc_vars is not None:
@@ -118,7 +118,7 @@ class TfSolver:
         else:
             raise NotImplementedError("Please select a valid optimizer.")
 
-    def get_last_conv_values(self, feed_dict):
+    def get_last_conv_values(self, sess, feed_dict):
         values = sess.run(self.last_conv_vars, feed_dict)
         return values
 

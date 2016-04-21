@@ -92,7 +92,8 @@ common = {
             'sensor_dims': SENSOR_DIMS[1],
             'batch_size': 25,
         }],
-        'iterations': 1000,
+        'iterations': 501,
+        'fc_only_iterations': 501,
         'weights_file_prefix': EXP_DIR + 'policy',
     }
 }
@@ -120,7 +121,7 @@ agent = [{
     'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, RGB_IMAGE],
     'meta_include': [RGB_IMAGE_SIZE],
     'camera_pos': np.array([3., 4., 3., 0., 0., 0.]),
-}, 
+},
 {
     'type': AgentMuJoCo,
     'filename': './mjc_models/arm_4link_reach.xml',
