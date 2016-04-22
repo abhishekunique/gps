@@ -3,7 +3,7 @@
 import tensorflow as tf
 from gps.algorithm.policy_opt.tf_utils import TfMap
 import numpy as np
-
+import time
 
 def init_weights(shape, name=None):
     return tf.Variable(tf.random_normal(shape, stddev=0.01), name=name)
