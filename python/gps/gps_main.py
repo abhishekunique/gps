@@ -22,7 +22,7 @@ from gps.sample.sample_list import SampleList
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-
+from gps.proto.gps_pb2 import RGB_IMAGE
 
 class GPSMain(object):
     """ Main class to run algorithms and experiments. """
@@ -48,7 +48,7 @@ class GPSMain(object):
         for alg, ag in zip(config['algorithm'], self.agent):
             alg['agent'] = ag
         dU = [ag.dU for ag in self.agent]
-        
+
         dO = [ag.dO for ag in self.agent]
         self.policy_opt =  self._hyperparams['common']['policy_opt']['type'](
            self._hyperparams['common']['policy_opt'], dO, dU
@@ -72,10 +72,11 @@ class GPSMain(object):
             traj_sample_lists = [None]*self.num_robots
             thread_samples = []
             for robot_number in range(self.num_robots):
-                thread_samples.append(threading.Thread(target=self.collect_samples, args=(itr, robot_number, traj_sample_lists)))
-                thread_samples[robot_number].start()
-            for robot_number in range(self.num_robots):
-                thread_samples[robot_number].join()
+                self.collect_samples(itr, robot_number, traj_sample_lists)
+            #     thread_samples.append(threading.Thread(target=self.collect_samples, args=(itr, robot_number, traj_sample_lists)))
+            #     thread_samples[robot_number].start()
+            # for robot_number in range(self.num_robots):
+            #     thread_samples[robot_number].join()
 
             for robot_number in range(self.num_robots):            
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
@@ -88,6 +89,38 @@ class GPSMain(object):
                 thread_samples[robot_number].join()
         self._end()
 
+    def pretrain(self):
+        iterations = 1
+        obs_full, pretrain_tgt_full = self.collect_observations(iterations)
+        itr_full = [0,0]
+        inner_itr = 0
+        self.policy_opt.update_pretrain(obs_full, pretrain_tgt_full, itr_full, inner_itr)
+
+    def collect_observations(self, iters):
+        obs_full = []
+        pos_labels_full = []
+        for robot_number in range(self.num_robots):
+            obs = []
+            pos_labels = []
+            for iter in range(iters):
+                samples = [None, None]
+                self.collect_samples(iter, robot_number, samples)
+                # Each sample_list has 5 samples
+                for sample_list_i in range(len(samples[robot_number])):
+                    sample_list = samples[robot_number][sample_list_i]
+                    obs.append(sample_list.get_obs())
+                    cond = self._train_idx[sample_list_i]
+                    pos_labels += [self.agent[robot_number]._hyperparams['pos_body_offset'][cond] for s in range(len(sample_list))]
+            obs_np = np.concatenate(obs)
+            pos_labels_np = np.array(pos_labels)
+            pos_labels_np = np.repeat(pos_labels_np, obs_np.shape[1], axis=0)
+            obs_np = np.reshape(obs_np, (obs_np.shape[0]*obs_np.shape[1], obs_np.shape[2]))
+            print "obs_np", obs_np.shape
+            print "pos_label_np", pos_labels_np.shape
+            obs_full.append(obs_np)
+            pos_labels_full.append(pos_labels_np)
+        return obs_full, pos_labels_full
+
     def run(self, itr_load=None):
         """
         Run training by iteratively sampling and taking an iteration.
@@ -99,45 +132,38 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
+        # self.pretrain()
+
         for itr in range(itr_start, self._hyperparams['iterations']):
             start_time_overall = time.time()
-
-
-
             traj_sample_lists = [None]*self.num_robots
-
-
-
             thread_samples = []
+
             print("doing sample collection")
             start_time_sampling = time.time()
             for robot_number in range(self.num_robots):
+                # self.collect_samples(itr, robot_number, traj_sample_lists)
                 thread_samples.append(threading.Thread(target=self.collect_samples, args=(itr, robot_number, traj_sample_lists)))
                 thread_samples[robot_number].start()
             for robot_number in range(self.num_robots):
                 thread_samples[robot_number].join()
             end_time_sampling = time.time()
             time_elapsed_sampling = end_time_sampling - start_time_sampling
-            print("sampling" + str(time_elapsed_sampling))
-            
-
-
+            print("sampling " + str(time_elapsed_sampling))
             print("doing LQR")
             start_time_lqr = time.time()
             for robot_number in range(self.num_robots):            
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
             end_time_lqr = time.time()
             time_elapsed_lqr = end_time_lqr - start_time_lqr
-            print("LQR" + str(time_elapsed_lqr))
-            
-
+            print("LQR " + str(time_elapsed_lqr))
 
             print("doing policy opt")
             start_time_po = time.time()
             self._take_iteration_shared(itr, traj_sample_lists)
             end_time_po = time.time()
             time_elapsed_po = end_time_po - start_time_po
-            print("PO" + str(time_elapsed_po))
+            print("PO " + str(time_elapsed_po))
 
 
 
@@ -159,6 +185,7 @@ class GPSMain(object):
 
     def collect_samples(self, itr, robot_number, traj_sample_lists):
         for cond in self._train_idx:
+            print "condition", cond
             for i in range(self._hyperparams['num_samples']):
                 #CHANGED
                 self._take_sample(itr, cond, i, robot_number=robot_number)
@@ -219,6 +246,7 @@ class GPSMain(object):
             i: Sample number.
         Returns: None
         """
+        print "itr", itr, "cond", cond, "i", i, "robot", robot_number
         pol = self.algorithm[robot_number].cur[cond].traj_distr
         if self.gui:
             self.gui[robot_number].set_image_overlays(cond)   # Must call for each new cond.
@@ -310,13 +338,13 @@ class GPSMain(object):
             if self.algorithm[0].iteration_count > 0 or inner_itr > 0:
                 self.policy_opt.update(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr)
             for robot_number in range(self.num_robots):
-                for m in range(self._conditions):
+                for m in self._train_idx:
                     self.algorithm[robot_number]._update_policy_fit(m)  # Update policy priors.
             for robot_number in range(self.num_robots):
                 if self.algorithm[robot_number].iteration_count > 0 or inner_itr > 0:
                     step = (inner_itr == self._hyperparams['inner_iterations'] - 1)
                     # Update dual variables.
-                    for m in range(self._conditions):
+                    for m in self._train_idx:
                         self.algorithm[robot_number]._policy_dual_step(m, step=step)
             for robot_number in range(self.num_robots):
                 self.algorithm[robot_number]._update_trajectories()

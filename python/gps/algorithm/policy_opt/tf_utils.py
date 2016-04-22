@@ -1,5 +1,5 @@
 import tensorflow as tf
-
+import numpy as np
 
 def check_list_and_convert(the_object):
     if isinstance(the_object, list):
@@ -11,21 +11,30 @@ class TfMap:
     """ a container for inputs, outputs, and loss in a tf graph. This object exists only
     to make well-defined the tf inputs, outputs, and losses used in the policy_opt_tf class."""
 
-    def __init__(self, input_tensor, target_output_tensor, precision_tensor, output_op, loss_op):
+    def __init__(self, input_tensor, target_output_tensor, precision_tensor, output_op,
+                 loss_op, pretraining_tgt=None, pretraining_loss_op=None
+             ):
         self.input_tensor = input_tensor
         self.target_output_tensor = target_output_tensor
         self.precision_tensor = precision_tensor
         self.output_op = output_op
         self.loss_op = loss_op
-
+        self.pretraining_loss_op = pretraining_loss_op
+        self.pretraining_tgt = pretraining_tgt
     @classmethod
     def init_from_lists(cls, inputs, outputs, loss):
         inputs = check_list_and_convert(inputs)
         outputs = check_list_and_convert(outputs)
         loss = check_list_and_convert(loss)
+        if len(loss) < 2:
+            # missing pretraining loss
+            loss.append(None)
+        if len(outputs) < 1:
+            # missing pretraining tgt
+            outputs.append(None)
         if len(inputs) < 3:  # pad for the constructor if needed.
             inputs += [None]*(3 - len(inputs))
-        return cls(inputs[0], inputs[1], inputs[2], outputs[0], loss[0])
+        return cls(inputs[0], inputs[1], inputs[2], outputs[0], loss[0], outputs[1], loss[1])
 
     def get_input_tensor(self):
         return self.input_tensor
@@ -62,7 +71,7 @@ class TfSolver:
     """ A container for holding solver hyperparams in tensorflow. Used to execute backwards pass. """
     def __init__(self, loss_scalar, solver_name='adam', base_lr=None, lr_policy=None,
                  momentum=None, weight_decay=None, robot_number=0, fc_vars=None, last_conv_vars=None,
-                 shared_vars=None, sparsity_param=None):
+                 shared_vars=None, sparsity_param=None, pretraining_loss=None):
         self.base_lr = base_lr
         self.lr_policy = lr_policy
         self.momentum = momentum
@@ -84,36 +93,59 @@ class TfSolver:
         if fc_vars is not None:
             self.fc_vars = fc_vars
             self.last_conv_vars = last_conv_vars
-            self.fc_solver_op = self.get_solver_op(fc_vars)
+            self.fc_solver_op = self.get_solver_op(var_list=fc_vars)
+        if pretraining_loss is not None:
+            self.pretraining_loss = pretraining_loss
+            self.pretraining_solver_op = self.get_solver_op(loss=self.pretraining_loss)
 
-    def get_solver_op(self, var_list=None):
+    def get_solver_op(self, var_list=None, loss=None):
         solver_string = self.solver_name.lower()
         print "VAR NAME", var_list
+        if loss is None:
+            loss = self.loss_scalar
         if solver_string == 'adam':
             return tf.train.AdamOptimizer(learning_rate=self.base_lr,
-                                          beta1=self.momentum).minimize(self.loss_scalar, var_list=var_list)
+                                          beta1=self.momentum).minimize(loss, var_list=var_list)
         elif solver_string == 'rmsprop':
             return tf.train.RMSPropOptimizer(learning_rate=self.base_lr,
-                                             decay=self.momentum).minimize(self.loss_scalar, var_list=var_list)
+                                             decay=self.momentum).minimize(loss, var_list=var_list)
         elif solver_string == 'momentum':
             return tf.train.MomentumOptimizer(learning_rate=self.base_lr,
-                                              momentum=self.momentum).minimize(self.loss_scalar, var_list=var_list)
+                                              momentum=self.momentum).minimize(loss, var_list=var_list)
         elif solver_string == 'adagrad':
             return tf.train.AdagradOptimizer(learning_rate=self.base_lr,
-                                             initial_accumulator_value=self.momentum).minimize(self.loss_scalar, var_list=var_list)
+                                             initial_accumulator_value=self.momentum).minimize(loss, var_list=var_list)
         elif solver_string == 'sgd':
-            return tf.train.GradientDescentOptimizer(learning_rate=self.base_lr).minimize(self.loss_scalar, var_list=var_list)
+            return tf.train.GradientDescentOptimizer(learning_rate=self.base_lr).minimize(loss, var_list=var_list)
         else:
             raise NotImplementedError("Please select a valid optimizer.")
 
-    def get_last_conv_values(self, sess, feed_dict):
-        values = sess.run(self.last_conv_vars, feed_dict)
-        return values
+    def get_last_conv_values(self, sess, feed_dict, num_values, batch_size):
+        i = 0
+        values = []
+        while i < num_values:
+            batch_dict = {}
+            start = i
+            end = min(i+batch_size, num_values)
 
-    def __call__(self, feed_dict, sess, device_string="/cpu:0", use_fc_solver=False):
+            for k,v in feed_dict.iteritems():
+                batch_dict[k] = v[start:end]
+            batch_vals = sess.run(self.last_conv_vars, batch_dict)
+            values.append(batch_vals)
+            i = end
+        final_values = [None for v in self.last_conv_vars]
+        for v in range(len(self.last_conv_vars)):
+            final_values[v] = np.concatenate([values[i][v] for i in range(len(values))])
+
+        return final_values
+
+    def __call__(self, feed_dict, sess, device_string="/cpu:0", use_fc_solver=False, use_pretrain_solver=False):
+        assert not(use_fc_solver and use_pretrain_solver)
         with tf.device(device_string):
             if use_fc_solver:
                 loss = sess.run([self.loss_scalar, self.fc_solver_op], feed_dict)
+            elif use_pretrain_solver:
+                loss = sess.run([self.pretraining_loss, self.pretraining_solver_op], feed_dict)
             else:
                 loss = sess.run([self.loss_scalar, self.solver_op], feed_dict)
             return loss[0]

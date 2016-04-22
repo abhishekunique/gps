@@ -34,6 +34,7 @@ def multi_input_multi_output_images_shared_fcvars(dim_input=[27, 27], dim_output
     variable_separations = []
     with tf.variable_scope("shared_wts"):
         for robot_number, robot_params in enumerate(network_config):
+            print "ROBOT NUM",robot_number
             for sensor in robot_params['obs_include']:
                 dim = robot_params['sensor_dims'][sensor]
                 if sensor in robot_params['obs_image_data']:
@@ -101,7 +102,7 @@ def multi_input_multi_output_images_shared_fcvars(dim_input=[27, 27], dim_output
             variable_separations.append([weights['wc1'], biases['bc1'], weights['wc2'], biases['bc2'], weights['wd1'], biases['bd1'], weights['out'], biases['out']])
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
 
-            last_conv_vars.append(conv_out_flat)
+            last_conv_vars.append(fc_input)
             fc_vars += [weights['wd1'], biases['bd1'], weights['out'], biases['out']]
 
     return nnets, variable_separations, fc_vars, last_conv_vars

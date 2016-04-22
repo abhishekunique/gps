@@ -90,6 +90,8 @@ class PolicyOptTf(PolicyOpt):
         self.precision_tensors = []
         self.act_ops = []
         self.loss_scalars = []
+        self.pretraining_tgt_tensors = []
+        self.pretraining_loss_scalars = []
         self.fc_vars = fc_vars
         self.last_conv_vars = last_conv_vars
         for tf_map in tf_maps:
@@ -98,7 +100,12 @@ class PolicyOptTf(PolicyOpt):
             self.precision_tensors.append(tf_map.get_precision_tensor())
             self.act_ops.append(tf_map.get_output_op())
             self.loss_scalars.append(tf_map.get_loss_op())
+            if tf_map.pretraining_loss_op is not None:
+                self.pretraining_loss_scalars.append(tf_map.pretraining_loss_op)
+                self.pretraining_tgt_tensors.append(tf_map.pretraining_tgt)
         self.combined_loss = tf.add_n(self.loss_scalars)
+        if len(self.pretraining_loss_scalars) > 0:
+            self.combined_pretraining_loss = tf.add_n(self.pretraining_loss_scalars)
 
 
     def init_solver(self):
@@ -110,7 +117,8 @@ class PolicyOptTf(PolicyOpt):
                                momentum=self._hyperparams['momentum'],
                                weight_decay=self._hyperparams['weight_decay'],
                                fc_vars=self.fc_vars,
-                               last_conv_vars=self.last_conv_vars
+                               last_conv_vars=self.last_conv_vars,
+                               pretraining_loss = self.combined_pretraining_loss,
         )
         # self.solver = TfSolver(loss_scalar=self.combined_loss,
         #                        solver_name=self._hyperparams['solver_type'],
@@ -120,6 +128,65 @@ class PolicyOptTf(PolicyOpt):
         #                        weight_decay=self._hyperparams['weight_decay'], shared_vars=self.shared_vars, sparsity_param=self._hyperparams['sparsity_param'])
 
 
+    def update_pretrain(self, obs_full, pretrain_tgt_full, itr_full, inner_itr):
+        obs_reshaped = []
+        tgt_reshaped = []
+        itr_reshaped = []
+        idx_reshaped = []
+        batches_per_epoch_reshaped = []
+        for robot_number in range(self.num_robots):
+            obs = obs_full[robot_number]
+            tgt = pretrain_tgt_full[robot_number]
+
+            itr = itr_full[robot_number]
+
+            N = obs.shape[0]
+            dTgt = tgt.shape[-1]
+            dU, dO = self._dU[robot_number], self._dO[robot_number]
+
+            # # Normalize obs, but only compute normalzation at the beginning.
+            # if itr == 0 and inner_itr == 1:
+            #     #TODO: may need to change this
+            #     self.policy[robot_number].st_idx = self.st_idx[robot_number]
+            #     self.policy[robot_number].scale = np.diag(1.0 / np.std(obs[:, self.st_idx[robot_number]], axis=0))
+            #     self.policy[robot_number].bias = -np.mean(obs[:, self.st_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)
+            # obs[:, self.st_idx[robot_number]] = obs[:, self.st_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
+
+            # Assuming that N*T >= self.batch_size.
+            batches_per_epoch = np.floor(N / self.batch_size)
+            idx = range(N)
+
+            np.random.shuffle(idx)
+            obs_reshaped.append(obs)
+            tgt_reshaped.append(tgt)
+            itr_reshaped.append(itr)
+            idx_reshaped.append(idx)
+            batches_per_epoch_reshaped.append(batches_per_epoch)
+
+        # actual training.
+        average_loss = 0
+        for i in range(self._hyperparams['iterations']*4):
+            # Load in data for this batch.
+            feed_dict = {}
+            for robot_number in range(self.num_robots):
+                start_idx = int(i * self.batch_size %
+                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                #TODO: Make sure this stuff is reading in the correct stuff
+                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                feed_dict[self.pretraining_tgt_tensors[robot_number]] = tgt_reshaped[robot_number][idx_i]
+            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_pretrain_solver=True)
+
+            average_loss += train_loss
+            if i % 100 == 0 and i != 0:
+                LOGGER.debug('pretraining tensorflow iteration %d, average loss %f',
+                             i, average_loss / 100)
+                print 'supervised tf loss is '
+                print average_loss
+                average_loss = 0
+        return self.policy
+
+        
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
         Update policy.
@@ -127,7 +194,7 @@ class PolicyOptTf(PolicyOpt):
             obs: Numpy array of observations, N x T x dO.
             tgt_mu: Numpy array of mean controller outputs, N x T x dU.
             tgt_prc: Numpy array of precision matrices, N x T x dU x dU.
-            tgt_wt: Numpy array of weights, N x T.
+        tgt_wt: Numpy array of weights, N x T.x
         Returns:
             A tensorflow object with updated weights.
         """
@@ -204,15 +271,28 @@ class PolicyOptTf(PolicyOpt):
         average_loss = 0
         print "itr_full", itr_full
         if itr_full[0] > 0:
-            for i in range(self._hyperparams['fc_only_iterations']):
+            feed_dict = {}
+            for robot_number in range(self.num_robots):
+                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number]
+                feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number]
+                feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number]
+
+            num_values = obs_reshaped[0].shape[0]
+            conv_values = self.solver.get_last_conv_values(self.sess, feed_dict, num_values, 100)
+            time0 = time.clock()
+            fc_batch_size = 100
+            for i in range(self._hyperparams['fc_only_iterations'] ):
                 feed_dict = {}
                 for robot_number in range(self.num_robots):
-                    start_idx = int(i * self.batch_size %
-                                    (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-                    idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                    feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                    start_idx = int(i * fc_batch_size %
+                                    (batches_per_epoch_reshaped[robot_number] * fc_batch_size))
+                    idx_i = idx_reshaped[robot_number][start_idx:start_idx+fc_batch_size]
+                    # feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                     feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                     feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+                for idx, var in enumerate(self.solver.last_conv_vars):
+                    feed_dict[var] = conv_values[idx][idx_i]
+
                 train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_fc_solver=True)
                 average_loss += train_loss
                 if i % 100 == 0 and i != 0:
@@ -222,6 +302,8 @@ class PolicyOptTf(PolicyOpt):
                     print average_loss
                     average_loss = 0
             average_loss = 0
+            time1 = time.clock()
+            print "FC took", time1-time0, "seconds, or", (time1-time0)/self._hyperparams['fc_only_iterations'] 
         # actual training.
         for i in range(self._hyperparams['iterations']):
             # Load in data for this batch.
