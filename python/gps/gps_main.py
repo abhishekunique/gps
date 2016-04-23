@@ -47,42 +47,19 @@ class GPSMain(object):
         for alg, ag in zip(config['algorithm'], self.agent):
             alg['agent'] = ag
 
-        dU = [ag.dU for ag in self.agent]
-        dO = [ag.dO for ag in self.agent]
-        self.policy_opt =  self._hyperparams['common']['policy_opt']['type'](
-            self._hyperparams['common']['policy_opt'], dO, dU
-        )
-        self.algorithm = config['algorithm']['type'](config['algorithm'])
-        self.algorithm = []
-        for robot_number, alg in enumerate(config['algorithm']):
-            self.algorithm.append(alg['type'](alg, self.policy_opt, robot_number))
-
-    def run(self, itr_load=None):
-        """
-        Run training by iteratively sampling and taking an iteration.
-        Args:
-            itr_load: If specified, loads algorithm state from that
-                iteration, and resumes training at the next iteration.
-        Returns: None
-        """
-        itr_start = self._initialize(itr_load)
-
-        for itr in range(itr_start, self._hyperparams['iterations']):
-            for cond in self._train_idx:
-                for i in range(self._hyperparams['num_samples']):
-                    self._take_sample(itr, cond, i)
-
-            traj_sample_lists = [
-                self.agent.get_samples(cond, -self._hyperparams['num_samples'])
-                for cond in self._train_idx
-            ]
-            self._take_iteration(itr, traj_sample_lists)
-            pol_sample_lists = self._take_policy_samples()
-            self._log_data(itr, traj_sample_lists, pol_sample_lists)
-
-        self._end()
-
-
+        if 'policy_opt' in self._hyperparams['common']:
+            dU = [ag.dU for ag in self.agent]
+            dO = [ag.dO for ag in self.agent]
+            self.policy_opt =  self._hyperparams['common']['policy_opt']['type'](
+                self._hyperparams['common']['policy_opt'], dO, dU
+            )
+            self.algorithm = []
+            for robot_number, alg in enumerate(config['algorithm']):
+                self.algorithm.append(alg['type'](alg, self.policy_opt, robot_number))
+        else:
+            self.algorithm = []
+            for robot_number, alg in enumerate(config['algorithm']):
+                self.algorithm.append(alg['type'](alg))
 
     def run(self, itr_load=None):
         """
@@ -508,7 +485,7 @@ def main():
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:
-            if isinstance(hyperparams.config['algorithm'][0], AlgorithmTrajOpt):
+            if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
                 run_gps = threading.Thread(
                     target=lambda: gps.run_trajopt(itr_load=resume_training_itr)
                 )
@@ -522,7 +499,11 @@ def main():
             plt.ioff()
             plt.show()
         else:
-            gps.run(itr_load=resume_training_itr)
+            if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
+                gps.run_trajopt(itr_load=resume_training_itr)
+            else:
+                gps.run(itr_load=resume_training_itr)
+            
 
 
 if __name__ == "__main__":

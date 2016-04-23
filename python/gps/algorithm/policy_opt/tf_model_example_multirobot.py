@@ -96,12 +96,7 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
     """
     # List of indices for state (vector) data and image (tensor) data in observation.
     print 'making multi-input/output-network'
-    n_layers = 3
-    layer_size = 20
-    dim_hidden = (n_layers - 1)*[layer_size]
-    dim_hidden.append(dim_output)
-    pool_size = 2
-    filter_size = 3
+    
     fc_vars = []
     last_conv_vars = []
     num_robots = len(dim_input)
@@ -117,6 +112,12 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
     variable_separations = []
     with tf.variable_scope("shared_wts"):
         for robot_number, robot_params in enumerate(network_config):
+            n_layers = 3
+            layer_size = 20
+            dim_hidden = (n_layers - 1)*[layer_size]
+            dim_hidden.append(dim_output[robot_number])
+            pool_size = 2
+            filter_size = 3
             for sensor in robot_params['obs_include']:
                 dim = robot_params['sensor_dims'][sensor]
                 if sensor in robot_params['obs_image_data']:
@@ -137,19 +138,6 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
             im_width = network_config[robot_number]['image_width']
             num_channels = network_config[robot_number]['image_channels']
             image_input = tf.reshape(image_input, [-1, im_width, im_height, num_channels])
-
-            weights = {
-                'wc1': get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
-                'wd1': init_weights([first_dense_size, dim_hidden], name='wd1rn' + str(robot_number)),
-                'out': init_weights([dim_hidden, dim_output[robot_number]], name='outwrn' + str(robot_number))
-            }
-
-            biases = {
-                'bc1': init_bias([num_filters[0]], name='bc1rn' + str(robot_number)),
-                'bd1': init_bias([dim_hidden], name='bd1rn' + str(robot_number)),
-                'out': init_bias([dim_output[robot_number]], name='outbrn' + str(robot_number))
-            }
-
 
                 # Store layers weight & bias
             weights = {
@@ -183,8 +171,7 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
             full_feature_points = tf.concat(concat_dim=1, values=feature_points)
 
             fc_input = tf.concat(concat_dim=1, values=[full_feature_points, state_input])
-
-            fc_output, weights_FC, biases_FC = get_mlp_layers(fc_input, n_layers, dim_hidden)
+            fc_output, weights_FC, biases_FC = get_mlp_layers(fc_input, n_layers, dim_hidden, robot_number=robot_number)
             fc_vars += weights_FC
             fc_vars += biases_FC
             last_conv_vars.append(fc_input)

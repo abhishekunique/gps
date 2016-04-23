@@ -22,7 +22,7 @@ class Algorithm(object):
         config = copy.deepcopy(ALG)
         config.update(hyperparams)
         self._hyperparams = config
-
+        
         if 'train_conditions' in hyperparams:
             self._cond_idx = hyperparams['train_conditions']
             self.M = len(self._cond_idx)

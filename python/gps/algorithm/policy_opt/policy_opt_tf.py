@@ -76,7 +76,7 @@ class PolicyOptTf(PolicyOpt):
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
         merged = tf.merge_all_summaries()
-        writer = tf.train.SummaryWriter('/tensorboard_data', graph_def=self.sess.graph)
+        writer = tf.train.SummaryWriter('/home/abhigupta/tensorboard_data', graph_def=self.sess.graph)
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
@@ -100,7 +100,7 @@ class PolicyOptTf(PolicyOpt):
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver = TfSolver(loss_scalar=self.loss_scalar,
+        self.solver = TfSolver(loss_scalar=self.combined_loss,
                                solver_name=self._hyperparams['solver_type'],
                                base_lr=self._hyperparams['lr'],
                                lr_policy=self._hyperparams['lr_policy'],
