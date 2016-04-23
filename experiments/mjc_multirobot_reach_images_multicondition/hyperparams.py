@@ -64,38 +64,6 @@ common = {
     'train_conditions': [0,1],
     'test_conditions':[2],
     'num_robots':2,
-    #need to fix this to be appropriate
-    # 'policy_opt': {
-    #     'type': PolicyOptTf,
-    #     'network_model': multi_input_multi_output_images_shared,
-    #     'network_params': [{
-    #         'dim_hidden': [10],
-    #         'num_filters': [10, 20],
-    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, RGB_IMAGE],
-    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES],
-    #         'obs_image_data':[RGB_IMAGE],
-    #         'image_width': IMAGE_WIDTH,
-    #         'image_height': IMAGE_HEIGHT,
-    #         'image_channels': IMAGE_CHANNELS,
-    #         'sensor_dims': SENSOR_DIMS[0],
-    #         'batch_size': 25,
-    #     },
-    #     {
-    #         'dim_hidden': [10],
-    #         'num_filters': [10, 20],
-    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, RGB_IMAGE],
-    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES],
-    #         'obs_image_data':[RGB_IMAGE],
-    #         'image_width': IMAGE_WIDTH,
-    #         'image_height': IMAGE_HEIGHT,
-    #         'image_channels': IMAGE_CHANNELS,
-    #         'sensor_dims': SENSOR_DIMS[1],
-    #         'batch_size': 25,
-    #     }],
-    #     'iterations': 500,
-    #     'fc_only_iterations': 5000,
-    #     'weights_file_prefix': EXP_DIR + 'policy',
-    # }
 }
 
 if not os.path.exists(common['data_files_dir']):
@@ -147,41 +115,6 @@ agent = [{
     'meta_include': [RGB_IMAGE_SIZE],
     'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
 }]
-
-# algorithm = [{
-#     'type': AlgorithmBADMM,
-#     'conditions': common['conditions'],
-#     'train_conditions': common['train_conditions'],
-#     'test_conditions': common['test_conditions'],
-#     'num_robots': common['num_robots'],
-#     'iterations': 25,
-#     'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
-#     'policy_dual_rate': 0.2,
-#     'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
-#     'fixed_lg_step': 3,
-#     'kl_step': 5.0,
-#     'min_step_mult': 0.01,
-#     'max_step_mult': 1.0,
-#     'sample_decrease_var': 0.05,
-#     'sample_increase_var': 0.1,
-# },
-# {
-#     'type': AlgorithmBADMM,
-#     'conditions': common['conditions'],
-#     'train_conditions': common['train_conditions'],
-#     'test_conditions': common['test_conditions'],
-#     'num_robots': common['num_robots'],
-#     'iterations': 25,
-#     'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
-#     'policy_dual_rate': 0.2,
-#     'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
-#     'fixed_lg_step': 3,
-#     'kl_step': 5.0,
-#     'min_step_mult': 0.01,
-#     'max_step_mult': 1.0,
-#     'sample_decrease_var': 0.05,
-#     'sample_increase_var': 0.1,
-# }]
 
 algorithm = [{
     'type': AlgorithmTrajOpt,
@@ -321,21 +254,21 @@ algorithm[1]['traj_opt'] = {
 }
 
 
-algorithm[0]['policy_prior'] = {
-    'type': PolicyPriorGMM,
-    'max_clusters': 20,
-    'min_samples_per_cluster': 40,
-    'max_samples': 20,
-    'robot_number':0
-}
+# algorithm[0]['policy_prior'] = {
+#     'type': PolicyPriorGMM,
+#     'max_clusters': 20,
+#     'min_samples_per_cluster': 40,
+#     'max_samples': 20,
+#     'robot_number':0
+# }
 
-algorithm[1]['policy_prior'] = {
-    'type': PolicyPriorGMM,
-    'max_clusters': 20,
-    'min_samples_per_cluster': 40,
-    'max_samples': 20,
-    'robot_number':1
-}
+# algorithm[1]['policy_prior'] = {
+#     'type': PolicyPriorGMM,
+#     'max_clusters': 20,
+#     'min_samples_per_cluster': 40,
+#     'max_samples': 20,
+#     'robot_number':1
+# }
 
 
 
