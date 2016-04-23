@@ -19,7 +19,7 @@ class AlgorithmBADMM(Algorithm):
     Sample-based joint policy learning and trajectory optimization with
     BADMM-based guided policy search algorithm.
     """
-    def __init__(self, hyperparams):
+    def __init__(self, hyperparams, policy_opt, robot_number):
         config = copy.deepcopy(ALG_BADMM)
         config.update(hyperparams)
         Algorithm.__init__(self, config)
@@ -29,10 +29,23 @@ class AlgorithmBADMM(Algorithm):
             policy_prior = self._hyperparams['policy_prior']
             self.cur[m].pol_info.policy_prior = \
                     policy_prior['type'](policy_prior)
+        self.robot_number = robot_number
+        self.policy_opt = policy_opt
 
-        self.policy_opt = self._hyperparams['policy_opt']['type'](
-            self._hyperparams['policy_opt'], self.dO, self.dU
-        )
+    def iteration_start(self, sample_lists):
+        """
+        Run iteration of BADMM-based guided policy search.
+
+        Args:
+            sample_lists: List of SampleList objects for each condition.
+        """
+        for m in range(self.M):
+            self.cur[m].sample_list = sample_lists[m]
+        
+        self._set_interp_values()
+        self._update_dynamics()  # Update dynamics model using all sample.
+        self._update_policy_samples()  # Choose samples to use with the policy.
+        self._update_step_size()  # KL Divergence step size.
 
     def iteration(self, sample_lists):
         """
@@ -76,12 +89,12 @@ class AlgorithmBADMM(Algorithm):
                 (self._hyperparams['iterations'] - 1), 1)
         # Perform iteration-based interpolation of entropy penalty.
         if type(self._hyperparams['ent_reg_schedule']) in (int, float):
-            self.policy_opt.set_ent_reg(self._hyperparams['ent_reg_schedule'])
+            self.policy_opt.set_ent_reg(self._hyperparams['ent_reg_schedule'],robot_number=self.robot_number)
         else:
             sch = self._hyperparams['ent_reg_schedule']
             self.policy_opt.set_ent_reg(
                 np.exp(np.interp(t, np.linspace(0, 1, num=len(sch)),
-                                 np.log(sch)))
+                                 np.log(sch))), robot_number=self.robot_number
             )
         # Perform iteration-based interpolation of Lagrange multiplier.
         if type(self._hyperparams['lg_step_schedule']) in (int, float):
@@ -152,6 +165,41 @@ class AlgorithmBADMM(Algorithm):
         self.policy_opt.update(obs_data, tgt_mu, tgt_prc, tgt_wt,
                                itr, inner_itr)
 
+    def _update_policy_lists(self, itr, inner_itr):
+        """ Compute the new policy. """
+        dU, dO, T = self.dU, self.dO, self.T
+        # Compute target mean, cov, and weight for each sample.
+        obs_data, tgt_mu = np.zeros((0, T, dO)), np.zeros((0, T, dU))
+        tgt_prc, tgt_wt = np.zeros((0, T, dU, dU)), np.zeros((0, T))
+        for m in range(self.M):
+            samples = self.cur[m].sample_list
+            X = samples.get_X()
+            N = len(samples)
+            traj, pol_info = self.cur[m].traj_distr, self.cur[m].pol_info
+            mu = np.zeros((N, T, dU))
+            prc = np.zeros((N, T, dU, dU))
+            wt = np.zeros((N, T))
+            # Get time-indexed actions.
+            for t in range(T):
+                # Compute actions along this trajectory.
+                prc[:, t, :, :] = np.tile(traj.inv_pol_covar[t, :, :],
+                                          [N, 1, 1])
+                for i in range(N):
+                    mu[i, t, :] = \
+                            (traj.K[t, :, :].dot(X[i, t, :]) + traj.k[t, :]) - \
+                            np.linalg.solve(
+                                prc[i, t, :, :],  #TODO: Divide by pol_wt[t].
+                                pol_info.lambda_K[t, :, :].dot(X[i, t, :]) + \
+                                        pol_info.lambda_k[t, :]
+                            )
+                wt[:, t].fill(pol_info.pol_wt[t])
+            tgt_mu = np.concatenate((tgt_mu, mu))
+            tgt_prc = np.concatenate((tgt_prc, prc))
+            tgt_wt = np.concatenate((tgt_wt, wt))
+            obs_data = np.concatenate((obs_data, samples.get_obs()))
+        print("POLICY" + str(self.robot_number))
+        return obs_data, tgt_mu, tgt_prc, tgt_wt
+
     def _update_policy_fit(self, m, init=False):
         """
         Re-estimate the local policy values in the neighborhood of the
@@ -166,18 +214,18 @@ class AlgorithmBADMM(Algorithm):
         N = len(samples)
         pol_info = self.cur[m].pol_info
         X = samples.get_X()
-        pol_mu, pol_sig = self.policy_opt.prob(samples.get_obs().copy())[:2]
+        pol_mu, pol_sig = self.policy_opt.prob(samples.get_obs().copy(), robot_number=self.robot_number)[:2]
         pol_info.pol_mu, pol_info.pol_sig = pol_mu, pol_sig
         # Update policy prior.
         if init:
             self.cur[m].pol_info.policy_prior.update(
                 samples, self.policy_opt,
-                SampleList(self.cur[m].pol_info.policy_samples)
+                SampleList(self.cur[m].pol_info.policy_samples, robot_number=self.robot_number)
             )
         else:
             self.cur[m].pol_info.policy_prior.update(
                 SampleList([]), self.policy_opt,
-                SampleList(self.cur[m].pol_info.policy_samples)
+                SampleList(self.cur[m].pol_info.policy_samples), robot_number=self.robot_number
             )
         # Collapse policy covariances. This is not really correct, but
         # it works fine so long as the policy covariance doesn't depend
@@ -398,7 +446,7 @@ class AlgorithmBADMM(Algorithm):
         kl, kl_m = np.zeros((N, T)), np.zeros(T)
         kl_l, kl_lm = np.zeros((N, T)), np.zeros(T)
         # Compute policy mean and covariance at each sample.
-        pol_mu, _, pol_prec, pol_det_sigma = self.policy_opt.prob(obs.copy())
+        pol_mu, _, pol_prec, pol_det_sigma = self.policy_opt.prob(obs.copy(), robot_number=self.robot_number)
         # Compute KL divergence.
         for t in range(T):
             # Compute trajectory action at sample.

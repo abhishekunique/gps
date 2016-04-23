@@ -88,7 +88,7 @@ class Sample(object):
                 if data_type not in self.agent.meta_data_types:
                     continue
                 data = self._data[data_type]
-                self.agent.pack_data_meta(meta, data, data_types=[data_type])
+                self.agent.pack_data_meta(meta, np.asarray(data), data_types=[data_type])
         return meta
 
     # For pickling.
