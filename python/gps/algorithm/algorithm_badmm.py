@@ -218,7 +218,7 @@ class AlgorithmBADMM(Algorithm):
         if init:
             self.cur[m].pol_info.policy_prior.update(
                 samples, self.policy_opt,
-                SampleList(self.cur[m].pol_info.policy_samples, robot_number=self.robot_number)
+                SampleList(self.cur[m].pol_info.policy_samples), robot_number=self.robot_number
             )
         else:
             self.cur[m].pol_info.policy_prior.update(

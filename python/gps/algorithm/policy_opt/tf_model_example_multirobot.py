@@ -109,7 +109,6 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
         im_idx.append([])
         i.append(0)
     #need to fix whatever this is 
-    variable_separations = []
     with tf.variable_scope("shared_wts"):
         for robot_number, robot_params in enumerate(network_config):
             n_layers = 3

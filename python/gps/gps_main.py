@@ -18,6 +18,8 @@ sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
 from gps.gui.gps_training_gui import GPSTrainingGUI
 from gps.utility.data_logger import DataLogger
 from gps.sample.sample_list import SampleList
+from gps.algorithm.algorithm_badmm import AlgorithmBADMM
+from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
@@ -51,15 +53,15 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             config['algorithm'][robot_number]['agent'] = self.agent[robot_number]
             self.algorithm.append(config['algorithm'][robot_number]['type'](config['algorithm'][robot_number]))
-        # if 'policy_opt' in self._hyperparams['common']:
-        #     dU = [ag.dU for ag in self.agent]
-        #     dO = [ag.dO for ag in self.agent]
-        #     self.policy_opt =  self._hyperparams['common']['policy_opt']['type'](
-        #         self._hyperparams['common']['policy_opt'], dO, dU
-        #     )
-        #     for robot_number in range(self.num_robots):
-        #         self.algorithm.policy_opt = self.policy_opt
-        #         self.algorithm.robot_number = robot_number
+        if 'policy_opt' in self._hyperparams['common']:
+            dU = [ag.dU for ag in self.agent]
+            dO = [ag.dO for ag in self.agent]
+            self.policy_opt =  self._hyperparams['common']['policy_opt']['type'](
+                self._hyperparams['common']['policy_opt'], dO, dU
+            )
+            for robot_number in range(self.num_robots):
+                self.algorithm[robot_number].policy_opt = self.policy_opt
+                self.algorithm[robot_number].robot_number = robot_number
 
 
     def run(self, itr_load=None):
@@ -94,6 +96,97 @@ class GPSMain(object):
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
 
         self._end()
+
+    def run_badmm(self, itr_load=None):
+        """
+        Run training by iteratively sampling and taking an iteration.
+        Args:
+            itr_load: If specified, loads algorithm state from that
+                iteration, and resumes training at the next iteration.
+        Returns: None
+        """
+        for robot_number in range(self.num_robots):
+            itr_start = self._initialize(itr_load, robot_number=robot_number)
+
+        for itr in range(itr_start, self._hyperparams['iterations']):
+            traj_sample_lists = {}
+            for robot_number in range(self.num_robots):
+                for cond in self._train_idx:
+                    for i in range(self._hyperparams['num_samples']):
+                        self._take_sample(itr, cond, i, robot_number=robot_number)
+
+                traj_sample_lists[robot_number] = [
+                    self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
+                    for cond_1 in self._train_idx
+                ]
+
+            for robot_number in range(self.num_robots):            
+                self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+
+            self._take_iteration_shared()
+
+            for robot_number in range(self.num_robots):
+                pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
+                self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
+            if itr % 5 == 0 and itr > 0:
+                import IPython
+                IPython.embed()
+
+        self._end()
+
+    def _take_iteration_start(self, itr, sample_lists, robot_number=0):
+        """
+        Take an iteration of the algorithm.
+        Args:
+            itr: Iteration number.
+        Returns: None
+        """
+        if self.gui:
+            self.gui[robot_number].set_status_text('Calculating.')
+        self.algorithm[robot_number].iteration_start(sample_lists)
+
+    def _take_iteration_shared(self):
+        """
+        Take an iteration of the algorithm.
+        Args:
+            itr: Iteration number.
+        Returns: None
+        """
+        # Run inner loop to compute new policies.
+        for inner_itr in range(self._hyperparams['inner_iterations']):
+            #TODO: Could start from init controller.
+            obs_full = [None]*self.num_robots
+            tgt_mu_full = [None]*self.num_robots
+            tgt_prc_full = [None]*self.num_robots
+            tgt_wt_full = [None]*self.num_robots
+            itr_full = [None]*self.num_robots
+            for robot_number in range(self.num_robots):
+                if self.algorithm[robot_number].iteration_count > 0 or inner_itr > 0:
+                    obs, tgt_mu, tgt_prc, tgt_wt = self.algorithm[robot_number]._update_policy_lists(self.algorithm[robot_number].iteration_count, inner_itr)
+                    obs_full[robot_number] = obs
+                    tgt_mu_full[robot_number] = tgt_mu
+                    tgt_prc_full[robot_number] = tgt_prc
+                    tgt_wt_full[robot_number] = tgt_wt
+                    itr_full[robot_number] = self.algorithm[robot_number].iteration_count
+
+            #May want to make this shared across robots
+            if self.algorithm[0].iteration_count > 0 or inner_itr > 0:
+                self.policy_opt.update(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr)
+            for robot_number in range(self.num_robots):
+                for m in self._train_idx:
+                    self.algorithm[robot_number]._update_policy_fit(m)  # Update policy priors.
+            for robot_number in range(self.num_robots):
+                if self.algorithm[robot_number].iteration_count > 0 or inner_itr > 0:
+                    step = (inner_itr == self._hyperparams['inner_iterations'] - 1)
+                    # Update dual variables.
+                    for m in self._train_idx:
+                        self.algorithm[robot_number]._policy_dual_step(m, step=step)
+            for robot_number in range(self.num_robots):
+                self.algorithm[robot_number]._update_trajectories()
+        for robot_number in range(self.num_robots):
+            self.algorithm[robot_number]._advance_iteration_variables()
+            if self.gui:
+                self.gui[robot_number].stop_display_calculating()
 
     def test_policy(self, itr, N):
         """
@@ -388,9 +481,14 @@ def main():
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:
-            run_gps = threading.Thread(
-                target=lambda: gps.run(itr_load=resume_training_itr)
-            )
+            if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
+                run_gps = threading.Thread(
+                    target=lambda: gps.run(itr_load=resume_training_itr)
+                )
+            else:
+                run_gps = threading.Thread(
+                    target=lambda: gps.run_badmm(itr_load=resume_training_itr)
+                )
             run_gps.daemon = True
             run_gps.start()
 

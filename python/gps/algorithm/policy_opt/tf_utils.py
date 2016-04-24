@@ -1,5 +1,5 @@
 import tensorflow as tf
-
+import numpy as np
 
 def check_list_and_convert(the_object):
     if isinstance(the_object, list):

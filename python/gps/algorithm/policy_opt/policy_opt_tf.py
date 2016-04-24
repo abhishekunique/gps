@@ -168,10 +168,10 @@ class PolicyOptTf(PolicyOpt):
             # Normalize obs, but only compute normalzation at the beginning.
             if itr == 0 and inner_itr == 1:
                 #TODO: may need to change this
-                self.policy[robot_number].st_idx = self.st_idx[robot_number]
-                self.policy[robot_number].scale = np.diag(1.0 / np.std(obs[:, self.st_idx[robot_number]], axis=0))
-                self.policy[robot_number].bias = -np.mean(obs[:, self.st_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)
-            obs[:, self.st_idx[robot_number]] = obs[:, self.st_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
+                self.policy[robot_number].x_idx = self.x_idx[robot_number]
+                self.policy[robot_number].scale = np.diag(1.0 / np.std(obs[:, self.x_idx[robot_number]], axis=0))
+                self.policy[robot_number].bias = -np.mean(obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)
+            obs[:, self.x_idx[robot_number]] = obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
 
             # Assuming that N*T >= self.batch_size.
             batches_per_epoch = np.floor(N*T / self.batch_size)
@@ -276,7 +276,7 @@ class PolicyOptTf(PolicyOpt):
         for i in range(N):
             for t in range(T):
                 # Feed in data.
-                feed_dict = {self.obs_tensor[robot_number]: np.expand_dims(obs[i, t], axis=0)}
+                feed_dict = {self.obs_tensors[robot_number]: np.expand_dims(obs[i, t], axis=0)}
                 with tf.device(self.device_string):
                     output[i, t, :] = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
 
