@@ -327,7 +327,7 @@ class GPSMain(object):
         if self.gui:
             self.gui[robot_number].set_status_text('Taking policy samples.')
         pol_samples = [[None for _ in range(N)] for _ in range(self._conditions)]
-        for cond in range(len(self._conditions)):
+        for cond in range(self._conditions):
             for i in range(N):
                 pol_samples[cond][i] = self.agent[robot_number].sample(
                     self.algorithm[robot_number].policy_opt.policy[robot_number], cond,
