@@ -206,8 +206,7 @@ class PolicyOptTf(PolicyOpt):
                     idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                     feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                     feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-                for j, var in enumerate(self.solver.last_conv_vars):
-                    feed_dict[var] = conv_values[j][idx_i]
+                    feed_dict[self.last_conv_vars[robot_number]] = conv_values[robot_number][idx_i]
 
                 train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_fc_solver=True)
                 average_loss += train_loss
@@ -233,7 +232,7 @@ class PolicyOptTf(PolicyOpt):
             average_loss += train_loss
             if i % 200 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 100)
+                             i, average_loss / 200)
                 print 'supervised tf loss is '
                 print (average_loss/200)
                 average_loss = 0

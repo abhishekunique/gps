@@ -60,15 +60,15 @@ class Algorithm(object):
         self.traj_opt = hyperparams['traj_opt']['type'](
             hyperparams['traj_opt']
         )
-        if not isinstance(hyperparams['cost'], list):
-            self.cost = [
-                hyperparams['cost']['type'](hyperparams['cost'])
-                for _ in range(self.M)
-            ]
-        else:
+        if isinstance(hyperparams['cost'], list):
             self.cost = [
                 hc['type'](hc)
                 for hc in hyperparams['cost']
+            ]
+        else:
+            self.cost = [
+                hyperparams['cost']['type'](hyperparams['cost'])
+                for _ in range(self.M)
             ]
         self.base_kl_step = self._hyperparams['kl_step']
 
