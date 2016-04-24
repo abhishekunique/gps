@@ -51,6 +51,16 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             config['algorithm'][robot_number]['agent'] = self.agent[robot_number]
             self.algorithm.append(config['algorithm'][robot_number]['type'](config['algorithm'][robot_number]))
+        # if 'policy_opt' in self._hyperparams['common']:
+        #     dU = [ag.dU for ag in self.agent]
+        #     dO = [ag.dO for ag in self.agent]
+        #     self.policy_opt =  self._hyperparams['common']['policy_opt']['type'](
+        #         self._hyperparams['common']['policy_opt'], dO, dU
+        #     )
+        #     for robot_number in range(self.num_robots):
+        #         self.algorithm.policy_opt = self.policy_opt
+        #         self.algorithm.robot_number = robot_number
+
 
     def run(self, itr_load=None):
         """
@@ -64,18 +74,24 @@ class GPSMain(object):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         for itr in range(itr_start, self._hyperparams['iterations']):
+            traj_sample_lists = {}
             for robot_number in range(self.num_robots):
                 for cond in self._train_idx:
                     for i in range(self._hyperparams['num_samples']):
                         self._take_sample(itr, cond, i, robot_number=robot_number)
 
-                traj_sample_lists = [
-                    self.agent[robot_number].get_samples(cond, -self._hyperparams['num_samples'])
-                    for cond in self._train_idx
+                traj_sample_lists[robot_number] = [
+                    self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
+                    for cond_1 in self._train_idx
                 ]
-                self._take_iteration(itr, traj_sample_lists, robot_number=robot_number)
+            # import IPython
+            # IPython.embed()
+            for robot_number in range(self.num_robots):
+                self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+
+            for robot_number in range(self.num_robots):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
-                self._log_data(itr, traj_sample_lists, pol_sample_lists, robot_number=robot_number)
+                self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
 
         self._end()
 
@@ -340,8 +356,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(0)
-        np.random.seed(0)
+        random.seed(1)
+        np.random.seed(1)
 
         data_files_dir = exp_dir + 'data_files/'
         data_filenames = os.listdir(data_files_dir)
@@ -367,8 +383,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(0)
-        np.random.seed(0)
+        random.seed(1)
+        np.random.seed(1)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:

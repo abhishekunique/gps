@@ -19,7 +19,7 @@ class AlgorithmBADMM(Algorithm):
     Sample-based joint policy learning and trajectory optimization with
     BADMM-based guided policy search algorithm.
     """
-    def __init__(self, hyperparams, policy_opt, robot_number):
+    def __init__(self, hyperparams):
         config = copy.deepcopy(ALG_BADMM)
         config.update(hyperparams)
         Algorithm.__init__(self, config)
@@ -29,8 +29,6 @@ class AlgorithmBADMM(Algorithm):
             policy_prior = self._hyperparams['policy_prior']
             self.cur[m].pol_info.policy_prior = \
                     policy_prior['type'](policy_prior)
-        self.robot_number = robot_number
-        self.policy_opt = policy_opt
 
     def iteration_start(self, sample_lists):
         """
