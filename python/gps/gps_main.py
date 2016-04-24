@@ -128,6 +128,8 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
+                self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
+                
             if itr % 5 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
@@ -313,6 +315,28 @@ class GPSMain(object):
         self.algorithm[robot_number].iteration(sample_lists)
         if self.gui:
             self.gui[robot_number].stop_display_calculating()
+
+
+    def save_policy_samples(self, N=None, robot_number=0, itr=None):
+        """
+        Take samples from the policy to see how it's doing.
+        Args:
+            N  : number of policy samples to take per condition
+        Returns: None
+        """
+        if self.gui:
+            self.gui[robot_number].set_status_text('Taking policy samples.')
+        pol_samples = [[None for _ in range(N)] for _ in range(self._conditions)]
+        for cond in range(len(self._conditions)):
+            for i in range(N):
+                pol_samples[cond][i] = self.agent[robot_number].sample(
+                    self.algorithm[robot_number].policy_opt.policy[robot_number], cond,
+                    verbose=True, save=False)
+
+        self.data_logger.pickle(
+            self._data_files_dir + ('polsample_itr_%02d_rn_%02d_cond_%02d.pkl' % (itr, robot_number, cond)),
+            copy.copy(pol_samples[cond])
+        )
 
     def _take_policy_samples(self, N=None, robot_number=0):
         """
