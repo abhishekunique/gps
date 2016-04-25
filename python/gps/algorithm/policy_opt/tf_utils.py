@@ -134,9 +134,10 @@ class TfSolver:
             values.append(batch_vals)
             i = end
         final_values = [None for v in self.last_conv_vars]
+        i = 0
+
         for v in range(len(self.last_conv_vars)):
             final_values[v] = np.concatenate([values[i][v] for i in range(len(values))])
-
         return final_values
 
     def __call__(self, feed_dict, sess, device_string="/cpu:0", use_fc_solver=False):
