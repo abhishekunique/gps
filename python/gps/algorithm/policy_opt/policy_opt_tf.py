@@ -75,8 +75,8 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = self._hyperparams['ent_reg']
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
-        merged = tf.merge_all_summaries()
-        writer = tf.train.SummaryWriter('/home/abhigupta/tensorboard_data', graph_def=self.sess.graph)
+        # merged = tf.merge_all_summaries()
+        # writer = tf.train.SummaryWriter('/home/abhigupta/tensorboard_data', graph_def=self.sess.graph)
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
