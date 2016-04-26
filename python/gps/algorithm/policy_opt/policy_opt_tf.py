@@ -289,16 +289,15 @@ class PolicyOptTf(PolicyOpt):
                                     (batches_per_epoch_reshaped[robot_number] * self.batch_size))
                     idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                     dc_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                    robot_onehots = np.zeros((idx_i.shape[0], self.num_robots))
-                    robot_onehots[:, robot_number] = np.ones((idx_i.shape[0],))
+                    robot_onehots = np.zeros((self.batch_size, self.num_robots))
+                    robot_onehots[:, robot_number] = np.ones((self.batch_size,))
                     dc_dict[self.dc_onehots[robot_number]] = robot_onehots
                 dc_train_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
-
                 average_loss_dc += dc_train_loss
                 if i % 200 == 0 and i != 0:
                     LOGGER.debug('tensorflow iteration %d, dc loss %f',
                                  i, average_loss_dc / 200)
-                    print 'supervised tf loss is '
+                    print 'supervised dc loss is '
                     print (average_loss_dc/200)
                     average_loss_dc = 0
 

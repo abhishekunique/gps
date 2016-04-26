@@ -184,7 +184,7 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
             
             loss_domain_confusion = -(1/float(num_robots))*tf.reduce_sum(tf.log(tf.nn.softmax(tf.matmul(full_feature_points, weights['dc']) + biases['dc'])),0)[robot_number]
             loss = tf.add_n([loss,loss_domain_confusion])
-            classification_loss_dc.append(tf.nn.softmax_cross_entropy_with_logits(tf.matmul(full_feature_points, weights['dc']) + biases['dc'], dc_onehot))
+            classification_loss_dc.append(tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(tf.matmul(full_feature_points, weights['dc']) + biases['dc'], dc_onehot)))
             dc_vars = [weights['dc'], biases['dc']]
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss], [dc_onehot]))
             tf.get_variable_scope().reuse_variables()
