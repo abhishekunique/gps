@@ -9,8 +9,8 @@ import tensorflow as tf
 from gps.algorithm.policy.tf_policy import TfPolicy
 from gps.algorithm.policy_opt.policy_opt import PolicyOpt
 from gps.algorithm.policy_opt.config import POLICY_OPT_TF
-from gps.algorithm.policy_opt.tf_utils import TfSolver
-
+from gps.algorithm.policy_opt.tf_utils import DcTfSolver,TfSolver
+from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared_dc
 LOGGER = logging.getLogger(__name__)
 
 
@@ -37,12 +37,15 @@ class PolicyOptTf(PolicyOpt):
         self.action_tensors = []
         self.solver = None
         self.var = []
+        self.dc_mode = False
+        self.dc_onehots = []
         for i, dU_ind in enumerate(dU):
             self.act_ops.append(None)
             self.loss_scalars.append(None)
             self.obs_tensors.append(None)
             self.precision_tensors.append(None)
             self.action_tensors.append(None)
+            self.dc_onehots.append(None)
             self.var.append(self._hyperparams['init_var'] * np.ones(dU_ind))
         self.init_network()
         self.init_solver()
@@ -81,33 +84,73 @@ class PolicyOptTf(PolicyOpt):
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        tf_maps, fc_vars, last_conv_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
-                                network_config=self._hyperparams['network_params'])
-        self.obs_tensors = []
-        self.action_tensors = []
-        self.precision_tensors = []
-        self.act_ops = []
-        self.loss_scalars = []
-        self.fc_vars = fc_vars
-        self.last_conv_vars = last_conv_vars
-        for tf_map in tf_maps:
-            self.obs_tensors.append(tf_map.get_input_tensor())
-            self.action_tensors.append(tf_map.get_target_output_tensor())
-            self.precision_tensors.append(tf_map.get_precision_tensor())
-            self.act_ops.append(tf_map.get_output_op())
-            self.loss_scalars.append(tf_map.get_loss_op())
-        self.combined_loss = tf.add_n(self.loss_scalars)
+        if ('dc_mode' in self._hyperparams) and self._hyperparams['dc_mode']:
+            tf_maps, fc_vars, last_conv_vars, dc_vars, dc_loss = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
+                                    network_config=self._hyperparams['network_params'])
+            self.obs_tensors = []
+            self.action_tensors = []
+            self.precision_tensors = []
+            self.act_ops = []
+            self.loss_scalars = []
+            self.fc_vars = fc_vars
+            self.last_conv_vars = last_conv_vars
+            self.dc_onehots = []
+            for tf_map in tf_maps:
+                self.obs_tensors.append(tf_map.get_input_tensor())
+                self.action_tensors.append(tf_map.get_target_output_tensor())
+                self.precision_tensors.append(tf_map.get_precision_tensor())
+                self.act_ops.append(tf_map.get_output_op())
+                self.loss_scalars.append(tf_map.get_loss_op())
+                self.dc_onehots.append(tf_map.get_dc_onehot())
+            self.combined_loss = tf.add_n(self.loss_scalars)
+            self.dc_mode = True
+            self.dc_vars = dc_vars
+            self.dc_loss = dc_loss
+        else:
+            tf_maps, fc_vars, last_conv_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
+                                    network_config=self._hyperparams['network_params'])
+            self.obs_tensors = []
+            self.action_tensors = []
+            self.precision_tensors = []
+            self.act_ops = []
+            self.loss_scalars = []
+            self.fc_vars = fc_vars
+            self.last_conv_vars = last_conv_vars
+            for tf_map in tf_maps:
+                self.obs_tensors.append(tf_map.get_input_tensor())
+                self.action_tensors.append(tf_map.get_target_output_tensor())
+                self.precision_tensors.append(tf_map.get_precision_tensor())
+                self.act_ops.append(tf_map.get_output_op())
+                self.loss_scalars.append(tf_map.get_loss_op())
+            self.combined_loss = tf.add_n(self.loss_scalars)
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver = TfSolver(loss_scalar=self.combined_loss,
-                               solver_name=self._hyperparams['solver_type'],
-                               base_lr=self._hyperparams['lr'],
-                               lr_policy=self._hyperparams['lr_policy'],
-                               momentum=self._hyperparams['momentum'],
-                               weight_decay=self._hyperparams['weight_decay'],
-                               fc_vars=self.fc_vars,
-                               last_conv_vars=self.last_conv_vars)
+        if self.dc_mode:
+            self.solver = TfSolver(loss_scalar=self.combined_loss,
+                                   solver_name=self._hyperparams['solver_type'],
+                                   base_lr=self._hyperparams['lr'],
+                                   lr_policy=self._hyperparams['lr_policy'],
+                                   momentum=self._hyperparams['momentum'],
+                                   weight_decay=self._hyperparams['weight_decay'],
+                                   fc_vars=self.fc_vars,
+                                   last_conv_vars=self.last_conv_vars, dc_vars=self.dc_vars)
+
+            self.dc_solver = DcTfSolver(loss_scalar=self.dc_loss,
+                       solver_name=self._hyperparams['solver_type'],
+                       base_lr=self._hyperparams['lr'],
+                       lr_policy=self._hyperparams['lr_policy'],
+                       momentum=self._hyperparams['momentum'],
+                       weight_decay=self._hyperparams['weight_decay'], dc_vars=self.dc_vars)
+        else:
+            self.solver = TfSolver(loss_scalar=self.combined_loss,
+                                   solver_name=self._hyperparams['solver_type'],
+                                   base_lr=self._hyperparams['lr'],
+                                   lr_policy=self._hyperparams['lr_policy'],
+                                   momentum=self._hyperparams['momentum'],
+                                   weight_decay=self._hyperparams['weight_decay'],
+                                   fc_vars=self.fc_vars,
+                                   last_conv_vars=self.last_conv_vars)
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
@@ -217,6 +260,8 @@ class PolicyOptTf(PolicyOpt):
                     print (average_loss/100)
                     average_loss = 0
             average_loss = 0
+        average_loss = 0
+        average_loss_dc = 0
         for i in range(self._hyperparams['iterations']):
             # Load in data for this batch.
             feed_dict = {}
@@ -236,6 +281,25 @@ class PolicyOptTf(PolicyOpt):
                 print 'supervised tf loss is '
                 print (average_loss/200)
                 average_loss = 0
+
+            if self.dc_mode:
+                dc_dict = {}
+                for robot_number in range(self.num_robots):
+                    start_idx = int(i * self.batch_size %
+                                    (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                    idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                    dc_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                    robot_onehots = np.zeros((self.batch_size, self.num_robots))
+                    robot_onehots[:, robot_number] = np.ones((self.batch_size,))
+                    dc_dict[self.dc_onehots[robot_number]] = robot_onehots
+                dc_train_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
+                average_loss_dc += dc_train_loss
+                if i % 200 == 0 and i != 0:
+                    LOGGER.debug('tensorflow iteration %d, dc loss %f',
+                                 i, average_loss_dc / 200)
+                    print 'supervised dc loss is '
+                    print (average_loss_dc/200)
+                    average_loss_dc = 0
 
 
         for robot_number in range(self.num_robots):
