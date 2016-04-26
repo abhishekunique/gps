@@ -9,6 +9,7 @@ from gps.agent.mjc.agent_mjc import AgentMuJoCo
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.algorithm.cost.cost_fk import CostFK
+from gps.algorithm.cost.cost_fk_dev import CostFKDev
 from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
@@ -272,6 +273,23 @@ fk_cost_2 = [{
     'alpha': 1e-5,
 }]
 
+fk_cost_3 = [{
+    'type': CostFKDev,
+    'traj_file': 'cond0.pkl',
+    'wp': np.array([1, 1, 1]),
+    'l1': 0.1,
+    'l2': 10.0,
+    'alpha': 1e-5,
+},
+{
+    'type': CostFKDev,
+    'traj_file': 'cond1.pkl',
+    'wp': np.array([1, 1, 1]),
+    'l1': 0.1,
+    'l2': 10.0,
+    'alpha': 1e-5,
+}]
+
 
 algorithm[0]['cost'] = [{
     'type': CostSum,
@@ -281,8 +299,8 @@ algorithm[0]['cost'] = [{
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [torque_cost_2[i], fk_cost_2[i]],
-    'weights': [1.0, 1.0],
+    'costs': [torque_cost_2[i], fk_cost_2[i], fk_cost_3[i]],
+    'weights': [1.0, 1.0, 0.5],
 } for i in common['train_conditions']]
 
 

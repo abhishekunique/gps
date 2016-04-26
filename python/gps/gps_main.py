@@ -86,6 +86,7 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx
                 ]
+
             # import IPython
             # IPython.embed()
             for robot_number in range(self.num_robots):
@@ -119,6 +120,10 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx
                 ]
+                if robot_number == 0:
+                    for cond in self._train_idx:
+                        mean_traj = np.mean(np.asarray([traj_sample_lists[robot_number][cond]._samples[i]._data[3] for i in range(self._hyperparams['num_samples'])]),0)
+                        self.data_logger.pickle(('cond%d.pkl' % cond), copy.copy(mean_traj))
 
             for robot_number in range(self.num_robots):            
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
