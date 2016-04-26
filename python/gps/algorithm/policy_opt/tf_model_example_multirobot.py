@@ -50,7 +50,7 @@ def euclidean_loss_layer(a, b, precision, batch_size):
     return uPu/scale_factor
 
 
-def get_input_layer(dim_input, dim_output, robot_number):
+def get_input_layer(dim_input, dim_output, robot_number, num_robots=None):
     """produce the placeholder inputs that are used to run ops forward and backwards.
         net_input: usually an observation.
         action: mu, the ground truth actions we're trying to learn.
@@ -58,8 +58,11 @@ def get_input_layer(dim_input, dim_output, robot_number):
     net_input = tf.placeholder("float", [None, dim_input], name='nn_input' + str(robot_number))
     action = tf.placeholder('float', [None, dim_output], name='action' + str(robot_number))
     precision = tf.placeholder('float', [None, dim_output, dim_output], name='precision' + str(robot_number))
-    return net_input, action, precision
-
+    if num_robots:
+        dc_onehot = tf.placeholder('float', [None, num_robots], name='dc_' + str(robot_number))
+        return net_input, action, precision, dc_onehot
+    else:
+        return net_input, action, precision
 
 def get_mlp_layers(mlp_input, number_layers, dimension_hidden, robot_number):
     """compute MLP with specified number of layers.
@@ -109,6 +112,7 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
         im_idx.append([])
         i.append(0)
     #need to fix whatever this is 
+    classification_loss_dc = []
     with tf.variable_scope("shared_wts"):
         for robot_number, robot_params in enumerate(network_config):
             n_layers = 3
@@ -125,7 +129,7 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
                     st_idx[robot_number] = st_idx[robot_number] + list(range(i[robot_number], i[robot_number]+dim))
                 i[robot_number] += dim
 
-            nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
+            nn_input, action, precision, dc_onehot = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number, num_robots)
 
             state_input = nn_input[:, 0:st_idx[robot_number][-1]+1]
             image_input = nn_input[:, st_idx[robot_number][-1]+1:im_idx[robot_number][-1]+1]
@@ -177,11 +181,17 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
             fc_vars += biases_FC
             last_conv_vars.append(fc_input)
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
-            loss_domain_confusion = -(1/float(self.num_robots))*tf.log(tf.nn.softmax(tf.matmul(full_feature_points, weights['dc']) + biases['dc']))[robot_number]
+            
+            import IPython
+            IPython.embed()
+            loss_domain_confusion = -(1/float(num_robots))*tf.log(tf.nn.softmax(tf.matmul(full_feature_points, weights['dc']) + biases['dc']))[robot_number]
             loss = tf.add_n([loss,loss_domain_confusion])
-            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
+            classification_loss_dc.append(tf.nn.softmax_cross_entropy_with_logits(tf.matmul(full_feature_points, weights['dc']) + biases['dc'], dc_onehot))
+            dc_vars = [weights['dc'], biases['dc']]
+            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss], [dc_onehot]))
             tf.get_variable_scope().reuse_variables()
-    return nnets, fc_vars, last_conv_vars
+    classification_loss_dc = tf.add_n(classification_loss_dc)
+    return nnets, fc_vars, last_conv_vars, dc_vars, classification_loss_dc
 
 def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
     """
