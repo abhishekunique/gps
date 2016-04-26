@@ -5,9 +5,11 @@ from gps.algorithm.policy_opt.tf_utils import TfMap
 import numpy as np
 
 
-def init_weights_shared(shape, name=None):
+def init_weights_shared(shape, name=None, stddev=None):
+    if stddev is None:
+        stddev = 0.01
     weights = tf.get_variable("weights" + str(name), shape,
-        initializer=tf.random_normal_initializer())
+        initializer=tf.random_normal_initializer(stddev=stddev))
     return weights
 
 def get_xavier_weights_shared(filter_shape, poolsize=(2, 2), name=None):
@@ -123,7 +125,6 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
         i.append(0)
     #need to fix whatever this is 
     classification_loss_dc = []
-    domain_confusion_losses = []
     with tf.variable_scope("shared_wts"):
         for robot_number, robot_params in enumerate(network_config):
             n_layers = 3
@@ -158,13 +159,10 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
                 # Store layers weight & bias
             weights = {
                 'wc1': get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
-                # 'wc2': get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
-
             }
 
             biases = {
                 'bc1': init_bias([num_filters[0]], name="biasconv1rn" + str(robot_number)),
-                # 'bc2': init_bias([num_filters[1]], name="biasconv2rn" + str(robot_number))
             }
             weights['wc2'] = get_xavier_weights_shared([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2rnshared') # 5x5 conv, 32 inputs, 64 outputs
             biases['bc2'] = init_bias_shared([num_filters[1]], name='bc2rnshared')
@@ -196,15 +194,14 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
             fc_vars += biases_FC
             last_conv_vars.append(fc_input)
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
-            loss_domain_confusion = -(1/float(num_robots))*tf.reduce_sum(tf.log(tf.nn.softmax(tf.matmul(full_feature_points, weights['dc']) + biases['dc'])))
-            # loss = tf.add_n([loss,loss_domain_confusion])
-            domain_confusion_losses.append(loss_domain_confusion)
+            loss_domain_confusion = network_config[robot_number]['dc_weight']*(-1/float(num_robots))*tf.reduce_sum(tf.log(tf.nn.softmax(tf.matmul(full_feature_points, weights['dc']) + biases['dc'])))
+            loss = tf.add_n([loss,loss_domain_confusion])
             classification_loss_dc.append(tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(tf.matmul(full_feature_points, weights['dc']) + biases['dc'], dc_onehot)))
             dc_vars = [weights['dc'], biases['dc']]
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss], [dc_onehot]))
             tf.get_variable_scope().reuse_variables()
     classification_loss_dc = tf.add_n(classification_loss_dc)
-    return nnets, fc_vars, last_conv_vars, dc_vars, classification_loss_dc, domain_confusion_losses
+    return nnets, fc_vars, last_conv_vars, dc_vars, classification_loss_dc
 
 def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
     """
@@ -293,7 +290,6 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
                 feature_points.append(feature_points_x)
                 feature_points.append(feature_points_y)
             full_feature_points = tf.concat(concat_dim=1, values=feature_points)
-
             fc_input = tf.concat(concat_dim=1, values=[full_feature_points, state_input])
             fc_output, weights_FC, biases_FC = get_mlp_layers(fc_input, n_layers, dim_hidden, robot_number=robot_number)
             fc_vars += weights_FC
