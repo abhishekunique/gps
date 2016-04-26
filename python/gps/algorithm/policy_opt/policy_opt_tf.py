@@ -85,7 +85,7 @@ class PolicyOptTf(PolicyOpt):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
         if ('dc_mode' in self._hyperparams) and self._hyperparams['dc_mode']:
-            tf_maps, fc_vars, last_conv_vars, dc_vars, dc_loss = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
+            tf_maps, fc_vars, last_conv_vars, dc_vars, dc_loss, confusion_losses = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
                                     network_config=self._hyperparams['network_params'])
             self.obs_tensors = []
             self.action_tensors = []
@@ -106,6 +106,7 @@ class PolicyOptTf(PolicyOpt):
             self.dc_mode = True
             self.dc_vars = dc_vars
             self.dc_loss = dc_loss
+            self.confusion_losses = confusion_losses
         else:
             tf_maps, fc_vars, last_conv_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
                                     network_config=self._hyperparams['network_params'])
@@ -272,6 +273,8 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                 feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+            import IPython
+            IPython.embed()
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
             average_loss += train_loss
@@ -292,7 +295,10 @@ class PolicyOptTf(PolicyOpt):
                     robot_onehots = np.zeros((self.batch_size, self.num_robots))
                     robot_onehots[:, robot_number] = np.ones((self.batch_size,))
                     dc_dict[self.dc_onehots[robot_number]] = robot_onehots
+                import IPython
+                IPython.embed()
                 dc_train_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
+
                 average_loss_dc += dc_train_loss
                 if i % 200 == 0 and i != 0:
                     LOGGER.debug('tensorflow iteration %d, dc loss %f',

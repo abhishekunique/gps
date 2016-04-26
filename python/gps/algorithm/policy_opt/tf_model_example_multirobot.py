@@ -17,8 +17,17 @@ def get_xavier_weights_shared(filter_shape, poolsize=(2, 2), name=None):
     low = -4*np.sqrt(6.0/(fan_in + fan_out)) # use 4 for sigmoid, 1 for tanh activation
     high = 4*np.sqrt(6.0/(fan_in + fan_out))
     wts = tf.get_variable("xavier_weights" + str(name), filter_shape,
-        initializer=tf.random_normal_initializer(low, high))
+        initializer=tf.random_uniform_initializer(low, high, dtype=tf.float32))
     return wts
+
+def get_xavier_weights(filter_shape, poolsize=(2, 2), name=None):
+    fan_in = np.prod(filter_shape[1:])
+    fan_out = (filter_shape[0] * np.prod(filter_shape[2:]) //
+               np.prod(poolsize))
+
+    low = -4*np.sqrt(6.0/(fan_in + fan_out)) # use 4 for sigmoid, 1 for tanh activation
+    high = 4*np.sqrt(6.0/(fan_in + fan_out))
+    return tf.Variable(tf.random_uniform(filter_shape, minval=low, maxval=high, dtype=tf.float32), name=name)
 
 def init_bias_shared(shape, name=None):
     biases = tf.get_variable("biases" + str(name), shape,
@@ -46,6 +55,7 @@ def euclidean_loss_layer(a, b, precision, batch_size):
                     = (u-uhat)'*A*(u-uhat)"""
     scale_factor = tf.constant(2*batch_size, dtype='float')
     uP = batched_matrix_vector_multiply(a-b, precision)
+
     uPu = tf.reduce_sum(uP*(a-b))  # this last dot product is then summed, so we just the sum all at once.
     return uPu/scale_factor
 
@@ -113,6 +123,7 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
         i.append(0)
     #need to fix whatever this is 
     classification_loss_dc = []
+    domain_confusion_losses = []
     with tf.variable_scope("shared_wts"):
         for robot_number, robot_params in enumerate(network_config):
             n_layers = 3
@@ -147,10 +158,13 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
                 # Store layers weight & bias
             weights = {
                 'wc1': get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
+                # 'wc2': get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
+
             }
 
             biases = {
                 'bc1': init_bias([num_filters[0]], name="biasconv1rn" + str(robot_number)),
+                # 'bc2': init_bias([num_filters[1]], name="biasconv2rn" + str(robot_number))
             }
             weights['wc2'] = get_xavier_weights_shared([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2rnshared') # 5x5 conv, 32 inputs, 64 outputs
             biases['bc2'] = init_bias_shared([num_filters[1]], name='bc2rnshared')
@@ -183,13 +197,14 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
             last_conv_vars.append(fc_input)
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
             loss_domain_confusion = -(1/float(num_robots))*tf.reduce_sum(tf.log(tf.nn.softmax(tf.matmul(full_feature_points, weights['dc']) + biases['dc'])))
-            loss = tf.add_n([loss,loss_domain_confusion])
+            # loss = tf.add_n([loss,loss_domain_confusion])
+            domain_confusion_losses.append(loss_domain_confusion)
             classification_loss_dc.append(tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(tf.matmul(full_feature_points, weights['dc']) + biases['dc'], dc_onehot)))
             dc_vars = [weights['dc'], biases['dc']]
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss], [dc_onehot]))
             tf.get_variable_scope().reuse_variables()
     classification_loss_dc = tf.add_n(classification_loss_dc)
-    return nnets, fc_vars, last_conv_vars, dc_vars, classification_loss_dc
+    return nnets, fc_vars, last_conv_vars, dc_vars, classification_loss_dc, domain_confusion_losses
 
 def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
     """
@@ -323,13 +338,3 @@ def conv2d(img, w, b):
 
 def max_pool(img, k):
     return tf.nn.max_pool(img, ksize=[1, k, k, 1], strides=[1, k, k, 1], padding='SAME')
-
-
-def get_xavier_weights(filter_shape, poolsize=(2, 2), name=None):
-    fan_in = np.prod(filter_shape[1:])
-    fan_out = (filter_shape[0] * np.prod(filter_shape[2:]) //
-               np.prod(poolsize))
-
-    low = -4*np.sqrt(6.0/(fan_in + fan_out)) # use 4 for sigmoid, 1 for tanh activation
-    high = 4*np.sqrt(6.0/(fan_in + fan_out))
-    return tf.Variable(tf.random_uniform(filter_shape, minval=low, maxval=high, dtype=tf.float32), name=name)
