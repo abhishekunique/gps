@@ -152,7 +152,7 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
             }
             weights['wc2'] = get_xavier_weights_shared([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2rnshared') # 5x5 conv, 32 inputs, 64 outputs
             biases['bc2'] = init_bias_shared([num_filters[1]], name='bc2rnshared')
-            weights['dc'] = init_weights_shared([num_filters[1],num_robots], name="wtsdcshared")
+            weights['dc'] = init_weights_shared([2*num_filters[1],num_robots], name="wtsdcshared")
             biases['dc'] = init_bias_shared([num_robots], name="biasdcshared")
             
             conv_layer_0 = conv2d(img=image_input, w=weights['wc1'], b=biases['bc1'])
