@@ -84,7 +84,7 @@ class PolicyOptTf(PolicyOpt):
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        if ('dc_mode' in self._hyperparams):
+        if ('dc_mode' in self._hyperparams) and self._hyperparams['dc_mode']:
             tf_maps, fc_vars, last_conv_vars, dc_vars, dc_loss = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
                                     network_config=self._hyperparams['network_params'])
             self.obs_tensors = []

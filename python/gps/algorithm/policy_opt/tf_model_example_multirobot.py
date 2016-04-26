@@ -182,9 +182,7 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
             last_conv_vars.append(fc_input)
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
             
-            import IPython
-            IPython.embed()
-            loss_domain_confusion = -(1/float(num_robots))*tf.log(tf.nn.softmax(tf.matmul(full_feature_points, weights['dc']) + biases['dc']))[robot_number]
+            loss_domain_confusion = -(1/float(num_robots))*tf.reduce_sum(tf.log(tf.nn.softmax(tf.matmul(full_feature_points, weights['dc']) + biases['dc'])),0)[robot_number]
             loss = tf.add_n([loss,loss_domain_confusion])
             classification_loss_dc.append(tf.nn.softmax_cross_entropy_with_logits(tf.matmul(full_feature_points, weights['dc']) + biases['dc'], dc_onehot))
             dc_vars = [weights['dc'], biases['dc']]
