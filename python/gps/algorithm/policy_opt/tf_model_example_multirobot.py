@@ -245,7 +245,8 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
             im_height = network_config[robot_number]['image_height']
             im_width = network_config[robot_number]['image_width']
             num_channels = network_config[robot_number]['image_channels']
-            image_input = tf.reshape(image_input, [-1, im_width, im_height, num_channels])
+            image_input = tf.reshape(image_input, [-1, num_channels, im_width, im_height])
+            image_input = tf.transpose(image_input, perm=[0,3,2,1])
 
                 # Store layers weight & bias
             weights = {
@@ -263,8 +264,8 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
             conv_layer_1 = conv2d(img=conv_layer_0, w=weights['wc2'], b=biases['bc2'])
 
 
-            full_x = np.tile(np.arange(80), (64,1)).T
-            full_y = np.tile(np.arange(64), (80,1))
+            full_y = np.tile(np.arange(im_width), (im_height,1))
+            full_x = np.tile(np.arange(im_height), (im_width,1)).T
             full_x = tf.convert_to_tensor(np.reshape(full_x, [-1,1]), dtype=tf.float32)
             full_y = tf.convert_to_tensor(np.reshape(full_y, [-1,1] ), dtype=tf.float32)
             feature_points = []
