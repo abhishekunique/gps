@@ -140,6 +140,68 @@ class GPSMain(object):
 
         self._end()
 
+
+
+    def run_badmm_parallel(self, itr_load=None):
+        """
+        Run training by iteratively sampling and taking an iteration.
+        Args:
+            itr_load: If specified, loads algorithm state from that
+                iteration, and resumes training at the next iteration.
+        Returns: None
+        """
+        for robot_number in range(self.num_robots):
+            itr_start = self._initialize(itr_load, robot_number=robot_number)
+
+        for itr in range(itr_start, self._hyperparams['iterations']):
+            traj_sample_lists = {}
+            thread_samples_sampling = []
+            for robot_number in range(self.num_robots):
+                thread_samples_sampling.append(threading.Thread(target=self.collect_samples, args=(itr, traj_sample_lists, robot_number)))
+                thread_samples_sampling[robot_number].start()
+            for robot_number in range(self.num_robots):
+                thread_samples_sampling[robot_number].join()
+
+
+            thread_samples_start = []
+            for robot_number in range(self.num_robots):
+                thread_samples_start.append(threading.Thread(target=self._take_iteration_start, args=(itr, traj_sample_lists[robot_number], robot_number)))
+                thread_samples_start[robot_number].start()
+            for robot_number in range(self.num_robots):
+                thread_samples_start[robot_number].join()
+
+            self._take_iteration_shared()
+
+            thread_samples_pollog = []
+            for robot_number in range(self.num_robots):
+                thread_samples_pollog.append(threading.Thread(target=self.polsamples_log, args=(itr, traj_sample_lists[robot_number], robot_number)))
+                thread_samples_pollog[robot_number].start()
+            for robot_number in range(self.num_robots):
+                thread_samples_pollog[robot_number].join()
+                
+            if itr % 5 == 0 and itr > 0:
+                import IPython
+                IPython.embed()
+
+        self._end()
+
+    def collect_samples(self, itr, traj_sample_lists, robot_number):
+        for cond in self._train_idx:
+            for i in range(self._hyperparams['num_samples']):
+                self._take_sample(itr, cond, i, robot_number=robot_number)
+
+        traj_sample_lists[robot_number] = [
+            self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
+            for cond_1 in self._train_idx
+        ]
+        return traj_sample_lists
+
+    def polsamples_log(self, itr, traj_sample_list, robot_number):
+        pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
+        self._log_data(itr, traj_sample_list, pol_sample_lists, robot_number=robot_number)
+        self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
+
+
     def _take_iteration_start(self, itr, sample_lists, robot_number=0):
         """
         Take an iteration of the algorithm.
@@ -417,6 +479,8 @@ def main():
                         help='resume training from iter N')
     parser.add_argument('-p', '--policy', metavar='N', type=int,
                         help='take N policy samples (for BADMM only)')
+    parser.add_argument('-m', '--multithread', action='store_true',
+                        help='Perform the badmm algorithm in parallel')
     args = parser.parse_args()
 
     exp_name = args.experiment
@@ -515,9 +579,14 @@ def main():
                     target=lambda: gps.run(itr_load=resume_training_itr)
                 )
             else:
-                run_gps = threading.Thread(
-                    target=lambda: gps.run_badmm(itr_load=resume_training_itr)
-                )
+                if args.multithread:
+                    run_gps = threading.Thread(
+                        target=lambda: gps.run_badmm_parallel(itr_load=resume_training_itr)
+                    )
+                else:
+                    run_gps = threading.Thread(
+                        target=lambda: gps.run_badmm(itr_load=resume_training_itr)
+                    )
             run_gps.daemon = True
             run_gps.start()
 
