@@ -94,6 +94,10 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
+            if itr % 5 == 0 and itr > 0:
+                import IPython
+                IPython.embed()
+
 
         self._end()
 
@@ -326,6 +330,7 @@ class GPSMain(object):
         """
         if self.gui:
             self.gui[robot_number].set_status_text('Taking policy samples.')
+        
         pol_samples = [[None for _ in range(N)] for _ in range(self._conditions)]
         for cond in range(self._conditions):
             for i in range(N):

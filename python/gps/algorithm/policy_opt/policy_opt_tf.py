@@ -78,8 +78,8 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = self._hyperparams['ent_reg']
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
-        merged = tf.merge_all_summaries()
-        writer = tf.train.SummaryWriter('/home/abhigupta/tensorboard_data', graph_def=self.sess.graph)
+        # merged = tf.merge_all_summaries()
+        # writer = tf.train.SummaryWriter('/home/abhigupta/tensorboard_data', graph_def=self.sess.graph)
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
@@ -302,8 +302,6 @@ class PolicyOptTf(PolicyOpt):
                         print 'supervised dc loss is '
                         print (average_loss_dc/10)
                         average_loss_dc = 0
-
-
         for robot_number in range(self.num_robots):
             # Keep track of tensorflow iterations for loading solver states.
             #TODO: Need to figure this out, not going to work
