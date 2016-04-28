@@ -85,13 +85,12 @@ class PolicyOptTf(PolicyOpt):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
         if ('dc_mode' in self._hyperparams) and self._hyperparams['dc_mode']:
-            tf_maps, fc_vars, last_conv_vars, dc_vars, dc_loss, confusion_losses = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
+            tf_maps, fc_vars, last_conv_vars, dc_vars, dc_loss = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
                                     network_config=self._hyperparams['network_params'])
             self.dc_onehots = []
             self.dc_mode = True
             self.dc_vars = dc_vars
             self.dc_loss = dc_loss
-            self.confusion_losses = confusion_losses
         else:
             tf_maps, fc_vars, last_conv_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
                                     network_config=self._hyperparams['network_params'])
@@ -327,36 +326,33 @@ class PolicyOptTf(PolicyOpt):
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
             average_loss += train_loss
-            if i % 200 == 0 and i != 0:
+            if i % 100 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 200)
+                             i, average_loss / 100)
                 print 'supervised tf loss is '
-                print (average_loss/200)
+                print (average_loss/100)
                 average_loss = 0
 
             if self.dc_mode:
-                dc_dict = {}
-                for robot_number in range(self.num_robots):
-                    start_idx = int(i * self.batch_size %
-                                    (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-                    idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                    dc_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                    robot_onehots = np.zeros((self.batch_size, self.num_robots))
-                    robot_onehots[:, robot_number] = np.ones((self.batch_size,))
-                    dc_dict[self.dc_onehots[robot_number]] = robot_onehots
-                dc_train_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
+                if i % 10 == 0:
+                    dc_dict = {}
+                    for robot_number in range(self.num_robots):
+                        start_idx = int(i * self.batch_size %
+                                        (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                        idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                        dc_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                        robot_onehots = np.zeros((self.batch_size, self.num_robots))
+                        robot_onehots[:, robot_number] = np.ones((self.batch_size,))
+                        dc_dict[self.dc_onehots[robot_number]] = robot_onehots
+                    dc_train_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
 
-                average_loss_dc += dc_train_loss
-                if i % 200 == 0 and i != 0:
-                    LOGGER.debug('tensorflow iteration %d, dc loss %f',
-                                 i, average_loss_dc / 200)
-                    print 'supervised dc loss is '
-                    print (average_loss_dc/200)
-                    average_loss_dc = 0
-        # import IPython
-        # IPython.embed()
-        # self.img_with_fp(obs, 0)
-
+                    average_loss_dc += dc_train_loss
+                    if i % 100 == 0 and i != 0:
+                        LOGGER.debug('tensorflow iteration %d, dc loss %f',
+                                     i, average_loss_dc / 10)
+                        print 'supervised dc loss is '
+                        print (average_loss_dc/10)
+                        average_loss_dc = 0
         for robot_number in range(self.num_robots):
             # Keep track of tensorflow iterations for loading solver states.
             #TODO: Need to figure this out, not going to work
