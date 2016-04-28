@@ -64,6 +64,39 @@ class GPSMain(object):
                 self.algorithm[robot_number].robot_number = robot_number
 
 
+    def pretrain(self):
+        iterations = 1
+        obs_full, pretrain_tgt_full = self.collect_observations(iterations)
+        itr_full = [0,0]
+        inner_itr = 0
+        self.policy_opt.update_pretrain(obs_full, pretrain_tgt_full, itr_full, inner_itr)
+
+    def collect_observations(self, iters):
+        obs_full = []
+        pos_labels_full = []
+        for robot_number in range(self.num_robots):
+            obs = []
+            pos_labels = []
+            for iter in range(iters):
+                samples = [None, None]
+                self.collect_samples(iter, robot_number, samples)
+                # Each sample_list has 5 samples
+                for sample_list_i in range(len(samples[robot_number])):
+                    sample_list = samples[robot_number][sample_list_i]
+                    obs.append(sample_list.get_obs())
+                    cond = self._train_idx[sample_list_i]
+                    pos_labels += [self.agent[robot_number]._hyperparams['pos_body_offset'][cond] for s in range(len(sample_list))]
+            obs_np = np.concatenate(obs)
+            pos_labels_np = np.array(pos_labels)
+            pos_labels_np = np.repeat(pos_labels_np, obs_np.shape[1], axis=0)
+            obs_np = np.reshape(obs_np, (obs_np.shape[0]*obs_np.shape[1], obs_np.shape[2]))
+            print "obs_np", obs_np.shape
+            print "pos_label_np", pos_labels_np.shape
+            obs_full.append(obs_np)
+            pos_labels_full.append(pos_labels_np)
+        return obs_full, pos_labels_full
+
+
     def run(self, itr_load=None):
         """
         Run training by iteratively sampling and taking an iteration.
@@ -478,8 +511,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(1)
-        np.random.seed(1)
+        random.seed(44)
+        np.random.seed(44)
 
         data_files_dir = exp_dir + 'data_files/'
         data_filenames = os.listdir(data_files_dir)
@@ -524,8 +557,10 @@ def main():
             plt.ioff()
             plt.show()
         else:
-            gps.run(itr_load=resume_training_itr)
-
+            if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
+                gps.run(itr_load=resume_training_itr)
+            else:
+                gps.run_badmm(itr_load=resume_training_itr)
 
 if __name__ == "__main__":
     main()
