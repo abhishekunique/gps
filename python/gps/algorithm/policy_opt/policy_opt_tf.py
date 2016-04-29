@@ -24,7 +24,7 @@ class PolicyOptTf(PolicyOpt):
 
         self.num_robots = len(dU)
         self.tf_iter = [0 for r_no in range(len(dU))]
-        self.checkpoint_file = self._hyperparams['checkpoint_prefix']
+        self.checkpoint_file = self._hyperparams['weights_file_prefix']
         self.batch_size = self._hyperparams['batch_size']
         self.device_string = "/cpu:0"
         if self._hyperparams['use_gpu'] == 1:
@@ -429,11 +429,23 @@ class PolicyOptTf(PolicyOpt):
             var_dict[var.name] = var
         saver = self.sess.Saver(var_dict)
         save_path = saver.save(self.sess, "/tmp/model.ckpt")
-        print("Model saved in file: %s" % save_path)
+        print("Shared weights saved in file: %s" % save_path)
 
     def restore_shared_wts(self):
         saver = self.sess.Saver()
         saver.restore(sess, "/tmp/model.ckpt")
+
+    def save_all_wts(self, itr):
+        var_list = tf.trainable_variables()
+        var_dict = {var.name: var for var in var_list}
+        saver = self.sess.Saver(var_dict)
+        save_path = saver.save(self.sess, self.checkpoint_prefix + "_itr"+str(itr)+'.ckpt')
+        print("Model saved in file: %s" % save_path)
+
+    def restore_all_wts(self, itr):
+        saver = self.sess.Saver()
+        saver.restore(sess, self.checkpoint_prefix + "_itr"+str(itr)+'.ckpt')
+
 
     def set_ent_reg(self, ent_reg, robot_number=0):
         """ Set the entropy regularization. """
@@ -459,6 +471,6 @@ class PolicyOptTf(PolicyOpt):
         self.policy.bias = state['bias']
         self.tf_iter = state['tf_iter']
 
-        saver = tf.train.Saver()
-        check_file = self.checkpoint_file
-        saver.restore(self.sess, check_file)
+        # saver = tf.train.Saver()
+        # check_file = self.checkpoint_file
+        # saver.restore(self.sess, check_file)

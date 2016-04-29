@@ -65,7 +65,10 @@ class GPSMain(object):
         self.save_shared = False
         if 'save_shared' in self._hyperparams['common']:
             self.save_shared = self._hyperparams['save_shared']
-
+        else: self.save_shared = False
+        if 'save_wts' in self._hyperparams['common']:
+            self.save_wts = self._hyperparams['common']
+        else: self.save_wts = False
 
     def pretrain(self):
         iterations = 1
@@ -161,7 +164,7 @@ class GPSMain(object):
             # import IPython
             # IPython.embed()
             for robot_number in range(self.num_robots):
-                self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+                self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_numer)
 
             for robot_number in range(self.num_robots):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
@@ -209,6 +212,8 @@ class GPSMain(object):
                 self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
             if self.save_shared:
                 self.policy_opt.save_shared_wts()
+            if self.save_wts:
+                self.policy_opt.save_all_wts(itr)
             if itr % 2 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
@@ -519,10 +524,10 @@ class GPSMain(object):
             )
         if 'no_sample_logging' in self._hyperparams['common']:
             return
-        self.data_logger.pickle(
-            self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
-            copy.copy(self.algorithm)
-        )
+        # self.data_logger.pickle(
+        #     self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
+        #     copy.copy(self.algorithm)
+        # )
         self.data_logger.pickle(
             self._data_files_dir + ('traj_sample_itr_%02d.pkl' % itr),
             copy.copy(traj_sample_lists)

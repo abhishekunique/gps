@@ -4,7 +4,7 @@
     
     <default>
         <joint armature='0.04' damping="1" limited="true"/>
-        <geom friction=".8 .1 .1" density="100" margin="0.002" condim="1" contype="1" conaffinity="1"/>
+        <geom friction=".8 .1 .1" density="500" margin="0.002" condim="1" contype="1" conaffinity="1"/>
     </default>
     
     <worldbody>

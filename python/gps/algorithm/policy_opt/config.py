@@ -47,7 +47,8 @@ POLICY_OPT_TF = {
     # Other hyperparameters.
     'fc_only_iterations': 0,
     'network_model': multi_input_multi_output_images_shared,
-    'checkpoint_prefix': checkpoint_path
+    'checkpoint_prefix': checkpoint_path,
+    'restore_shared_wts': False,
 }
 
 POLICY_OPT_TF.update(GENERIC_CONFIG)
