@@ -62,7 +62,8 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 self.algorithm[robot_number].policy_opt = self.policy_opt
                 self.algorithm[robot_number].robot_number = robot_number
-
+        import IPython
+        IPython.embed()
 
     def run(self, itr_load=None):
         """
@@ -86,6 +87,12 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx
                 ]
+                # if robot_number == 0:
+                #     for cond in self._train_idx:
+                #         print("IN HERE")
+                #         mean_traj = np.mean(np.asarray([traj_sample_lists[robot_number][cond]._samples[i]._data[3] for i in range(self._hyperparams['num_samples'])]),0)
+                #         self.data_logger.pickle(('cond_new%d.pkl' % cond), copy.copy(mean_traj))
+
 
             # import IPython
             # IPython.embed()
@@ -122,8 +129,9 @@ class GPSMain(object):
                 ]
                 if robot_number == 0:
                     for cond in self._train_idx:
+                        print("IN HERE")
                         mean_traj = np.mean(np.asarray([traj_sample_lists[robot_number][cond]._samples[i]._data[3] for i in range(self._hyperparams['num_samples'])]),0)
-                        self.data_logger.pickle(('cond%d.pkl' % cond), copy.copy(mean_traj))
+                        self.data_logger.pickle(('cond_new%d.pkl' % cond), copy.copy(mean_traj))
 
             for robot_number in range(self.num_robots):            
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
@@ -135,7 +143,7 @@ class GPSMain(object):
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
                 self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
                 
-            if itr % 5 == 0 and itr > 0:
+            if itr % 10 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
@@ -234,7 +242,10 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns:
             itr_start: Iteration to start from.
+
         """
+        # loadfile = self._data_files_dir + 'algorithm_itr_11_00.pkl'
+        # alg = self.data_logger.unpickle(loadfile)
         if itr_load is None:
             if self.gui:
                 self.gui[robot_number].set_status_text('Press \'go\' to begin.')
@@ -378,22 +389,22 @@ class GPSMain(object):
             self.gui[robot_number].update(itr, self.algorithm[robot_number], self.agent[robot_number],
                 traj_sample_lists, pol_sample_lists)
             self.gui[robot_number].save_figure(
-                self._data_files_dir + ('figure_itr_%02d.png' % itr)
+                self._data_files_dir + ('figure_itr_%02d_%02d.png' % (itr, robot_number))
             )
         if 'no_sample_logging' in self._hyperparams['common']:
             return
         # self.data_logger.pickle(
-        #     self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
-        #     copy.copy(self.algorithm)
+        #     self._data_files_dir + ('algorithm_itr_%02d_%02d.pkl' % (itr, robot_number)),
+        #     copy.copy(self.algorithm[robot_number])
         # )
-        # self.data_logger.pickle(
-        #     self._data_files_dir + ('traj_sample_itr_%02d.pkl' % itr),
-        #     copy.copy(traj_sample_lists)
-        # )
+        self.data_logger.pickle(
+            self._data_files_dir + ('traj_sample_itr_%02d_%02d.pkl' % (itr, robot_number)),
+            copy.copy(traj_sample_lists[robot_number])
+        )
         # if pol_sample_lists:
         #     self.data_logger.pickle(
-        #         self._data_files_dir + ('pol_sample_itr_%02d.pkl' % itr),
-        #         copy.copy(pol_sample_lists)
+        #         self._data_files_dir + ('pol_sample_itr_%02d_%02d.pkl' % (itr, robot_number)),
+        #         copy.copy(pol_sample_lists[robot_number])
         #     )
 
     def _end(self):
