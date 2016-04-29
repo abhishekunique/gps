@@ -262,14 +262,17 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
 
                 # Store layers weight & bias
             weights = {
-                'wc1': get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
+                # 'wc1': get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
             }
 
             biases = {
-                'bc1': init_bias([num_filters[0]]),
+                # 'bc1': init_bias([num_filters[0]]),
             }
+            weights['wc1'] = get_xavier_weights_shared([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rnshared')
+            biases['bc1'] = init_bias_shared([num_filters[0]], name='bc1rnshared')
             weights['wc2'] = get_xavier_weights_shared([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2rnshared') # 5x5 conv, 32 inputs, 64 outputs
             biases['bc2'] = init_bias_shared([num_filters[1]], name='bc2rnshared')
+
             tf.get_variable_scope().reuse_variables()
             conv_layer_0 = conv2d(img=image_input, w=weights['wc1'], b=biases['bc1'])
 
@@ -299,8 +302,7 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
     return nnets, fc_vars, last_conv_vars
 
-
-def multi_input_multi_output_images_shared_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
+def multi_input_multi_output_images_shared_multitask(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None, same_task_idx=None):
     """
     An example a network in theano that has both state and image inputs.
 
@@ -326,7 +328,13 @@ def multi_input_multi_output_images_shared_domain_confusion(dim_input=[27, 27], 
         st_idx.append([])
         im_idx.append([])
         i.append(0)
-    #need to fix whatever this is 
+
+    robot_task_mapping = {}
+    task_num = 0
+    for task_robots in same_task_idx:
+        for robot_number in task_robots:
+            robot_task_mapping[robot_number] = task_num
+        task_num += 1
     with tf.variable_scope("shared_wts"):
         for robot_number, robot_params in enumerate(network_config):
             n_layers = 3
@@ -354,29 +362,35 @@ def multi_input_multi_output_images_shared_domain_confusion(dim_input=[27, 27], 
             im_height = network_config[robot_number]['image_height']
             im_width = network_config[robot_number]['image_width']
             num_channels = network_config[robot_number]['image_channels']
-            image_input = tf.reshape(image_input, [-1, im_width, im_height, num_channels])
+            image_input = tf.reshape(image_input, [-1, num_channels, im_width, im_height])
+            image_input = tf.transpose(image_input, perm=[0,3,2,1])
 
                 # Store layers weight & bias
             weights = {
-                'wc1': get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
+                # 'wc1': get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
             }
 
             biases = {
-                'bc1': init_bias([num_filters[0]]),
+                # 'bc1': init_bias([num_filters[0]]),
             }
             weights['wc2'] = get_xavier_weights_shared([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2rnshared') # 5x5 conv, 32 inputs, 64 outputs
             biases['bc2'] = init_bias_shared([num_filters[1]], name='bc2rnshared')
-            weights['dc'] = init_weights_shared([num_filters[1],num_robots], name="wtsdcshared")
-            biases['dc'] = init_bias_shared([num_robots], name="biasdcshared")
 
 
+
+            #=======
+            weights['wc1'] = get_xavier_weights_shared([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1sharedtasknum' + str(robot_task_mapping[robot_number])) # 5x5 conv, 1 input, 32 outputs
+            weights['bc1'] = init_bias_shared([num_filters[0]], name='bc1sharedtasknum' + str(robot_task_mapping[robot_number]))
+
+            #=======
+            tf.get_variable_scope().reuse_variables()
             conv_layer_0 = conv2d(img=image_input, w=weights['wc1'], b=biases['bc1'])
 
             conv_layer_1 = conv2d(img=conv_layer_0, w=weights['wc2'], b=biases['bc2'])
 
 
-            full_x = np.tile(np.arange(80), (64,1)).T
-            full_y = np.tile(np.arange(64), (80,1))
+            full_y = np.tile(np.arange(im_width), (im_height,1))
+            full_x = np.tile(np.arange(im_height), (im_width,1)).T
             full_x = tf.convert_to_tensor(np.reshape(full_x, [-1,1]), dtype=tf.float32)
             full_y = tf.convert_to_tensor(np.reshape(full_y, [-1,1] ), dtype=tf.float32)
             feature_points = []
@@ -389,21 +403,14 @@ def multi_input_multi_output_images_shared_domain_confusion(dim_input=[27, 27], 
                 feature_points.append(feature_points_x)
                 feature_points.append(feature_points_y)
             full_feature_points = tf.concat(concat_dim=1, values=feature_points)
-
             fc_input = tf.concat(concat_dim=1, values=[full_feature_points, state_input])
             fc_output, weights_FC, biases_FC = get_mlp_layers(fc_input, n_layers, dim_hidden, robot_number=robot_number)
             fc_vars += weights_FC
             fc_vars += biases_FC
-            dc_output = tf.nn.softmax(tf.matmul(full_feature_points, weights['dc']) + biases['dc'])
-            loss_domain_confusion = -(1/float(self.num_robots))*tf.log(dc_output)[robot_number]
-
-            tf.get_variable_scope().reuse_variables()
             last_conv_vars.append(fc_input)
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
-            loss = tf.add_n([loss,loss_domain_confusion])
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
     return nnets, fc_vars, last_conv_vars
-
 
 def get_loss_layer(mlp_out, action, precision, batch_size):
     """The loss layer used for the MLP network is obtained through this class."""

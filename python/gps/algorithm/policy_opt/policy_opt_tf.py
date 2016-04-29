@@ -234,6 +234,7 @@ class PolicyOptTf(PolicyOpt):
 
         average_loss = 0
         print "itr_full", itr_full
+        print "inner_itr", inner_itr
         if itr_full[0] > 0:
             feed_dict = {}
             for robot_number in range(self.num_robots):

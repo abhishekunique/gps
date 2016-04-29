@@ -94,7 +94,7 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-            if itr % 5 == 0 and itr > 0:
+            if itr % 2 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
@@ -134,7 +134,7 @@ class GPSMain(object):
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
                 self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
                 
-            if itr % 5 == 0 and itr > 0:
+            if itr % 2 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
