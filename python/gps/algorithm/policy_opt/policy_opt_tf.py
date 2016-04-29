@@ -400,36 +400,19 @@ class PolicyOptTf(PolicyOpt):
 
         return output, pol_sigma, pol_prec, pol_det_sigma
 
-    # def imgs_with_fp(self, obs, robot_number, idx):
-    #     imgs_full = []
-    #     feed_dict = {}
-    #     features = []
-    #     for robot_number in range(self.num_robots):
-    #         fx = self.feature_point_tensors[robot_number][0]
-    #         fy = self.feature_point_tensors[robot_number][1]
-    #         features += [fx,fy]
-    #         feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx]
-    #     feature_vals = self.sess.run(features, feed_dict)
-    #     for robot_number in range(self.num_robots):
-    #         fx_v = feature_vals[robot_number*2]
-    #         fy_v = feature_vals[robot_number*2+1]
-    #         imgs = obs_reshaped[robot_number]
-    #     return
-
     def single_img_with_fp(self, obs, robot_number, img_height, img_width, num_channels ):
-        fx = self.feature_point_tensors[robot_number][0]
-        fy = self.feature_point_tensors[robot_number][1]
-        features = [fx,fy]
+        fps = self.feature_point_tensors[robot_number]
         feed_dict[self.obs_tensors[robot_number]] = obs
-        fx_v, fy_v = self.sess.run(features, feed_dict)
-        fx_v = int(fx_v); fy_v = int(fy_v)
+        fps= self.sess.run(features, feed_dict)
+        fx_v = fps_vals[::2].astype(int)
+        fy_v = fps_vals[1::2].astype(int)
         img = obs[self.img_idx]
         import IPython
         IPython.embed()
         img = obs.reshape(img_height, img_width, num_channels)
-        img[fy_v, fx_v, :] = 0
-        img[fy_v, fx_v, 0] = 255
-        return
+        img[fx_v, fy_v, :] = 0
+        img[fx_v, fy_v, 0] = 255
+        return img
 
 
     def set_ent_reg(self, ent_reg, robot_number=0):

@@ -136,6 +136,87 @@ def convolutional_network(dim_input=(64,80,3), dim_output=3, batch_size=128, net
     pretrain_h = tf.nn.relu(tf.matmul(full_feature_points, weights['pretrain_w']) + biases['pretrain_b'])
     pretrain_output = tf.matmul(pretrain_h, weights['pretrain_out']) + biases['pretrain_outb']
     pretrain_loss = tf.nn.l2_loss(pretrain_output - pose_labels)
-    out_dict = {'input': nn_input, 'pose_labels': pose_labels, 'loss': pretrain_loss}
+    out_dict = {'input': nn_input, 'pose_labels': pose_labels, 'loss': pretrain_loss,
+    'feature_points': full_feature_points}
+
+    return out_dict
+
+def convolutional_network_dc(dim_input=(64,80,3), dim_output=3, num_robots=2, batch_size=128,
+                             dc_weight=0.1):
+    """
+    An example a network in theano that has both state and image inputs.
+
+    Args:
+        dim_input:  (h,w,c) tuple for input size.
+        dim_output: Dimensionality of the output.
+        batch_size: Batch size.
+        network_config: dictionary of network structure parameters
+    Returns:
+        a dictionary containing inputs, outputs, and the loss function representing scalar loss.
+    """
+    # List of indices for state (vector) data and image (tensor) data in observation.
+    print 'making multi-input/output-network'
+    num_channels = dim_input[2]
+    im_width = dim_input[1]
+    im_height = dim_input[0]
+    n_layers = 3
+    layer_size = 20
+    dim_hidden = 16
+    pool_size = 2
+    filter_size = 3
+    nn_input, pose_labels = get_input_layer(dim_input, dim_output)
+    dc_onehot = tf.placeholder('float', [None, num_robots], name='robot_label')
+
+    # image goes through 2 convnet layers
+    num_filters = [10,20]
+    # Store layers weight & bias
+    weights = {
+        'wc1': get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rn'), # 5x5 conv, 1 input, 32 outputs
+        'pretrain_w': init_weights([num_filters[1]*2, dim_hidden], name='pretrain_w'),
+        'pretrain_out': init_weights([dim_hidden, 3], name='pretrain_out'),
+    }
+    biases = {
+        'bc1': init_bias([num_filters[0]], name="biasconv1rn" ),
+        'pretrain_b': init_bias([dim_hidden], name='pretrain_b'),
+        'pretrain_outb': init_bias([3], name='pretrain_outb'),
+    }
+    weights['wc2'] = get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2rnshared') # 5x5 conv, 32 inputs, 64 outputs
+    biases['bc2'] = init_bias([num_filters[1]], name='bc2rn')
+    weights['dc'] = init_weights([2*num_filters[1],num_robots], name="wtsdc")
+    biases['dc'] = init_bias([num_robots], name="biasdc")
+
+    conv_layer_0 = conv2d(img=nn_input, w=weights['wc1'], b=biases['bc1'])
+
+    conv_layer_1 = conv2d(img=conv_layer_0, w=weights['wc2'], b=biases['bc2'])
+
+    full_y = np.tile(np.arange(im_width), (im_height,1))
+    full_x = np.tile(np.arange(im_height), (im_width,1)).T
+    full_x = tf.convert_to_tensor(np.reshape(full_x, [-1,1]), dtype=tf.float32)
+    full_y = tf.convert_to_tensor(np.reshape(full_y, [-1,1] ), dtype=tf.float32)
+    feature_points = []
+    for filter_number in range(num_filters[1]):
+        conv_filter_chosen = conv_layer_1[:,:,:,filter_number]
+        conv_filter_chosen = tf.reshape(conv_filter_chosen, [-1, im_width*im_height])
+        conv_softmax = tf.nn.softmax(conv_filter_chosen)
+        feature_points_x = tf.matmul(conv_softmax, full_x)
+        feature_points_y = tf.matmul(conv_softmax, full_y)
+        feature_points.append(feature_points_x)
+        feature_points.append(feature_points_y)
+    full_feature_points = tf.concat(concat_dim=1, values=feature_points)
+
+    domain_confusion_output = tf.nn.softmax(tf.matmul(full_feature_points, weights['dc']) + biases['dc'])
+
+    loss_domain_confusion = dc_weight*(-1/float(num_robots))*tf.reduce_sum(domain_confusion_output)
+    classification_loss_dc = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(domain_confusion_output,
+                                                                                   dc_onehot))
+
+    pretrain_h = tf.nn.relu(tf.matmul(full_feature_points, weights['pretrain_w']) + biases['pretrain_b'])
+    pretrain_output = tf.matmul(pretrain_h, weights['pretrain_out']) + biases['pretrain_outb']
+    pretrain_loss = tf.nn.l2_loss(pretrain_output - pose_labels) 
+    loss = pretrain_loss + loss_domain_confusion
+    out_dict = {'input': nn_input, 'pose_labels': pose_labels, 'pose_loss': pretrain_loss, 
+                'robot_onehots': dc_onehot, 'loss': loss,
+                'dc_loss' : classification_loss_dc, 'dc_vars': [weights['dc'], biases['dc']],
+                'feature_points': full_feature_points, 'dc_output': domain_confusion_output}
 
     return out_dict

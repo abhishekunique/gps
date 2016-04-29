@@ -92,13 +92,18 @@ class GPSMain(object):
         pos_labels_np = np.repeat(pos_labels_np, img_np.shape[1], axis=0)
         robot_labels_np = np.array(robot_labels)
         robot_labels_np = np.repeat(robot_labels_np, img_np.shape[1], axis=0)
+
         img_np = np.reshape(img_np, (img_np.shape[0]*img_np.shape[1], img_np.shape[2]))
         print "img_np", img_np.shape
         print "pos_label_np", pos_labels_np.shape
-
-        import IPython
-        IPython.embed()
-
+        num_data = img_np.shape[0]
+        robot_onehots = np.zeros(num_data, self.num_robots)
+        robot_onehots[:,robot_labels_np] = 1
+        reshaped = img_np.reshape(num_data,3,80,64)
+        im = -np.transpose(reshaped, [0,2,3,1])
+        np.save('image_data', im)
+        np.save('pose_labels', pos_labels_np)
+        np.save('robot_onehots', robot_onehots)
         return img_np, pos_labels_np, robot_labels_np
 
 
@@ -173,6 +178,7 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
+        # self.collect_img_dataset(1)
 
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
@@ -509,19 +515,19 @@ class GPSMain(object):
             )
         if 'no_sample_logging' in self._hyperparams['common']:
             return
-        # self.data_logger.pickle(
-        #     self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
-        #     copy.copy(self.algorithm)
-        # )
-        # self.data_logger.pickle(
-        #     self._data_files_dir + ('traj_sample_itr_%02d.pkl' % itr),
-        #     copy.copy(traj_sample_lists)
-        # )
-        # if pol_sample_lists:
-        #     self.data_logger.pickle(
-        #         self._data_files_dir + ('pol_sample_itr_%02d.pkl' % itr),
-        #         copy.copy(pol_sample_lists)
-        #     )
+        self.data_logger.pickle(
+            self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
+            copy.copy(self.algorithm)
+        )
+        self.data_logger.pickle(
+            self._data_files_dir + ('traj_sample_itr_%02d.pkl' % itr),
+            copy.copy(traj_sample_lists)
+        )
+        if pol_sample_lists:
+            self.data_logger.pickle(
+                self._data_files_dir + ('pol_sample_itr_%02d.pkl' % itr),
+                copy.copy(pol_sample_lists)
+            )
 
     def _end(self):
         """ Finish running and exit. """
