@@ -62,6 +62,9 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 self.algorithm[robot_number].policy_opt = self.policy_opt
                 self.algorithm[robot_number].robot_number = robot_number
+        self.save_shared = False
+        if 'save_shared' in self._hyperparams['common']:
+            self.save_shared = self._hyperparams['save_shared']
 
 
     def pretrain(self):
@@ -204,7 +207,8 @@ class GPSMain(object):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
                 self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
-                
+            if self.save_shared:
+                self.policy_opt.save_shared_wts()
             if itr % 2 == 0 and itr > 0:
                 import IPython
                 IPython.embed()

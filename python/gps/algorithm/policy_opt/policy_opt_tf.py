@@ -76,8 +76,15 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = [self._hyperparams['ent_reg']]*self.num_robots
         else:
             self.ent_reg = self._hyperparams['ent_reg']
+        allVars = tf.trainable_variables()
+        self.shared_vars = []
+        for var in allVars:
+            if 'shared' in var.name:
+                self.shared_vars.append(var)
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
+        if self._hyperparams['restore_shared_wts']:
+            self.restore_shared_wts()
         # merged = tf.merge_all_summaries()
         # writer = tf.train.SummaryWriter('/home/abhigupta/tensorboard_data', graph_def=self.sess.graph)
 
@@ -415,6 +422,18 @@ class PolicyOptTf(PolicyOpt):
         img[fx_v, fy_v, 0] = 255
         return img
 
+
+    def save_shared_wts(self):
+        var_dict = {}
+        for var in self.shared_vars:
+            var_dict[var.name] = var
+        saver = self.sess.Saver(var_dict)
+        save_path = saver.save(self.sess, "/tmp/model.ckpt")
+        print("Model saved in file: %s" % save_path)
+
+    def restore_shared_wts(self):
+        saver = self.sess.Saver()
+        saver.restore(sess, "/tmp/model.ckpt")
 
     def set_ent_reg(self, ent_reg, robot_number=0):
         """ Set the entropy regularization. """
