@@ -51,6 +51,20 @@ PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/mjc_multirobot_reach_images_multicondition/'
+# mjc_reach = {
+#     'top_pos_offsets' : [np.asarray([-1.9, 0.0, 0.]), np.asarray([0., 0., -1.7]), np.asarray([-1.3, 0.0, -0.5]), np.asarray([-0.5, 0., -1.0])],
+#     'bottom_pos_offsets' : [np.asarray([-0.3, 0.0, 0.8]), np.asarray([0.7, 0., 0.]), np.asarray([0.3, 0.0, 0.5]), np.asarray([-0.5, 0.0, 0.5])], 
+# }
+
+# more_offsets = [np.asarray([0.7, 0., -1.]), np.asarray([.5, 0.0, 0.3]),np.asarray([.7, 0.0, -0.3]),
+#                 np.array([-0.8, 0.0, 0.5]),np.array([-0.3, 0.0, -0.8])
+#                 # np.asarray([0.7, 0., -1.])+0.1, np.asarray([.5, 0.0, 0.3])+0.1,np.asarray([.7, 0.0, -0.3])+0.1,
+#                 # np.asarray([0.7, 0., -1.])-0.1, np.asarray([.5, 0.0, 0.3])-0.1,np.asarray([.7, 0.0, -0.3])-0.1,
+# ]
+
+all_offsets = [np.asarray([0., 0., -1.7]),np.asarray([0.7, 0., 0.]), np.asarray([0.3, 0.0, 0.5]),
+              np.asarray([0.7, 0., -1.]), np.asarray([.5, 0.0, 0.3]),np.asarray([.7, 0.0, -0.3]),
+              np.array([-0.8, 0.0, 0.5]),np.array([-0.3, 0.0, -0.8])]
 
 
 common = {
@@ -60,9 +74,9 @@ common = {
     'data_files_dir': EXP_DIR + 'data_files/',
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
-    'conditions': 3,   
-    'train_conditions': [0,1],
-    'test_conditions':[2],
+    'conditions': 8,
+    'train_conditions': [0,1,2,3,],
+    'test_conditions':[4,5,6,7],
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
@@ -106,7 +120,7 @@ agent = [{
     'x0': np.zeros(6),
     'dt': 0.05,
     'substeps': 5,
-    'pos_body_offset': [np.array([0, 0.0, 0]), np.array([0, 0., 0.4]), np.array([0, 0., 0.2])],
+    'pos_body_offset': all_offsets,
     'pos_body_idx': np.array([6]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
@@ -129,7 +143,7 @@ agent = [{
     'x0': np.zeros(8),
     'dt': 0.05,
     'substeps': 5,
-    'pos_body_offset': [np.array([0, 0.0, 0]), np.array([0, 0., 0.4]), np.array([0, 0., 0.2])],
+    'pos_body_offset': all_offsets,
     'pos_body_idx': np.array([7]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
@@ -223,54 +237,31 @@ algorithm[1]['init_traj_distr'] = {
 torque_cost_1 = [{
     'type': CostAction,
     'wu': 5e-5 / PR2_GAINS[0],
-},
-{
-    'type': CostAction,
-    'wu': 5e-5 / PR2_GAINS[0],
-}]
+} for i in common['train_conditions']]
 
 fk_cost_1 = [{
     'type': CostFK,
-    'target_end_effector': np.array([0.8, 0.0, 0.5]),
+    'target_end_effector': np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i],
     'wp': np.array([1, 1, 1]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
-},
-{
-    'type': CostFK,
-    'target_end_effector': np.array([0.8, 0.0, 0.9]),
-    'wp': np.array([1, 1, 1]),
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-}]
+} for i in common['train_conditions']
+]
 
 torque_cost_2 = [{
     'type': CostAction,
     'wu': 5e-5 / PR2_GAINS[1],
-},
-{
-    'type': CostAction,
-    'wu': 5e-5 / PR2_GAINS[1],
-}]
+} for i in common['train_conditions']]
 
 fk_cost_2 = [{
     'type': CostFK,
-    'target_end_effector': np.array([0.8, 0.0, 0.5]),
+    'target_end_effector': np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i],
     'wp': np.array([1, 1, 1]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
-},
-{
-    'type': CostFK,
-    'target_end_effector': np.array([0.8, 0.0, 0.9]),
-    'wp': np.array([1, 1, 1]),
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-}]
+} for i in common['train_conditions']]
 
 
 algorithm[0]['cost'] = [{
@@ -343,8 +334,8 @@ algorithm[1]['policy_prior'] = {
 
 config = {
     'iterations': 25,
-    'num_samples': 5,
-    'verbose_trials': 5,
+    'num_samples': 10,
+    'verbose_trials': 10,
     'common': common,
     'agent': agent,
     'gui_on': True,

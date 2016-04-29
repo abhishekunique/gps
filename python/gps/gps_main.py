@@ -20,7 +20,7 @@ from gps.utility.data_logger import DataLogger
 from gps.sample.sample_list import SampleList
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
-
+from gps.proto.gps_pb2 import ACTION, RGB_IMAGE
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
@@ -62,6 +62,75 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 self.algorithm[robot_number].policy_opt = self.policy_opt
                 self.algorithm[robot_number].robot_number = robot_number
+
+
+    def pretrain(self):
+        iterations = 1
+        obs_full, pretrain_tgt_full = self.collect_observations(iterations)
+        itr_full = [0,0]
+        inner_itr = 0
+        self.policy_opt.update_pretrain(obs_full, pretrain_tgt_full, itr_full, inner_itr)
+
+
+    def collect_img_dataset(self, iters):
+        imgs = []
+        pos_labels = []
+        robot_labels = []
+        for robot_number in range(self.num_robots):
+            for iter in range(iters):
+                samples = [None, None]
+                self.collect_samples(iter, samples,robot_number)
+                # Each sample_list has 5 samples
+                for sample_list_i in range(len(samples[robot_number])):
+                    sample_list = samples[robot_number][sample_list_i]
+                    imgs.append(sample_list.get(RGB_IMAGE))
+                    cond = self._train_idx[sample_list_i]
+                    pos_labels += [self.agent[robot_number]._hyperparams['pos_body_offset'][cond] for s in range(len(sample_list))]
+                    robot_labels += [robot_number for s in range(len(sample_list))]
+        img_np = np.concatenate(imgs)
+        pos_labels_np = np.array(pos_labels)
+        pos_labels_np = np.repeat(pos_labels_np, img_np.shape[1], axis=0)
+        robot_labels_np = np.array(robot_labels)
+        robot_labels_np = np.repeat(robot_labels_np, img_np.shape[1], axis=0)
+
+        img_np = np.reshape(img_np, (img_np.shape[0]*img_np.shape[1], img_np.shape[2]))
+        print "img_np", img_np.shape
+        print "pos_label_np", pos_labels_np.shape
+        num_data = img_np.shape[0]
+        robot_onehots = np.zeros(num_data, self.num_robots)
+        robot_onehots[:,robot_labels_np] = 1
+        reshaped = img_np.reshape(num_data,3,80,64)
+        im = -np.transpose(reshaped, [0,2,3,1])
+        np.save('image_data', im)
+        np.save('pose_labels', pos_labels_np)
+        np.save('robot_onehots', robot_onehots)
+        return img_np, pos_labels_np, robot_labels_np
+
+
+    # def collect_observations(self, iters):
+    #     obs_full = []
+    #     pos_labels_full = []
+    #     for robot_number in range(self.num_robots):
+    #         obs = []
+    #         pos_labels = []
+    #         for iter in range(iters):
+    #             samples = [None, None]
+    #             self.collect_samples(iter, robot_number, samples)
+    #             # Each sample_list has 5 samples
+    #             for sample_list_i in range(len(samples[robot_number])):
+    #                 sample_list = samples[robot_number][sample_list_i]
+    #                 obs.append(sample_list.get_obs())
+    #                 cond = self._train_idx[sample_list_i]
+    #                 pos_labels += [self.agent[robot_number]._hyperparams['pos_body_offset'][cond] for s in range(len(sample_list))]
+    #         obs_np = np.concatenate(obs)
+    #         pos_labels_np = np.array(pos_labels)
+    #         pos_labels_np = np.repeat(pos_labels_np, obs_np.shape[1], axis=0)
+    #         obs_np = np.reshape(obs_np, (obs_np.shape[0]*obs_np.shape[1], obs_np.shape[2]))
+    #         print "obs_np", obs_np.shape
+    #         print "pos_label_np", pos_labels_np.shape
+    #         obs_full.append(obs_np)
+    #         pos_labels_full.append(pos_labels_np)
+    #     return obs_full, pos_labels_full
 
 
     def run(self, itr_load=None):
@@ -109,6 +178,8 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
+        # self.collect_img_dataset(1)
+
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
@@ -444,19 +515,19 @@ class GPSMain(object):
             )
         if 'no_sample_logging' in self._hyperparams['common']:
             return
-        # self.data_logger.pickle(
-        #     self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
-        #     copy.copy(self.algorithm)
-        # )
-        # self.data_logger.pickle(
-        #     self._data_files_dir + ('traj_sample_itr_%02d.pkl' % itr),
-        #     copy.copy(traj_sample_lists)
-        # )
-        # if pol_sample_lists:
-        #     self.data_logger.pickle(
-        #         self._data_files_dir + ('pol_sample_itr_%02d.pkl' % itr),
-        #         copy.copy(pol_sample_lists)
-        #     )
+        self.data_logger.pickle(
+            self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
+            copy.copy(self.algorithm)
+        )
+        self.data_logger.pickle(
+            self._data_files_dir + ('traj_sample_itr_%02d.pkl' % itr),
+            copy.copy(traj_sample_lists)
+        )
+        if pol_sample_lists:
+            self.data_logger.pickle(
+                self._data_files_dir + ('pol_sample_itr_%02d.pkl' % itr),
+                copy.copy(pol_sample_lists)
+            )
 
     def _end(self):
         """ Finish running and exit. """
@@ -542,8 +613,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(1)
-        np.random.seed(1)
+        random.seed(44)
+        np.random.seed(44)
 
         data_files_dir = exp_dir + 'data_files/'
         data_filenames = os.listdir(data_files_dir)
@@ -593,8 +664,10 @@ def main():
             plt.ioff()
             plt.show()
         else:
-            gps.run(itr_load=resume_training_itr)
-
+            if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
+                gps.run(itr_load=resume_training_itr)
+            else:
+                gps.run_badmm(itr_load=resume_training_itr)
 
 if __name__ == "__main__":
     main()

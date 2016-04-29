@@ -159,10 +159,15 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
                 # Store layers weight & bias
             weights = {
                 'wc1': get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
+                'pretrain_w': init_weights_shared([num_filters[1]*2, dim_hidden], name='pretrain_w'),
+                'pretrain_out': init_weights_shared([dim_hidden, 3], name='pretrain_out'),
+
             }
 
             biases = {
                 'bc1': init_bias([num_filters[0]], name="biasconv1rn" + str(robot_number)),
+                'pretrain_b': init_bias_shared([dim_hidden], name='pretrain_b'),
+                'pretrain_outb': init_bias_shared([3], name='pretrain_outb'),
             }
             weights['wc2'] = get_xavier_weights_shared([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2rnshared') # 5x5 conv, 32 inputs, 64 outputs
             biases['bc2'] = init_bias_shared([num_filters[1]], name='bc2rnshared')
@@ -198,7 +203,13 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
             loss = tf.add_n([loss,loss_domain_confusion])
             classification_loss_dc.append(tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(tf.matmul(full_feature_points, weights['dc']) + biases['dc'], dc_onehot)))
             dc_vars = [weights['dc'], biases['dc']]
-            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss], [dc_onehot]))
+            pretrain_target = tf.placeholder('float', [None, 3], name='pretrain_target')
+            pretrain_h = tf.nn.relu(tf.matmul(full_feature_points, weights['pretrain_w']) + biases['pretrain_b'])
+            pretrain_output = tf.matmul(pretrain_h, weights['pretrain_out']) + biases['pretrain_outb']
+            pretrain_loss = tf.nn.l2_loss(pretrain_output - pretrain_target)
+            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss], 
+                                               dc_onehot=[dc_onehot], pretraining_tgt=pretrain_target,
+                                               pretraining_loss=pretrain_loss))
             tf.get_variable_scope().reuse_variables()
     classification_loss_dc = tf.add_n(classification_loss_dc)
     return nnets, fc_vars, last_conv_vars, dc_vars, classification_loss_dc
@@ -284,15 +295,21 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
             full_x = tf.convert_to_tensor(np.reshape(full_x, [-1,1]), dtype=tf.float32)
             full_y = tf.convert_to_tensor(np.reshape(full_y, [-1,1] ), dtype=tf.float32)
             feature_points = []
+            f_x = []
+            f_y = []
             for filter_number in range(num_filters[1]):
                 conv_filter_chosen = conv_layer_1[:,:,:,filter_number]
                 conv_filter_chosen = tf.reshape(conv_filter_chosen, [-1, im_width*im_height])
                 conv_softmax = tf.nn.softmax(conv_filter_chosen)
                 feature_points_x = tf.matmul(conv_softmax, full_x)
                 feature_points_y = tf.matmul(conv_softmax, full_y)
+                f_x.append(feature_points_x)
+                f_y.append(feature_points_y)
                 feature_points.append(feature_points_x)
                 feature_points.append(feature_points_y)
             full_feature_points = tf.concat(concat_dim=1, values=feature_points)
+            f_x = tf.concat(concat_dim=1, values=f_x)
+            f_y = tf.concat(concat_dim=1, values=f_y)
             fc_input = tf.concat(concat_dim=1, values=[full_feature_points, state_input])
             fc_output, weights_FC, biases_FC = get_mlp_layers(fc_input, n_layers, dim_hidden, robot_number=robot_number)
             fc_vars += weights_FC
