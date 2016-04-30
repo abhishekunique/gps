@@ -48,13 +48,14 @@ SENSOR_DIMS = [{
 }]
 
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
-
-BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
+B
+mat[ASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/mjc_singlerobot_4link_reach_multicondition/'
-all_offsets = [np.asarray([0., 0., -1.7]),np.asarray([0.7, 0., 0.]), np.asarray([0.3, 0.0, 0.5]),
-              np.asarray([0.7, 0., -1.]), np.asarray([.5, 0.0, 0.3]),np.asarray([.7, 0.0, -0.3]),
-              np.array([-0.8, 0.0, 0.5]),np.array([-0.3, 0.0, -0.8])]
 
+all_offsets = [np.asarray([0., 0., -1.7]),np.asarray([0.7, 0., 0.]), np.asarray([0.3, 0.0, 0.5]),
+               np.asarray([0.7, 0., -1.]), np.asarray([.5, 0.0, 0.3]),np.asarray([.7, 0.0, -0.3]),
+               #              np.array([-0.8, 0.0, 0.5]),np.array([-0.3, 0.0, -0.8])]
+               np.array([0., 0., -1.3]), np.array([0.5, 0., -1])]
 
 common = {
     'experiment_name': 'my_experiment' + '_' + \

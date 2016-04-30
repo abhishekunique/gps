@@ -481,8 +481,8 @@ class GPSMain(object):
                     verbose=True, save=False)
 
         self.data_logger.pickle(
-            self._data_files_dir + ('polsample_itr_%02d_rn_%02d_cond_%02d.pkl' % (itr, robot_number, cond)),
-            copy.copy(pol_samples[cond])
+            self._data_files_dir + ('polsample_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
+            copy.copy(pol_samples)
         )
 
     def _take_policy_samples(self, N=None, robot_number=0):

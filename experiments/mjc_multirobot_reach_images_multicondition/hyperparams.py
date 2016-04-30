@@ -64,8 +64,8 @@ EXP_DIR = BASE_DIR + '/../experiments/mjc_multirobot_reach_images_multicondition
 
 all_offsets = [np.asarray([0., 0., -1.7]),np.asarray([0.7, 0., 0.]), np.asarray([0.3, 0.0, 0.5]),
               np.asarray([0.7, 0., -1.]), np.asarray([.5, 0.0, 0.3]),np.asarray([.7, 0.0, -0.3]),
-              np.array([-0.8, 0.0, 0.5]),np.array([-0.3, 0.0, -0.8])]
-
+#              np.array([-0.8, 0.0, 0.5]),np.array([-0.3, 0.0, -0.8])]
+               np.array([0., 0., -1.3]), np.array([0.5, 0., -1])]
 
 common = {
     'experiment_name': 'my_experiment' + '_' + \
@@ -120,7 +120,7 @@ agent = [{
     'x0': np.zeros(6),
     'dt': 0.05,
     'substeps': 5,
-    'pos_body_offset': all_offsets,
+    'pos_body_offset':  all_offsets,
     'pos_body_idx': np.array([6]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
@@ -143,7 +143,7 @@ agent = [{
     'x0': np.zeros(8),
     'dt': 0.05,
     'substeps': 5,
-    'pos_body_offset': all_offsets,
+    'pos_body_offset':  all_offsets,
     'pos_body_idx': np.array([7]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
@@ -336,6 +336,7 @@ config = {
     'iterations': 25,
     'num_samples': 10,
     'verbose_trials': 10,
+    'save_wts': True,
     'common': common,
     'agent': agent,
     'gui_on': True,
