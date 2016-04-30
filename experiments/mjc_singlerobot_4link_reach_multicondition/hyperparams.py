@@ -3,7 +3,7 @@ from __future__ import division
 from datetime import datetime
 import os.path
 import numpy as np
-
+import time
 from gps import __file__ as gps_filepath
 from gps.agent.mjc.agent_mjc import AgentMuJoCo
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
