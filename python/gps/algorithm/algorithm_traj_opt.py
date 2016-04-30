@@ -14,7 +14,7 @@ class AlgorithmTrajOpt(Algorithm):
     def __init__(self, hyperparams):
         Algorithm.__init__(self, hyperparams)
 
-    def iteration(self, sample_lists):
+    def iteration(self, sample_lists, itr=None):
         """
         Run iteration of LQR.
         Args:
@@ -26,7 +26,7 @@ class AlgorithmTrajOpt(Algorithm):
         # Update dynamics model using all samples.
         self._update_dynamics()
 
-        self._update_step_size()  # KL Divergence step size.
+        self._update_step_size(itr=itr)  # KL Divergence step size.
 
         # Run inner loop to compute new policies.
         for _ in range(self._hyperparams['inner_iterations']):
@@ -34,11 +34,11 @@ class AlgorithmTrajOpt(Algorithm):
 
         self._advance_iteration_variables()
 
-    def _update_step_size(self):
+    def _update_step_size(self, itr=None):
         """ Evaluate costs on samples, and adjust the step size. """
         # Evaluate cost function for all conditions and samples.
         for m in range(self.M):
-            self._eval_cost(m)
+            self._eval_cost(m, itr=itr)
 
         # Adjust step size relative to the previous iteration.
         for m in range(self.M):

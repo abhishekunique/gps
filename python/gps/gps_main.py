@@ -328,7 +328,7 @@ class GPSMain(object):
         if self.gui:
             self.gui[robot_number].set_status_text('Calculating.')
             self.gui[robot_number].start_display_calculating()
-        self.algorithm[robot_number].iteration(sample_lists)
+        self.algorithm[robot_number].iteration(sample_lists, itr=itr)
         if self.gui:
             self.gui[robot_number].stop_display_calculating()
 

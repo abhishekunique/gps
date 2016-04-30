@@ -20,7 +20,7 @@ class CostFK(Cost):
         config.update(hyperparams)
         Cost.__init__(self, config)
 
-    def eval(self, sample):
+    def eval(self, sample, itr=None):
         """
         Evaluate forward kinematics (end-effector penalties) cost.
         Temporary note: This implements the 'joint' penalty type from

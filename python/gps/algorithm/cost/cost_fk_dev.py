@@ -21,7 +21,7 @@ class CostFKDev(Cost):
         config.update(hyperparams)
         Cost.__init__(self, config)
 
-    def eval(self, sample):
+    def eval(self, sample, itr=None):
         """
         Evaluate forward kinematics (end-effector penalties) cost.
         Temporary note: This implements the 'joint' penalty type from
@@ -66,6 +66,9 @@ class CostFKDev(Cost):
             wp, dist, jx, jxx_zeros, self._hyperparams['l1'],
             self._hyperparams['l2'], self._hyperparams['alpha']
         )
+        l = l*0.5/((itr+1)**(0.3))
+        ls = ls*0.5/((itr+1)**(0.3))
+        lss = lss*0.5/((itr+1)**(0.3))
         # Add to current terms.
         sample.agent.pack_data_x(lx, ls, data_types=[JOINT_ANGLES])
         sample.agent.pack_data_x(lxx, lss,
