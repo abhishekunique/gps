@@ -35,8 +35,9 @@ SENSOR_DIMS = {
 
 PR2_GAINS = np.array([3.09, 1.08, 0.393, 0.674, 0.111, 0.152, 0.098])
 
-BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-3]) + '/'
-EXP_DIR = BASE_DIR + 'experiments/mjc_badmm_example/'
+BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
+EXP_DIR = BASE_DIR + '/../experiments/mjc_badmm_example/'
+
 
 common = {
     'experiment_name': 'my_experiment' + '_' + \
@@ -53,7 +54,7 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = {
     'type': AgentMuJoCo,
-    'filename': BASE_DIR + 'mjc_models/pr2_arm3d.xml',
+    'filename': './mjc_models/pr2_arm3d.xml',
     'x0': np.concatenate([np.array([0.1, 0.1, -1.54, -1.7, 1.54, -0.2, 0]),
                           np.zeros(7)]),
     'dt': 0.05,
