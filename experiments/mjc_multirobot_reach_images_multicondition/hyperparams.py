@@ -28,21 +28,22 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
 from gps.gui.config import generate_experiment_info
 
-SENSOR_DIMS = [{
-    JOINT_ANGLES: 3,
-    JOINT_VELOCITIES: 3,
-    END_EFFECTOR_POINTS: 3,
-    END_EFFECTOR_POINT_VELOCITIES: 3,
-    ACTION: 3,
-    RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
-    RGB_IMAGE_SIZE: 3,
-},
+SENSOR_DIMS = [
 {
     JOINT_ANGLES: 4,
     JOINT_VELOCITIES: 4,
     END_EFFECTOR_POINTS: 3,
     END_EFFECTOR_POINT_VELOCITIES: 3,
     ACTION: 4,
+    RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
+    RGB_IMAGE_SIZE: 3,
+},
+{
+    JOINT_ANGLES: 3,
+    JOINT_VELOCITIES: 3,
+    END_EFFECTOR_POINTS: 3,
+    END_EFFECTOR_POINT_VELOCITIES: 3,
+    ACTION: 3,
     RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
     RGB_IMAGE_SIZE: 3,
 }]
@@ -114,14 +115,15 @@ common = {
 if not os.path.exists(common['data_files_dir']):
     os.makedirs(common['data_files_dir'])
 
-agent = [{
+agent = [
+{
     'type': AgentMuJoCo,
-    'filename': './mjc_models/arm_3link_reach.xml',
-    'x0': np.zeros(6),
+    'filename': './mjc_models/arm_4link_reach.xml',
+    'x0': np.zeros(8),
     'dt': 0.05,
     'substeps': 5,
     'pos_body_offset':  all_offsets,
-    'pos_body_idx': np.array([6]),
+    'pos_body_idx': np.array([7]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
@@ -136,15 +138,14 @@ agent = [{
     'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, RGB_IMAGE],
     'meta_include': [RGB_IMAGE_SIZE],
     'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
-},
-{
+},{
     'type': AgentMuJoCo,
-    'filename': './mjc_models/arm_4link_reach.xml',
-    'x0': np.zeros(8),
+    'filename': './mjc_models/arm_3link_reach.xml',
+    'x0': np.zeros(6),
     'dt': 0.05,
     'substeps': 5,
     'pos_body_offset':  all_offsets,
-    'pos_body_idx': np.array([7]),
+    'pos_body_idx': np.array([6]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
@@ -236,7 +237,7 @@ algorithm[1]['init_traj_distr'] = {
 
 torque_cost_1 = [{
     'type': CostAction,
-    'wu': 5e-5 / PR2_GAINS[0],
+    'wu': 5e-5 / PR2_GAINS[1],
 } for i in common['train_conditions']]
 
 fk_cost_1 = [{
@@ -251,12 +252,12 @@ fk_cost_1 = [{
 
 torque_cost_2 = [{
     'type': CostAction,
-    'wu': 5e-5 / PR2_GAINS[1],
+    'wu': 5e-5 / PR2_GAINS[0],
 } for i in common['train_conditions']]
 
 fk_cost_2 = [{
     'type': CostFK,
-    'target_end_effector': np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i],
+    'target_end_effector': np.array([0.8, 0.0, 0.5])+ agent[1]['pos_body_offset'][i],
     'wp': np.array([1, 1, 1]),
     'l1': 0.1,
     'l2': 10.0,
@@ -344,7 +345,8 @@ config = {
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
-    'inner_iterations': 4
+    'inner_iterations': 4,
+    'verbose_policy_trials':5
 }
 
 common['info'] = generate_experiment_info(config)

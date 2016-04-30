@@ -327,17 +327,18 @@ class GPSMain(object):
             N  : number of policy samples to take per condition
         Returns: None
         """
-        if 'verbose_policy_trials' not in self._hyperparams:
-            return None
-        if not N:
-            N = self._hyperparams['verbose_policy_trials']
+        # if 'verbose_policy_trials' not in self._hyperparams:
+        #     return None
+        # if not N:
+        #     N = self._hyperparams['verbose_policy_trials']
+        N = 5
         if self.gui:
             self.gui[robot_number].set_status_text('Taking policy samples.')
         pol_samples = [[None for _ in range(N)] for _ in range(self._conditions)]
-        for cond in range(len(self._test_idx)):
+        for cond in range(self._conditions):
             for i in range(N):
                 pol_samples[cond][i] = self.agent[robot_number].sample(
-                    self.algorithm[robot_number].policy_opt.policy[robot_number], self._test_idx[cond],
+                    self.algorithm[robot_number].policy_opt.policy[robot_number], cond,
                     verbose=True, save=False)
         return [SampleList(samples) for samples in pol_samples]
 
