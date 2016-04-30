@@ -9,7 +9,7 @@ import tensorflow as tf
 from gps.algorithm.policy.tf_policy import TfPolicy
 from gps.algorithm.policy_opt.policy_opt import PolicyOpt
 from gps.algorithm.policy_opt.config import POLICY_OPT_TF
-from gps.algorithm.policy_opt.tf_utils import DcTfSolver,TfSolver
+from gps.algorithm.policy_opt.tf_utils import TfSolver
 from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared_dc
 LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +24,6 @@ class PolicyOptTf(PolicyOpt):
 
         self.num_robots = len(dU)
         self.tf_iter = [0 for r_no in range(len(dU))]
-        self.checkpoint_file = self._hyperparams['weights_file_prefix']
         self.batch_size = self._hyperparams['batch_size']
         self.device_string = "/cpu:0"
         if self._hyperparams['use_gpu'] == 1:
@@ -37,15 +36,12 @@ class PolicyOptTf(PolicyOpt):
         self.action_tensors = []
         self.solver = None
         self.var = []
-        self.dc_mode = False
-        self.dc_onehots = []
         for i, dU_ind in enumerate(dU):
             self.act_ops.append(None)
             self.loss_scalars.append(None)
             self.obs_tensors.append(None)
             self.precision_tensors.append(None)
             self.action_tensors.append(None)
-            self.dc_onehots.append(None)
             self.var.append(self._hyperparams['init_var'] * np.ones(dU_ind))
         self.init_network()
         self.init_solver()
@@ -76,32 +72,16 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = [self._hyperparams['ent_reg']]*self.num_robots
         else:
             self.ent_reg = self._hyperparams['ent_reg']
-        allVars = tf.trainable_variables()
-        self.shared_vars = []
-        for var in allVars:
-            if 'shared' in var.name:
-                self.shared_vars.append(var)
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
-        if self._hyperparams['restore_shared_wts']:
-            self.restore_shared_wts()
-        # merged = tf.merge_all_summaries()
-        # writer = tf.train.SummaryWriter('/home/abhigupta/tensorboard_data', graph_def=self.sess.graph)
+        merged = tf.merge_all_summaries()
+        writer = tf.train.SummaryWriter('/home/abhigupta/tensorboard_data', graph_def=self.sess.graph)
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        if ('dc_mode' in self._hyperparams) and self._hyperparams['dc_mode']:
-            tf_maps, fc_vars, last_conv_vars, dc_vars, dc_loss = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
+        tf_maps, fc_vars, last_conv_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
                                     network_config=self._hyperparams['network_params'])
-            self.dc_onehots = []
-            self.dc_mode = True
-            self.dc_vars = dc_vars
-            self.dc_loss = dc_loss
-        else:
-            tf_maps, fc_vars, last_conv_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
-                                    network_config=self._hyperparams['network_params'])
-            self.dc_onehots = None
         self.obs_tensors = []
         self.action_tensors = []
         self.precision_tensors = []
@@ -109,106 +89,25 @@ class PolicyOptTf(PolicyOpt):
         self.loss_scalars = []
         self.fc_vars = fc_vars
         self.last_conv_vars = last_conv_vars
-        self.pretraining_tgt_tensors = []
-        self.pretraining_loss_scalars = []
         for tf_map in tf_maps:
             self.obs_tensors.append(tf_map.get_input_tensor())
             self.action_tensors.append(tf_map.get_target_output_tensor())
             self.precision_tensors.append(tf_map.get_precision_tensor())
             self.act_ops.append(tf_map.get_output_op())
             self.loss_scalars.append(tf_map.get_loss_op())
-            if self.dc_onehots is not None:
-                self.dc_onehots.append(tf_map.get_dc_onehot())
-            if tf_map.pretraining_loss_op is not None:
-                self.pretraining_loss_scalars.append(tf_map.pretraining_loss_op)
-                self.pretraining_tgt_tensors.append(tf_map.pretraining_tgt)
         self.combined_loss = tf.add_n(self.loss_scalars)
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        if self.dc_mode:
-            self.solver = TfSolver(loss_scalar=self.combined_loss,
-                                   solver_name=self._hyperparams['solver_type'],
-                                   base_lr=self._hyperparams['lr'],
-                                   lr_policy=self._hyperparams['lr_policy'],
-                                   momentum=self._hyperparams['momentum'],
-                                   weight_decay=self._hyperparams['weight_decay'],
-                                   fc_vars=self.fc_vars,
-                                   last_conv_vars=self.last_conv_vars, dc_vars=self.dc_vars)
-
-            self.dc_solver = DcTfSolver(loss_scalar=self.dc_loss,
-                       solver_name=self._hyperparams['solver_type'],
-                       base_lr=self._hyperparams['lr'],
-                       lr_policy=self._hyperparams['lr_policy'],
-                       momentum=self._hyperparams['momentum'],
-                       weight_decay=self._hyperparams['weight_decay'], dc_vars=self.dc_vars)
-        else:
-            self.solver = TfSolver(loss_scalar=self.combined_loss,
-                                   solver_name=self._hyperparams['solver_type'],
-                                   base_lr=self._hyperparams['lr'],
-                                   lr_policy=self._hyperparams['lr_policy'],
-                                   momentum=self._hyperparams['momentum'],
-                                   weight_decay=self._hyperparams['weight_decay'],
-                                   fc_vars=self.fc_vars,
-                                   last_conv_vars=self.last_conv_vars)
-
-    def update_pretrain(self, obs_full, pretrain_tgt_full, itr_full, inner_itr):
-        obs_reshaped = []
-        tgt_reshaped = []
-        itr_reshaped = []
-        idx_reshaped = []
-        batches_per_epoch_reshaped = []
-        for robot_number in range(self.num_robots):
-            obs = obs_full[robot_number]
-            tgt = pretrain_tgt_full[robot_number]
-
-            itr = itr_full[robot_number]
-
-            N = obs.shape[0]
-            dTgt = tgt.shape[-1]
-            dU, dO = self._dU[robot_number], self._dO[robot_number]
-
-            # # Normalize obs, but only compute normalzation at the beginning.
-            # if itr == 0 and inner_itr == 1:
-            #     #TODO: may need to change this
-            #     self.policy[robot_number].st_idx = self.st_idx[robot_number]
-            #     self.policy[robot_number].scale = np.diag(1.0 / np.std(obs[:, self.st_idx[robot_number]], axis=0))
-            #     self.policy[robot_number].bias = -np.mean(obs[:, self.st_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)
-            # obs[:, self.st_idx[robot_number]] = obs[:, self.st_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
-
-            # Assuming that N*T >= self.batch_size.
-            batches_per_epoch = np.floor(N / self.batch_size)
-            idx = range(N)
-
-            np.random.shuffle(idx)
-            obs_reshaped.append(obs)
-            tgt_reshaped.append(tgt)
-            itr_reshaped.append(itr)
-            idx_reshaped.append(idx)
-            batches_per_epoch_reshaped.append(batches_per_epoch)
-
-        # actual training.
-        average_loss = 0
-        for i in range(self._hyperparams['iterations']*4):
-            # Load in data for this batch.
-            feed_dict = {}
-            for robot_number in range(self.num_robots):
-                start_idx = int(i * self.batch_size %
-                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                #TODO: Make sure this stuff is reading in the correct stuff
-                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                feed_dict[self.pretraining_tgt_tensors[robot_number]] = tgt_reshaped[robot_number][idx_i]
-            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_pretrain_solver=True)
-
-            average_loss += train_loss
-            if i % 100 == 0 and i != 0:
-                LOGGER.debug('pretraining tensorflow iteration %d, average loss %f',
-                             i, average_loss / 100)
-                print 'supervised tf loss is '
-                print average_loss
-                average_loss = 0
-        return self.policy
+   
+        self.solver = TfSolver(loss_scalar=self.combined_loss,
+                               solver_name=self._hyperparams['solver_type'],
+                               base_lr=self._hyperparams['lr'],
+                               lr_policy=self._hyperparams['lr_policy'],
+                               momentum=self._hyperparams['momentum'],
+                               weight_decay=self._hyperparams['weight_decay'],
+                               fc_vars=self.fc_vars,
+                               last_conv_vars=self.last_conv_vars)
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
@@ -341,26 +240,6 @@ class PolicyOptTf(PolicyOpt):
                 print (average_loss/100)
                 average_loss = 0
 
-            if self.dc_mode:
-                if i % 10 == 0:
-                    dc_dict = {}
-                    for robot_number in range(self.num_robots):
-                        start_idx = int(i * self.batch_size %
-                                        (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-                        idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                        dc_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                        robot_onehots = np.zeros((self.batch_size, self.num_robots))
-                        robot_onehots[:, robot_number] = np.ones((self.batch_size,))
-                        dc_dict[self.dc_onehots[robot_number]] = robot_onehots
-                    dc_train_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
-
-                    average_loss_dc += dc_train_loss
-                    if i % 100 == 0 and i != 0:
-                        LOGGER.debug('tensorflow iteration %d, dc loss %f',
-                                     i, average_loss_dc / 10)
-                        print 'supervised dc loss is '
-                        print (average_loss_dc/10)
-                        average_loss_dc = 0
         for robot_number in range(self.num_robots):
             # Keep track of tensorflow iterations for loading solver states.
             #TODO: Need to figure this out, not going to work
@@ -421,31 +300,6 @@ class PolicyOptTf(PolicyOpt):
         img[fx_v, fy_v, :] = 0
         img[fx_v, fy_v, 0] = 255
         return img
-
-
-    def save_shared_wts(self):
-        var_dict = {}
-        for var in self.shared_vars:
-            var_dict[var.name] = var
-        saver = self.sess.Saver(var_dict)
-        save_path = saver.save(self.sess, "/tmp/model.ckpt")
-        print("Shared weights saved in file: %s" % save_path)
-
-    def restore_shared_wts(self):
-        saver = self.sess.Saver()
-        saver.restore(sess, "/tmp/model.ckpt")
-
-    def save_all_wts(self, itr):
-        var_list = tf.trainable_variables()
-        var_dict = {var.name: var for var in var_list}
-        saver = self.sess.Saver(var_dict)
-        save_path = saver.save(self.sess, self.checkpoint_prefix + "_itr"+str(itr)+'.ckpt')
-        print("Model saved in file: %s" % save_path)
-
-    def restore_all_wts(self, itr):
-        saver = self.sess.Saver()
-        saver.restore(sess, self.checkpoint_prefix + "_itr"+str(itr)+'.ckpt')
-
 
     def set_ent_reg(self, ent_reg, robot_number=0):
         """ Set the entropy regularization. """

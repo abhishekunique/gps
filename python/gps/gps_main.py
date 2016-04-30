@@ -62,82 +62,14 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 self.algorithm[robot_number].policy_opt = self.policy_opt
                 self.algorithm[robot_number].robot_number = robot_number
-        self.save_shared = False
         if 'save_shared' in self._hyperparams['common']:
             self.save_shared = self._hyperparams['save_shared']
-        else: self.save_shared = False
+        else: 
+            self.save_shared = False
         if 'save_wts' in self._hyperparams['common']:
             self.save_wts = self._hyperparams['common']
-        else: self.save_wts = False
-
-    def pretrain(self):
-        iterations = 1
-        obs_full, pretrain_tgt_full = self.collect_observations(iterations)
-        itr_full = [0,0]
-        inner_itr = 0
-        self.policy_opt.update_pretrain(obs_full, pretrain_tgt_full, itr_full, inner_itr)
-
-
-    def collect_img_dataset(self, iters):
-        imgs = []
-        pos_labels = []
-        robot_labels = []
-        for robot_number in range(self.num_robots):
-            for iter in range(iters):
-                samples = [None, None]
-                self.collect_samples(iter, samples,robot_number)
-                # Each sample_list has 5 samples
-                for sample_list_i in range(len(samples[robot_number])):
-                    sample_list = samples[robot_number][sample_list_i]
-                    imgs.append(sample_list.get(RGB_IMAGE))
-                    cond = self._train_idx[sample_list_i]
-                    pos_labels += [self.agent[robot_number]._hyperparams['pos_body_offset'][cond] for s in range(len(sample_list))]
-                    robot_labels += [robot_number for s in range(len(sample_list))]
-        img_np = np.concatenate(imgs)
-        pos_labels_np = np.array(pos_labels)
-        pos_labels_np = np.repeat(pos_labels_np, img_np.shape[1], axis=0)
-        robot_labels_np = np.array(robot_labels)
-        robot_labels_np = np.repeat(robot_labels_np, img_np.shape[1], axis=0)
-
-        img_np = np.reshape(img_np, (img_np.shape[0]*img_np.shape[1], img_np.shape[2]))
-        print "img_np", img_np.shape
-        print "pos_label_np", pos_labels_np.shape
-        num_data = img_np.shape[0]
-        robot_onehots = np.zeros(num_data, self.num_robots)
-        robot_onehots[:,robot_labels_np] = 1
-        reshaped = img_np.reshape(num_data,3,80,64)
-        im = -np.transpose(reshaped, [0,2,3,1])
-        np.save('image_data', im)
-        np.save('pose_labels', pos_labels_np)
-        np.save('robot_onehots', robot_onehots)
-        return img_np, pos_labels_np, robot_labels_np
-
-
-    # def collect_observations(self, iters):
-    #     obs_full = []
-    #     pos_labels_full = []
-    #     for robot_number in range(self.num_robots):
-    #         obs = []
-    #         pos_labels = []
-    #         for iter in range(iters):
-    #             samples = [None, None]
-    #             self.collect_samples(iter, robot_number, samples)
-    #             # Each sample_list has 5 samples
-    #             for sample_list_i in range(len(samples[robot_number])):
-    #                 sample_list = samples[robot_number][sample_list_i]
-    #                 obs.append(sample_list.get_obs())
-    #                 cond = self._train_idx[sample_list_i]
-    #                 pos_labels += [self.agent[robot_number]._hyperparams['pos_body_offset'][cond] for s in range(len(sample_list))]
-    #         obs_np = np.concatenate(obs)
-    #         pos_labels_np = np.array(pos_labels)
-    #         pos_labels_np = np.repeat(pos_labels_np, obs_np.shape[1], axis=0)
-    #         obs_np = np.reshape(obs_np, (obs_np.shape[0]*obs_np.shape[1], obs_np.shape[2]))
-    #         print "obs_np", obs_np.shape
-    #         print "pos_label_np", pos_labels_np.shape
-    #         obs_full.append(obs_np)
-    #         pos_labels_full.append(pos_labels_np)
-    #     return obs_full, pos_labels_full
-
+        else: 
+            self.save_wts = False
 
     def run(self, itr_load=None):
         """
@@ -161,8 +93,7 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx
                 ]
-            # import IPython
-            # IPython.embed()
+
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_numer)
 
@@ -191,6 +122,7 @@ class GPSMain(object):
 
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
+            pol_sample_lists = {}
             for robot_number in range(self.num_robots):
                 for cond in self._train_idx:
                     for i in range(self._hyperparams['num_samples']):
@@ -207,9 +139,8 @@ class GPSMain(object):
             self._take_iteration_shared()
 
             for robot_number in range(self.num_robots):
-                pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
-                self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-                self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
+                pol_sample_lists[robot_number] = self._take_policy_samples(robot_number=robot_number)
+                self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists[robot_number], robot_number=robot_number)
             if self.save_shared:
                 self.policy_opt.save_shared_wts()
             if self.save_wts:
@@ -462,28 +393,6 @@ class GPSMain(object):
         if self.gui:
             self.gui[robot_number].stop_display_calculating()
 
-
-    def save_policy_samples(self, N=None, robot_number=0, itr=None):
-        """
-        Take samples from the policy to see how it's doing.
-        Args:
-            N  : number of policy samples to take per condition
-        Returns: None
-        """
-        if self.gui:
-            self.gui[robot_number].set_status_text('Taking policy samples.')
-        
-        pol_samples = [[None for _ in range(N)] for _ in range(self._conditions)]
-        for cond in range(self._conditions):
-            for i in range(N):
-                pol_samples[cond][i] = self.agent[robot_number].sample(
-                    self.algorithm[robot_number].policy_opt.policy[robot_number], cond,
-                    verbose=True, save=False)
-
-        self.data_logger.pickle(
-            self._data_files_dir + ('polsample_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
-            copy.copy(pol_samples)
-        )
 
     def _take_policy_samples(self, N=None, robot_number=0):
         """
