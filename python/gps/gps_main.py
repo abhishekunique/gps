@@ -71,33 +71,34 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
-        for robot_number in range(self.num_robots):
-            itr_start = self._initialize(itr_load, robot_number=robot_number)
+        print("NOT IMPLEMENTED")
+        # for robot_number in range(self.num_robots):
+        #     itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-        for itr in range(itr_start, self._hyperparams['iterations']):
-            traj_sample_lists = {}
-            for robot_number in range(self.num_robots):
-                for cond in self._train_idx:
-                    for i in range(self._hyperparams['num_samples']):
-                        self._take_sample(itr, cond, i, robot_number=robot_number)
+        # for itr in range(itr_start, self._hyperparams['iterations']):
+        #     traj_sample_lists = {}
+        #     for robot_number in range(self.num_robots):
+        #         for cond in self._train_idx:
+        #             for i in range(self._hyperparams['num_samples']):
+        #                 self._take_sample(itr, cond, i, robot_number=robot_number)
 
-                traj_sample_lists[robot_number] = [
-                    self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
-                    for cond_1 in self._train_idx
-                ]
+        #         traj_sample_lists[robot_number] = [
+        #             self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
+        #             for cond_1 in self._train_idx
+        #         ]
 
-            for robot_number in range(self.num_robots):
-                self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_numer)
+        #     for robot_number in range(self.num_robots):
+        #         self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_numer)
 
-            for robot_number in range(self.num_robots):
-                pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
-                self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-            if itr % 2 == 0 and itr > 0:
-                import IPython
-                IPython.embed()
+        #     for robot_number in range(self.num_robots):
+        #         pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
+        #         self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
+        #     if itr % 2 == 0 and itr > 0:
+        #         import IPython
+        #         IPython.embed()
 
 
-        self._end()
+        # self._end()
 
     def run_badmm(self, itr_load=None):
         """
@@ -133,6 +134,15 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 pol_sample_lists[robot_number] = self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists[robot_number], robot_number=robot_number)
+                self.data_logger.pickle(
+                    self._data_files_dir + ('traj_sample_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
+                    copy.copy(traj_sample_lists[robot_number])
+                )
+                if pol_sample_lists:
+                    self.data_logger.pickle(
+                        self._data_files_dir + ('pol_sample_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
+                        copy.copy(pol_sample_lists)
+                    )
             if itr % 2 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
@@ -357,21 +367,6 @@ class GPSMain(object):
                 traj_sample_lists, pol_sample_lists)
             self.gui[robot_number].save_figure(
                 self._data_files_dir + ('figure_itr_%02d.png' % itr)
-            )
-        if 'no_sample_logging' in self._hyperparams['common']:
-            return
-        # self.data_logger.pickle(
-        #     self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
-        #     copy.copy(self.algorithm)
-        # )
-        self.data_logger.pickle(
-            self._data_files_dir + ('traj_sample_itr_%02d.pkl' % itr),
-            copy.copy(traj_sample_lists)
-        )
-        if pol_sample_lists:
-            self.data_logger.pickle(
-                self._data_files_dir + ('pol_sample_itr_%02d.pkl' % itr),
-                copy.copy(pol_sample_lists)
             )
 
     def _end(self):
