@@ -452,9 +452,13 @@ class PolicyOptTf(PolicyOpt):
         if self.dc_mode:
             var_list.append(self.dc_solver.trainable_variables)
         var_dict = {var.name: var for var in var_list}
-        saver = tf.train.Saver(var_dict)
-        save_path = saver.save(self.sess, self.checkpoint_prefix + "_itr"+str(itr)+'.ckpt')
-        print("Model saved in file: %s" % save_path)
+        # saver = tf.train.Saver(var_dict)
+        # save_path = saver.save(self.sess, self.checkpoint_prefix + "_itr"+str(itr)+'.ckpt')
+        save_path = [self.policy[r].pickle_policy(deg_obs=len(self.x_idx[r])+len(self.img_idx[r]),
+                                                  deg_action=self._dU[r], var_dict = var_dict,
+                                                  checkpoint_path=self.checkpoint_prefix+'_rn_'+str(r), itr=itr)
+                     for r in range(self.num_robots)]
+        print "Model saved in files: ",  save_path
 
     def restore_all_wts(self, itr):
         saver = tf.train.Saver()
