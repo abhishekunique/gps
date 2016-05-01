@@ -48,8 +48,7 @@ SENSOR_DIMS = [{
 }]
 
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
-B
-mat[ASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
+BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/mjc_singlerobot_4link_reach_multicondition/'
 
 all_offsets = [np.asarray([0., 0., -1.7]),np.asarray([0.7, 0., 0.]), np.asarray([0.3, 0.0, 0.5]),
@@ -85,7 +84,7 @@ common = {
         }],
         'iterations': 500,
         'fc_only_iterations': 5000,
-        'weights_file_prefix': EXP_DIR + 'policy_weights',
+        'checkpoint_prefix': EXP_DIR + 'data_files/policy',
     }
 }
 
@@ -216,12 +215,13 @@ algorithm[0]['policy_prior'] = {
 
 config = {
     'iterations': 25,
-    'num_samples': 10,
-    'verbose_trials': 10,
+    'num_samples': 5,
+    'verbose_trials': 5,
     'common': common,
     'save_wts': True,
     'agent': agent,
     'gui_on': True,
+    'verbose_policy_trials': 5,
     'algorithm': algorithm,
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],

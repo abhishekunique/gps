@@ -209,7 +209,7 @@ def multi_input_multi_output_images_shared_dc(dim_input=[27, 27], dim_output=[7,
             pretrain_loss = tf.nn.l2_loss(pretrain_output - pretrain_target)
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss], 
                                                dc_onehot=[dc_onehot], pretraining_tgt=pretrain_target,
-                                               pretraining_loss=pretrain_loss))
+                                               pretraining_loss=pretrain_loss, feature_points=full_feature_points))
             tf.get_variable_scope().reuse_variables()
     classification_loss_dc = tf.add_n(classification_loss_dc)
     return nnets, fc_vars, last_conv_vars, dc_vars, classification_loss_dc
@@ -316,7 +316,8 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
             fc_vars += biases_FC
             last_conv_vars.append(fc_input)
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
-            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
+            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss],
+                                               feature_points=full_feature_points))
     return nnets, fc_vars, last_conv_vars
 
 def multi_input_multi_output_images_shared_multitask(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None, same_task_idx=None):
@@ -426,7 +427,8 @@ def multi_input_multi_output_images_shared_multitask(dim_input=[27, 27], dim_out
             fc_vars += biases_FC
             last_conv_vars.append(fc_input)
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
-            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
+            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss],
+                                               feature_points=full_feature_points))
     return nnets, fc_vars, last_conv_vars
 
 def get_loss_layer(mlp_out, action, precision, batch_size):

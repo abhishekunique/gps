@@ -76,6 +76,7 @@ class TfMap:
         self.dc_onehot = dc_onehot
 
 
+
 class TfSolver:
     """ A container for holding solver hyperparams in tensorflow. Used to execute backwards pass. """
     def __init__(self, loss_scalar, solver_name='adam', base_lr=None, lr_policy=None,
@@ -113,6 +114,7 @@ class TfSolver:
         if pretraining_loss is not None:
             self.pretraining_loss = pretraining_loss
             self.pretraining_solver_op = self.get_solver_op(loss=self.pretraining_loss)
+        self.trainable_variables = tf.trainable_variables()
 
     def get_solver_op(self, var_list=None, loss=None):
         solver_string = self.solver_name.lower()
@@ -182,9 +184,10 @@ class DcTfSolver:
             loss_with_reg = self.loss_scalar
             for var in trainable_vars:
                 loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
-            self.loss_scalar = loss_with_reg
+                self.loss_scalar = loss_with_reg
 
         self.solver_op = self.get_solver_op(var_list=dc_vars)
+        self.trainable_variables = tf.trainable_variables()
 
     def get_solver_op(self, var_list=None):
         solver_string = self.solver_name.lower()

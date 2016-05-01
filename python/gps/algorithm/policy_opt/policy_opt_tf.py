@@ -24,7 +24,7 @@ class PolicyOptTf(PolicyOpt):
 
         self.num_robots = len(dU)
         self.tf_iter = [0 for r_no in range(len(dU))]
-        self.checkpoint_file = self._hyperparams['weights_file_prefix']
+        self.checkpoint_prefix = self._hyperparams['checkpoint_prefix']
         self.batch_size = self._hyperparams['batch_size']
         self.device_string = "/cpu:0"
         if self._hyperparams['use_gpu'] == 1:
@@ -111,12 +111,14 @@ class PolicyOptTf(PolicyOpt):
         self.last_conv_vars = last_conv_vars
         self.pretraining_tgt_tensors = []
         self.pretraining_loss_scalars = []
+        self.feature_points= []
         for tf_map in tf_maps:
             self.obs_tensors.append(tf_map.get_input_tensor())
             self.action_tensors.append(tf_map.get_target_output_tensor())
             self.precision_tensors.append(tf_map.get_precision_tensor())
             self.act_ops.append(tf_map.get_output_op())
             self.loss_scalars.append(tf_map.get_loss_op())
+            self.feature_points.append(tf_map.feature_points)
             if self.dc_onehots is not None:
                 self.dc_onehots.append(tf_map.get_dc_onehot())
             if tf_map.pretraining_loss_op is not None:
@@ -341,6 +343,7 @@ class PolicyOptTf(PolicyOpt):
                 print (average_loss/100)
                 average_loss = 0
 
+
             if self.dc_mode:
                 if i % 10 == 0:
                     dc_dict = {}
@@ -361,6 +364,12 @@ class PolicyOptTf(PolicyOpt):
                         print 'supervised dc loss is '
                         print (average_loss_dc/10)
                         average_loss_dc = 0
+        obs = obs_reshaped[0][1]
+        img = self.single_img_with_fp(obs, 0, 64,80,3)
+        import matplotlib.image as mpimg
+        import time
+        mpimg.imsave('test_itr'+str(time.clock())+'.png', img) 
+
         for robot_number in range(self.num_robots):
             # Keep track of tensorflow iterations for loading solver states.
             #TODO: Need to figure this out, not going to work
@@ -409,15 +418,18 @@ class PolicyOptTf(PolicyOpt):
         return output, pol_sigma, pol_prec, pol_det_sigma
 
     def single_img_with_fp(self, obs, robot_number, img_height, img_width, num_channels ):
-        fps = self.feature_point_tensors[robot_number]
-        feed_dict[self.obs_tensors[robot_number]] = obs
-        fps= self.sess.run(features, feed_dict)
+        fps = self.feature_points[robot_number]
+        feed_dict = {}
+        batch_obs = np.array([obs])
+        feed_dict[self.obs_tensors[robot_number]] = batch_obs
+        fps_vals= self.sess.run(fps, feed_dict)[0]
         fx_v = fps_vals[::2].astype(int)
         fy_v = fps_vals[1::2].astype(int)
         img = obs[self.img_idx]
-        import IPython
-        IPython.embed()
-        img = obs.reshape(img_height, img_width, num_channels)
+
+        img = img.reshape((num_channels, img_width, img_height))
+        img = np.transpose(img, [2,1,0])
+        img = 255-img
         img[fx_v, fy_v, :] = 0
         img[fx_v, fy_v, 0] = 255
         return img
@@ -427,23 +439,25 @@ class PolicyOptTf(PolicyOpt):
         var_dict = {}
         for var in self.shared_vars:
             var_dict[var.name] = var
-        saver = self.sess.Saver(var_dict)
+        saver = tf.train.Saver(var_dict)
         save_path = saver.save(self.sess, "/tmp/model.ckpt")
         print("Shared weights saved in file: %s" % save_path)
 
     def restore_shared_wts(self):
-        saver = self.sess.Saver()
+        saver = tf.train.Saver()
         saver.restore(sess, "/tmp/model.ckpt")
 
-    def save_all_wts(self, itr):
-        var_list = tf.trainable_variables()
+    def save_all_wts(self,itr):
+        var_list = [var for var in self.solver.trainable_variables]
+        if self.dc_mode:
+            var_list.append(self.dc_solver.trainable_variables)
         var_dict = {var.name: var for var in var_list}
-        saver = self.sess.Saver(var_dict)
+        saver = tf.train.Saver(var_dict)
         save_path = saver.save(self.sess, self.checkpoint_prefix + "_itr"+str(itr)+'.ckpt')
         print("Model saved in file: %s" % save_path)
 
     def restore_all_wts(self, itr):
-        saver = self.sess.Saver()
+        saver = tf.train.Saver()
         saver.restore(sess, self.checkpoint_prefix + "_itr"+str(itr)+'.ckpt')
 
 

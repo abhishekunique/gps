@@ -107,7 +107,7 @@ common = {
         }],
         'iterations': 500,
         'fc_only_iterations': 5000,
-        'weights_file_prefix': EXP_DIR + 'policy',
+        'checkpoint_prefix': EXP_DIR + 'data_files/policy',
     }
 }
 
@@ -336,6 +336,7 @@ config = {
     'iterations': 25,
     'num_samples': 10,
     'verbose_trials': 10,
+    'verbose_policy_trials': 5,
     'save_wts': True,
     'common': common,
     'agent': agent,

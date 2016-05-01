@@ -66,8 +66,8 @@ class GPSMain(object):
         if 'save_shared' in self._hyperparams['common']:
             self.save_shared = self._hyperparams['save_shared']
         else: self.save_shared = False
-        if 'save_wts' in self._hyperparams['common']:
-            self.save_wts = self._hyperparams['common']
+        if 'save_wts' in self._hyperparams:
+            self.save_wts = self._hyperparams['save_wts']
         else: self.save_wts = False
 
     def pretrain(self):
@@ -186,6 +186,7 @@ class GPSMain(object):
         """
         # self.collect_img_dataset(1)
 
+
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
@@ -209,7 +210,7 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-                self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
+                # self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
             if self.save_shared:
                 self.policy_opt.save_shared_wts()
             if self.save_wts:
@@ -492,17 +493,17 @@ class GPSMain(object):
             N  : number of policy samples to take per condition
         Returns: None
         """
-        if 'verbose_policy_trials' not in self._hyperparams:
-            return None
+        # if 'verbose_policy_trials' not in self._hyperparams:
+        #     return None
         if not N:
             N = self._hyperparams['verbose_policy_trials']
         if self.gui:
             self.gui[robot_number].set_status_text('Taking policy samples.')
         pol_samples = [[None for _ in range(N)] for _ in range(self._conditions)]
-        for cond in range(len(self._test_idx)):
+        for cond in range(self._conditions):
             for i in range(N):
                 pol_samples[cond][i] = self.agent[robot_number].sample(
-                    self.algorithm[robot_number].policy_opt.policy[robot_number], self._test_idx[cond],
+                    self.algorithm[robot_number].policy_opt.policy[robot_number], cond,
                     verbose=True, save=False)
         return [SampleList(samples) for samples in pol_samples]
 
@@ -529,12 +530,12 @@ class GPSMain(object):
         #     copy.copy(self.algorithm)
         # )
         self.data_logger.pickle(
-            self._data_files_dir + ('traj_sample_itr_%02d.pkl' % itr),
+            self._data_files_dir + ('traj_sample_itr_%02d_rn_%02d.pkl' % (itr,robot_number)),
             copy.copy(traj_sample_lists)
         )
         if pol_sample_lists:
             self.data_logger.pickle(
-                self._data_files_dir + ('pol_sample_itr_%02d.pkl' % itr),
+                self._data_files_dir + ('pol_sample_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
                 copy.copy(pol_sample_lists)
             )
 
