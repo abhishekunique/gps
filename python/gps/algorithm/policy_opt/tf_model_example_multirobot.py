@@ -273,14 +273,14 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
 
                 # Store layers weight & bias
             weights = {
-                # 'wc1': get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
+                'wc1': get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rn' + str(robot_number)), # 5x5 conv, 1 input, 32 outputs
             }
 
             biases = {
-                # 'bc1': init_bias([num_filters[0]]),
+                'bc1': init_bias([num_filters[0]], name='bc1rn' + str(robot_number)),
             }
-            weights['wc1'] = get_xavier_weights_shared([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rnshared')
-            biases['bc1'] = init_bias_shared([num_filters[0]], name='bc1rnshared')
+            # weights['wc1'] = get_xavier_weights_shared([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='wc1rnshared')
+            # biases['bc1'] = init_bias_shared([num_filters[0]], name='bc1rnshared')
             weights['wc2'] = get_xavier_weights_shared([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2rnshared') # 5x5 conv, 32 inputs, 64 outputs
             biases['bc2'] = init_bias_shared([num_filters[1]], name='bc2rnshared')
 

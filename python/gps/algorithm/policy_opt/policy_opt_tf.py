@@ -425,7 +425,7 @@ class PolicyOptTf(PolicyOpt):
         fps_vals= self.sess.run(fps, feed_dict)[0]
         fx_v = fps_vals[::2].astype(int)
         fy_v = fps_vals[1::2].astype(int)
-        img = obs[self.img_idx]
+        img = obs[self.img_idx[robot_number]]
 
         img = img.reshape((num_channels, img_width, img_height))
         img = np.transpose(img, [2,1,0])
