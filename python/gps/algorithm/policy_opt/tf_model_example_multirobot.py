@@ -69,12 +69,8 @@ def get_input_layer(dim_input, dim_output, robot_number, num_robots=None):
         precision: precision matrix used to commpute loss."""
     net_input = tf.placeholder("float", [None, dim_input], name='nn_input' + str(robot_number))
     action = tf.placeholder('float', [None, dim_output], name='action' + str(robot_number))
-    precision = tf.placeholder('float', [None, dim_output, dim_output], name='precision' + str(robot_number))
-    if num_robots:
-        dc_onehot = tf.placeholder('float', [None, num_robots], name='dc_' + str(robot_number))
-        return net_input, action, precision, dc_onehot
-    else:
-        return net_input, action, precision
+    precision = tf.placeholder('float', [None, dim_output, dim_output], name='precision' + str(robot_number))   
+    return net_input, action, precision
 
 def get_mlp_layers(mlp_input, number_layers, dimension_hidden, robot_number):
     """compute MLP with specified number of layers.

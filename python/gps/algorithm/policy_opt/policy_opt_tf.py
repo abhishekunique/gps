@@ -333,8 +333,6 @@ class PolicyOptTf(PolicyOpt):
 
     def save_all_wts(self,itr):
         var_list = [var for var in self.solver.trainable_variables]
-        if self.dc_mode:
-            var_list.append(self.dc_solver.trainable_variables)
         var_dict = {var.name: var for var in var_list}
         # saver = tf.train.Saver(var_dict)
         # save_path = saver.save(self.sess, self.checkpoint_prefix + "_itr"+str(itr)+'.ckpt')
