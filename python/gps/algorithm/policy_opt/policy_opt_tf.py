@@ -10,7 +10,6 @@ from gps.algorithm.policy.tf_policy import TfPolicy
 from gps.algorithm.policy_opt.policy_opt import PolicyOpt
 from gps.algorithm.policy_opt.config import POLICY_OPT_TF
 from gps.algorithm.policy_opt.tf_utils import TfSolver
-from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared_dc
 LOGGER = logging.getLogger(__name__)
 
 
