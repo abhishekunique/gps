@@ -145,7 +145,7 @@ class GPSMain(object):
                 self.policy_opt.save_shared_wts()
             if self.save_wts:
                 self.policy_opt.save_all_wts(itr)
-            if itr % 2 == 0 and itr > 0:
+            if itr % 6 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
