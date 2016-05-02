@@ -44,6 +44,9 @@ class PolicyOptTf(PolicyOpt):
             self.action_tensors.append(None)
             self.var.append(self._hyperparams['init_var'] * np.ones(dU_ind))
         self.init_network()
+        tv = tf.trainable_variables()
+        self.shared_vars_array = tv[:4]
+        self.other_vars_array = tv[4:]
         self.init_solver()
         self.sess = tf.Session()
         self.policy = []
@@ -79,6 +82,14 @@ class PolicyOptTf(PolicyOpt):
                 self.shared_vars.append(var)
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
+        if 'restore_all_wts' in self._hyperparams and self._hyperparams['restore_all_wts']:
+            val_vars = np.load(self._hyperparams['restore_all_wts'])[10:14]
+            for i in range(4):
+                assign_op = tv[i].assign(val_vars[i])
+                self.sess.run(assign_op)
+
+        # import IPython
+        # IPython.embed()
         # if self._hyperparams['restore_shared_wts']:
         #     self.restore_shared_wts()
         # merged = tf.merge_all_summaries()
@@ -110,6 +121,16 @@ class PolicyOptTf(PolicyOpt):
     def init_solver(self):
         """ Helper method to initialize the solver. """
        
+        self.shared_solver = TfSolver(loss_scalar=self.combined_loss,
+                                   solver_name=self._hyperparams['solver_type'],
+                                   base_lr=self._hyperparams['lr'],
+                                   lr_policy=self._hyperparams['lr_policy'],
+                                   momentum=self._hyperparams['momentum'],
+                                   weight_decay=self._hyperparams['weight_decay'],
+                                   fc_vars=self.fc_vars,
+                                   last_conv_vars=self.last_conv_vars,
+                                   vars_to_opt=self.shared_vars_array)
+
         self.solver = TfSolver(loss_scalar=self.combined_loss,
                                    solver_name=self._hyperparams['solver_type'],
                                    base_lr=self._hyperparams['lr'],
@@ -117,7 +138,8 @@ class PolicyOptTf(PolicyOpt):
                                    momentum=self._hyperparams['momentum'],
                                    weight_decay=self._hyperparams['weight_decay'],
                                    fc_vars=self.fc_vars,
-                                   last_conv_vars=self.last_conv_vars)
+                                   last_conv_vars=self.last_conv_vars,
+                                   vars_to_opt=self.other_vars_array)
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
@@ -241,12 +263,16 @@ class PolicyOptTf(PolicyOpt):
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
             average_loss += train_loss
+            train_loss_shared = self.shared_solver(feed_dict, self.sess, device_string=self.device_string)
+
+            average_loss += train_loss_shared
             if i % 100 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_loss / 100)
                 print 'supervised tf loss is '
                 print (average_loss/100)
                 average_loss = 0
+
 
         obs_plot = obs_reshaped[0][1]
         img_plot = self.single_img_with_fp(obs_plot, 0, 64,80,3)
