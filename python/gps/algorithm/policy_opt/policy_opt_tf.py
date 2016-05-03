@@ -83,7 +83,7 @@ class PolicyOptTf(PolicyOpt):
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
         if 'restore_all_wts' in self._hyperparams and self._hyperparams['restore_all_wts']:
-            val_vars = np.load(self._hyperparams['restore_all_wts'])[10:14]
+            val_vars = np.load(self._hyperparams['restore_all_wts'])[0:4]
             for i in range(4):
                 assign_op = tv[i].assign(val_vars[i])
                 self.sess.run(assign_op)

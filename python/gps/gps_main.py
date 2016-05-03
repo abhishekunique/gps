@@ -100,7 +100,7 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-            if itr % 2 == 0 and itr > 0:
+            if itr % 8 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
@@ -145,7 +145,7 @@ class GPSMain(object):
                 self.policy_opt.save_shared_wts()
             if self.save_wts:
                 self.policy_opt.save_all_wts(itr)
-            if itr % 6 == 0 and itr > 0:
+            if itr % 8 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
@@ -376,10 +376,10 @@ class GPSMain(object):
         #     self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
         #     copy.copy(self.algorithm)
         # )
-        self.data_logger.pickle(
-            self._data_files_dir + ('traj_sample_itr_%02d_rn_%02d.pkl' % (itr,robot_number)),
-            copy.copy(traj_sample_lists)
-        )
+        # self.data_logger.pickle(
+        #     self._data_files_dir + ('traj_sample_itr_%02d_rn_%02d.pkl' % (itr,robot_number)),
+        #     copy.copy(traj_sample_lists)
+        # )
         if pol_sample_lists:
             self.data_logger.pickle(
                 self._data_files_dir + ('pol_sample_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
