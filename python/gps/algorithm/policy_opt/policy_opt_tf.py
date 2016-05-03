@@ -88,7 +88,7 @@ class PolicyOptTf(PolicyOpt):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
        
-        tf_maps, fc_vars, last_conv_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
+        tf_maps, fc_vars, last_conv_vars, av, ls = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
                                     network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
@@ -106,6 +106,8 @@ class PolicyOptTf(PolicyOpt):
             self.loss_scalars.append(tf_map.get_loss_op())
             self.feature_points.append(tf_map.feature_points)
         self.combined_loss = tf.add_n(self.loss_scalars)
+        self.av = av
+        self.ls = ls
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
@@ -238,6 +240,16 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                 feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+
+            # conv2vals = self.sess.run(self.ls[1], feed_dict)
+            # num_nonzeros = np.count_nonzero(conv2vals)
+            # ffpvals = self.sess.run(self.ls[2], feed_dict)
+            # if np.abs(ffpvals[0,0] - 31.5) < 0.5 and np.abs(ffpvals[0,1] - 39.5) < 0.5:
+            #     import IPython
+            #     IPython.embed()
+            
+            # if i % 100 == 0:
+            #     print(ffpvals)
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
             average_loss += train_loss

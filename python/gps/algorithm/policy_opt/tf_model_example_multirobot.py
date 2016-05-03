@@ -105,7 +105,7 @@ def multi_input_multi_output_images_shared_conv2(dim_input=[27, 27], dim_output=
         a dictionary containing inputs, outputs, and the loss function representing scalar loss.
     """
     # List of indices for state (vector) data and image (tensor) data in observation.
-    print 'making multi-input/output-network'
+    print 'making multi-input/output-network shared conv2'
     
     fc_vars = []
     last_conv_vars = []
@@ -228,6 +228,7 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
         im_idx.append([])
         i.append(0)
     #need to fix whatever this is 
+    all_vars = []
     with tf.variable_scope("shared_wts"):
         for robot_number, robot_params in enumerate(network_config):
             n_layers = 3
@@ -308,7 +309,9 @@ def multi_input_multi_output_images_shared(dim_input=[27, 27], dim_output=[7, 7]
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss],
                                                feature_points=full_feature_points))
-    return nnets, fc_vars, last_conv_vars
+            all_vars.append(weights)
+            all_vars.append(biases)
+    return nnets, fc_vars, last_conv_vars, all_vars, [conv_layer_0, conv_layer_1, full_feature_points, fc_input, fc_output]
 
 def get_loss_layer(mlp_out, action, precision, batch_size):
     """The loss layer used for the MLP network is obtained through this class."""
