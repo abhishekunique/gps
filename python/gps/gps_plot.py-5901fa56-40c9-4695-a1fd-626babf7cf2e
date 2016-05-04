@@ -32,9 +32,9 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 if __name__ == "__main__":
 	data_logger = DataLogger()
-	data_dir = '/home/olivaw/new_gps/gps/experiments/rs_data/mjc_rs_baseline_push/data_files/'
+	data_dir = '/home/olivaw/new_gps/gps/experiments/rs_data/mjc_rs_decreasing_4link/data_files/'
 	onlyfiles = []
-	for itr in range(15):
+	for itr in range(23):
 		onlyfiles.append('traj_sample_itr_%02d_00.pkl' % itr)
 	targets = [np.array([0.45, 0.0, 0.55]), np.array([0.45, 0.0, -0.45]), np.array([0.65, 0.0, 0.75]), np.array([0.65, 0.0, -0.65])]
 	dists = []
@@ -46,10 +46,9 @@ if __name__ == "__main__":
 			for sample in cond_list._samples:
 				sample_ee = sample._data[END_EFFECTOR_POINTS]
 				T = sample_ee.shape[0]
-				for t in range(20):
-					dist += np.linalg.norm(sample_ee[-t,3:] - targets[i])
-
-			dist_mean = dist/float(len(cond_list._samples)*20)
+				for t in range(T):
+					dist += (sample_ee[t,3:] - targets[i]).T.dot(sample_ee[t,3:] - targets[i])
+			dist_mean = dist/float(len(cond_list._samples))
 			dist_list[i] = dist_mean
 		dists.append(dist_list)
 

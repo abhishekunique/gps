@@ -103,6 +103,10 @@ class GPSMain(object):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
 
+            if itr % 10 == 0 and itr > 0:
+                import IPython
+                IPython.embed()
+
         self._end()
 
     def run_badmm(self, itr_load=None):
@@ -131,7 +135,7 @@ class GPSMain(object):
                     for cond in self._train_idx:
                         print("IN HERE")
                         mean_traj = np.mean(np.asarray([traj_sample_lists[robot_number][cond]._samples[i]._data[3] for i in range(self._hyperparams['num_samples'])]),0)
-                        self.data_logger.pickle(('cond_new%d.pkl' % cond), copy.copy(mean_traj))
+                        self.data_logger.pickle(('cond_new%d_itr_%d.pkl' % (cond, itr)), copy.copy(mean_traj))
 
             for robot_number in range(self.num_robots):            
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
@@ -141,7 +145,7 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-                self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
+                # self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
                 
             if itr % 10 == 0 and itr > 0:
                 import IPython
@@ -393,19 +397,10 @@ class GPSMain(object):
             )
         if 'no_sample_logging' in self._hyperparams['common']:
             return
-        # self.data_logger.pickle(
-        #     self._data_files_dir + ('algorithm_itr_%02d_%02d.pkl' % (itr, robot_number)),
-        #     copy.copy(self.algorithm[robot_number])
-        # )
         self.data_logger.pickle(
             self._data_files_dir + ('traj_sample_itr_%02d_%02d.pkl' % (itr, robot_number)),
-            copy.copy(traj_sample_lists[robot_number])
+            copy.copy(traj_sample_lists)
         )
-        # if pol_sample_lists:
-        #     self.data_logger.pickle(
-        #         self._data_files_dir + ('pol_sample_itr_%02d_%02d.pkl' % (itr, robot_number)),
-        #         copy.copy(pol_sample_lists[robot_number])
-        #     )
 
     def _end(self):
         """ Finish running and exit. """
@@ -489,8 +484,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(1)
-        np.random.seed(1)
+        random.seed(0)
+        np.random.seed(0)
 
         data_files_dir = exp_dir + 'data_files/'
         data_filenames = os.listdir(data_files_dir)
@@ -516,8 +511,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(1)
-        np.random.seed(1)
+        random.seed(0)
+        np.random.seed(0)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:

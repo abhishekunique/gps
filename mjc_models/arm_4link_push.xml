@@ -13,10 +13,10 @@
             
             <body name="proximal_1" pos="0 0 0">
                 <joint name="proximal_j_1" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.5236 2.3963" damping="1.0" />
-                <geom type="capsule" fromto="0 0 0 0.4 0 0" size="0.1" contype="1" conaffinity="1"/>
+                <geom type="capsule"  fromto="0 0 0 0.4 0 0" size="0.1" contype="1" conaffinity="1"/>
                 <body name="distal_1" pos="0.4 0 0">
                     <joint name="distal_j_1" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.3213 2.3" damping="1.0"/>
-                    <geom type="capsule" fromto="0 0 0 0.4 0 0" size="0.08" contype="1" conaffinity="1"/>
+                    <geom type="capsule"  fromto="0 0 0 0.4 0 0" size="0.08" contype="1" conaffinity="1"/>
                     <body name="distal_2" pos="0.4 0 0">
                         <joint name="distal_j_2" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.3213 2.3" damping="1.0"/>
                         <geom type="capsule" fromto="0 0 0 0.4 0 0" size="0.06" contype="1" conaffinity="1"/>
