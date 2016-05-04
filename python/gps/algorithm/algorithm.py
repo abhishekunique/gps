@@ -119,7 +119,7 @@ class Algorithm(object):
             self.new_traj_distr[cond], self.cur[cond].eta = \
                     self.traj_opt.update(cond, self)
 
-    def _eval_cost(self, cond):
+    def _eval_cost(self, cond, itr):
         """
         Evaluate costs for all samples for a condition.
         Args:
@@ -137,7 +137,7 @@ class Algorithm(object):
         for n in range(N):
             sample = self.cur[cond].sample_list[n]
             # Get costs.
-            l, lx, lu, lxx, luu, lux = self.cost[cond].eval(sample)
+            l, lx, lu, lxx, luu, lux = self.cost[cond].eval(sample, itr)
             cc[n, :] = l
             cs[n, :] = l
 

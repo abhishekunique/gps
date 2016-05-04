@@ -18,7 +18,7 @@ class CostSum(Cost):
         for cost in self._hyperparams['costs']:
             self._costs.append(cost['type'](cost))
 
-    def eval(self, sample):
+    def eval(self, sample, itr):
         """
         Evaluate cost function and derivatives.
         Args:
@@ -27,7 +27,7 @@ class CostSum(Cost):
         l, lx, lu, lxx, luu, lux = self._costs[0].eval(sample)
 
         # Compute weighted sum of each cost value and derivatives.
-        weight = self._weights[0]
+        weight = self._weights[0]/(float((itr + 1)**(0.3)))
         l = l * weight
         lx = lx * weight
         lu = lu * weight
