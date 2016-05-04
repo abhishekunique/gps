@@ -15,7 +15,7 @@ from gps.algorithm.cost.cost_sum import CostSum
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
 from gps.algorithm.dynamics.dynamics_prior_gmm import DynamicsPriorGMM
 from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
-from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
+from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd, init_from_file
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared
@@ -43,7 +43,7 @@ PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/mjc_singlerobot_4link_push/'
-
+INIT_POLICY_DIR = '/home/abhigupta/gps/experiments/mjc_singlerobot_4link_push/data_files/'
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),
@@ -55,25 +55,25 @@ common = {
     'train_conditions': [0,1,2,3,],
     'test_conditions':[4,5,6,7],
     'num_robots':1,
-    # 'policy_opt': {
-    #     'type': PolicyOptTf,
-    #     'network_model': multi_input_multi_output_images_shared,
-    #     'network_params': [{
-    #         'dim_hidden': [10],
-    #         'num_filters': [10, 20],
-    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, RGB_IMAGE],
-    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES],
-    #         'obs_image_data':[RGB_IMAGE],
-    #         'image_width': IMAGE_WIDTH,
-    #         'image_height': IMAGE_HEIGHT,
-    #         'image_channels': IMAGE_CHANNELS,
-    #         'sensor_dims': SENSOR_DIMS[0],
-    #         'batch_size': 25,
-    #     }],
-    #     'iterations': 500,
-    #     'fc_only_iterations': 5000,
-    #     'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-    # }
+    'policy_opt': {
+        'type': PolicyOptTf,
+        'network_model': multi_input_multi_output_images_shared,
+        'network_params': [{
+            'dim_hidden': [10],
+            'num_filters': [10, 20],
+            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, RGB_IMAGE],
+            'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES],
+            'obs_image_data':[RGB_IMAGE],
+            'image_width': IMAGE_WIDTH,
+            'image_height': IMAGE_HEIGHT,
+            'image_channels': IMAGE_CHANNELS,
+            'sensor_dims': SENSOR_DIMS[0],
+            'batch_size': 25,
+        }],
+        'iterations': 500,
+        'fc_only_iterations': 5000,
+        'checkpoint_prefix': EXP_DIR + 'data_files/policy',
+    }
 }
 
 if not os.path.exists(common['data_files_dir']):
@@ -88,9 +88,9 @@ agent = [{
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
     'pos_body_offset': [
                         [np.array([1.0, 0.0, 0.4]),np.array([0.4, 0.0, 0.4])],
-                        [np.array([1.0, 0.0, -0.4]),np.array([0.4, 0.0, -0.4])],
-                        [np.array([0.6, 0.0, 0.65]),np.array([0.2, 0.0, 0.65])],
-                        [np.array([0.8, 0.0, -0.65]),np.array([0.4, 0.0, -0.65])],
+                        [np.array([1.0, 0.0, -0.4]),np.array([0.6, 0.0, -0.4])],
+                        [np.array([0.6, 0.0, 0.6]),np.array([0.2, 0.0, 0.6])],
+                        [np.array([0.8, 0.0, -0.6]),np.array([0.4, 0.0, -0.6])],
 
                         [np.array([0.8, 0.0, 0.5]),np.array([0.3, 0.0, 0.5])],
                         [np.array([0.8, 0.0, -0.5]),np.array([0.4, 0.0, -0.5])],
@@ -117,33 +117,33 @@ agent = [{
     # 'smooth_noise_renormalize': True,
 }]
 
-# algorithm = [{
-#     'type': AlgorithmBADMM,
-#     'conditions': common['conditions'],
-#     'train_conditions': common['train_conditions'],
-#     'test_conditions': common['test_conditions'],
-#     'num_robots': common['num_robots'],
-#     'iterations': 25,
-#     'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
-#     'policy_dual_rate': 0.2,
-#     'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
-#     'fixed_lg_step': 3,
-#     'kl_step': 5.0,
-#     'min_step_mult': 0.01,
-#     'max_step_mult': 1.0,
-#     'sample_decrease_var': 0.05,
-#     'sample_increase_var': 0.1,
-#     'init_pol_wt': 0.01,
-# }]
-
 algorithm = [{
-    'type': AlgorithmTrajOpt,
+    'type': AlgorithmBADMM,
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
-    'iterations': 25,
     'num_robots': common['num_robots'],
+    'iterations': 25,
+    'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
+    'policy_dual_rate': 0.2,
+    'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
+    'fixed_lg_step': 3,
+    'kl_step': 5.0,
+    'min_step_mult': 0.01,
+    'max_step_mult': 1.0,
+    'sample_decrease_var': 0.05,
+    'sample_increase_var': 0.1,
+    # 'init_pol_wt': 0.001,
 }]
+
+# algorithm = [{
+#     'type': AlgorithmTrajOpt,
+#     'conditions': common['conditions'],
+#     'train_conditions': common['train_conditions'],
+#     'test_conditions': common['test_conditions'],
+#     'iterations': 25,
+#     'num_robots': common['num_robots'],
+# }]
 
 # DIFFERENT!!!!
 algorithm[0]['init_traj_distr'] = {
@@ -154,6 +154,11 @@ algorithm[0]['init_traj_distr'] = {
     'dt': agent[0]['dt'],
     'T': agent[0]['T'],
 }
+# algorithm[0]['init_traj_distr'] = {
+#     'type': init_from_file,
+#     'filename': [INIT_POLICY_DIR + ('alg_dist_cond%d.pkl' % i)
+#             for i in common['train_conditions']]
+# }
 
 # algorithm[0]['init_traj_distr'] = {
 #     'type': init_lqr,
