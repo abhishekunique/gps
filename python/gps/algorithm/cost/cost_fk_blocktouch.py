@@ -52,8 +52,8 @@ class CostFKBlock(Cost):
         pt_ee = pt[:, 0:3]
         pt_block = pt[:, 3:6]
         dist = pt_ee - pt_block
-        dist = np.concatenate([dist, np.zeros((T,3))], axis=1)
-        wp[:,3:] = np.zeros((T,3))
+        # dist = np.concatenate([dist, np.zeros((T,3))], axis=1)
+        wp= np.ones((T,3))
         # import IPython
         # IPython.embed()
         # print(wp)
@@ -61,11 +61,12 @@ class CostFKBlock(Cost):
         #        counting.
         #        (see pts_jacobian_only in matlab costinfos code)
         jx = sample.get(END_EFFECTOR_POINT_JACOBIANS)
+        jx_1 = jx[:, :3, :] - jx[:, 3:, :]
         # Evaluate penalty term. Use estimated Jacobians and no higher
         # order terms.
-        jxx_zeros = np.zeros((T, dist.shape[1], jx.shape[2]/2, jx.shape[2]/2))
+        jxx_zeros = np.zeros((T, dist.shape[1], jx.shape[2], jx.shape[2]))
         l, ls, lss = self._hyperparams['evalnorm'](
-            wp, dist, jx[:3], jxx_zeros, self._hyperparams['l1'],
+            wp, dist, jx_1, jxx_zeros, self._hyperparams['l1'],
             self._hyperparams['l2'], self._hyperparams['alpha']
         )
 
