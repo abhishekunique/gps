@@ -4,7 +4,7 @@
     
     <default>
         <joint armature='0.04' damping="1" limited="true"/>
-        <geom rgba="0. 0.5 0.5 .1" friction=".8 .1 .1" density="500" margin="0.002" condim="1" contype="1" conaffinity="1"/>
+        <geom friction=".8 .1 .1" density="500" margin="0.002" condim="1" contype="1" conaffinity="1"/>
     </default>
     
     <worldbody>
@@ -19,13 +19,9 @@
                     <geom type="capsule" fromto="0 0 0 0.4 0 0" size="0.08" contype="1" conaffinity="1"/>
                     <body name="distal_2" pos="0.4 0 0">
                         <joint name="distal_j_2" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.3213 2.3" damping="1.0"/>
-                        <geom type="capsule" fromto="0 0 0 0.4 0 0" size="0.06" contype="1" conaffinity="1"/>
-                        <body name="distal_3" pos="0.4 0 0">
-                            <joint name="distal_j_3" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.3213 2.3" damping="1.0"/>
-                            <geom type="capsule" fromto="0 0 0 0.4 0 0" size="0.04" contype="1" conaffinity="1"/>
-                            <body name="distal_4" pos="0.4 0 0">
-                                <site name="tip arm" pos="0 0 0" size="0.01" />
-                            </body>
+                        <geom type="capsule" fromto="0 0 0 0.8 0 0" size="0.06" contype="1" conaffinity="1"/>
+                        <body name="distal_3" pos="0.8 0 0">
+                            <site name="tip arm" pos="0 0 0" size="0.01" />
                         </body>
                     </body>
                 </body>
@@ -33,7 +29,7 @@
         </body>
         
         <body name="goal" pos="0.8 0.0 0.5">
-            <geom rgba=".3 0. 0.3 1" type="box" size="0.1 0.1 0.1" density='0.00001' contype="0" conaffinity="0"/>
+            <geom rgba="1. 0. 0. 1" type="box" size="0.1 0.1 0.1" density='0.00001' contype="0" conaffinity="0"/>
         </body>
     </worldbody>
     
@@ -42,6 +38,5 @@
         <motor joint="proximal_j_1" ctrlrange="-2 2" ctrllimited="true"/>
         <motor joint="distal_j_1" ctrlrange="-2 2" ctrllimited="true"/>
         <motor joint="distal_j_2" ctrlrange="-2 2" ctrllimited="true"/>
-        <motor joint="distal_j_3" ctrlrange="-2 2" ctrllimited="true"/>
     </actuator>
 </mujoco>

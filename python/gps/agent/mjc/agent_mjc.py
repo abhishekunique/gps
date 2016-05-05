@@ -113,13 +113,15 @@ class AgentMuJoCo(Agent):
             x0n = self._hyperparams['x0var'] * \
                     np.random.randn(self._hyperparams['x0var'].shape)
             mj_X += x0n
+
+
         noisy_body_idx = self._hyperparams['noisy_body_idx'][condition]
         if noisy_body_idx.size > 0:
             for i in range(len(noisy_body_idx)):
                 idx = noisy_body_idx[i]
                 var = self._hyperparams['noisy_body_var'][condition][i]
                 self._model[condition]['body_pos'][idx, :] += \
-                        var * np.random.randn(1, 3)
+                        var * np.random.randn(3)
         self._world[condition].set_model(self._model[condition])
         for t in range(self.T):
             X_t = new_sample.get_X(t=t)
@@ -168,6 +170,7 @@ class AgentMuJoCo(Agent):
         # dim-shuffle it for later conv-net processing,
         # and flatten for storage
         img_data = np.transpose(img["img"], (2, 1, 0)).flatten()
+
         # if initial image is an observation, replicate it for each time step
         if CONTEXT_IMAGE in self.obs_data_types:
             sample.set(CONTEXT_IMAGE, np.tile(img_data, (self.T, 1)), t=None)
