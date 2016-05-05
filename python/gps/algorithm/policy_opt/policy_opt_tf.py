@@ -48,6 +48,10 @@ class PolicyOptTf(PolicyOpt):
             self.dc_onehots.append(None)
             self.var.append(self._hyperparams['init_var'] * np.ones(dU_ind))
         self.init_network()
+        # tv = tf.trainable_variables()
+        # num_weights = 8
+        # self.shared_vars_array = tv[:num_weights]
+        # self.other_vars_array = tv[num_weights:]
         self.init_solver()
         self.sess = tf.Session()
         self.policy = []
@@ -76,15 +80,22 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = [self._hyperparams['ent_reg']]*self.num_robots
         else:
             self.ent_reg = self._hyperparams['ent_reg']
-        allVars = tf.trainable_variables()
-        self.shared_vars = []
-        for var in allVars:
-            if 'shared' in var.name:
-                self.shared_vars.append(var)
+        # allVars = tf.trainable_variables()
+        # self.shared_vars = []
+        # for var in allVars:
+        #     if 'shared' in var.name:
+        #         self.shared_vars.append(var)
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
-        if self._hyperparams['restore_shared_wts']:
-            self.restore_shared_wts()
+        # if self._hyperparams['restore_shared_wts']:
+        #     self.restore_shared_wts()
+        # if 'restore_all_wts' in self._hyperparams and self._hyperparams['restore_all_wts']:
+        #     val_vars = np.load(self._hyperparams['restore_all_wts'])
+            
+
+        #     for i in range(10):
+        #         assign_op = tv[i].assign(val_vars[i])
+        #         self.sess.run(assign_op)
         # merged = tf.merge_all_summaries()
         # writer = tf.train.SummaryWriter('/home/abhigupta/tensorboard_data', graph_def=self.sess.graph)
 
@@ -153,6 +164,27 @@ class PolicyOptTf(PolicyOpt):
                                    weight_decay=self._hyperparams['weight_decay'],
                                    fc_vars=self.fc_vars,
                                    last_conv_vars=self.last_conv_vars)
+
+
+            # self.shared_solver = TfSolver(loss_scalar=self.combined_loss,
+            #                            solver_name=self._hyperparams['solver_type'],
+            #                            base_lr=self._hyperparams['lr']/float(10.0),
+            #                            lr_policy=self._hyperparams['lr_policy'],
+            #                            momentum=self._hyperparams['momentum'],
+            #                            weight_decay=self._hyperparams['weight_decay'],
+            #                            fc_vars=self.fc_vars,
+            #                            last_conv_vars=self.last_conv_vars,
+            #                            vars_to_opt=self.shared_vars_array)
+
+            # self.solver = TfSolver(loss_scalar=self.combined_loss,
+            #                            solver_name=self._hyperparams['solver_type'],
+            #                        base_lr=self._hyperparams['lr'],
+            #                        lr_policy=self._hyperparams['lr_policy'],
+            #                        momentum=self._hyperparams['momentum'],
+            #                        weight_decay=self._hyperparams['weight_decay'],
+            #                        fc_vars=self.fc_vars,
+            #                        last_conv_vars=self.last_conv_vars,
+            #                        vars_to_opt=self.other_vars_array)
 
     def update_pretrain(self, obs_full, pretrain_tgt_full, itr_full, inner_itr):
         obs_reshaped = []
@@ -310,8 +342,8 @@ class PolicyOptTf(PolicyOpt):
                     idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                     feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                     feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-                    feed_dict[self.last_conv_vars[robot_number]] = conv_values[robot_number][idx_i]
-
+                for c in range(len(self.last_conv_vars)):
+                    feed_dict[self.last_conv_vars[c]] = conv_values[c][idx_i]
                 train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_fc_solver=True)
                 average_loss += train_loss
                 if i % 100 == 0 and i != 0:
@@ -336,6 +368,10 @@ class PolicyOptTf(PolicyOpt):
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
             average_loss += train_loss
+            # train_loss_shared = self.shared_solver(feed_dict, self.sess, device_string=self.device_string)
+            # average_loss += train_loss_shared
+
+            # average_loss += train_loss
             if i % 100 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_loss / 100)
@@ -345,7 +381,8 @@ class PolicyOptTf(PolicyOpt):
 
 
             if self.dc_mode:
-                if i % 10 == 0:
+                average_loss_dc = 0
+                if i % 5 == 0:
                     dc_dict = {}
                     for robot_number in range(self.num_robots):
                         start_idx = int(i * self.batch_size %
@@ -360,9 +397,8 @@ class PolicyOptTf(PolicyOpt):
                     average_loss_dc += dc_train_loss
                     if i % 100 == 0 and i != 0:
                         LOGGER.debug('tensorflow iteration %d, dc loss %f',
-                                     i, average_loss_dc / 10)
-                        print 'supervised dc loss is '
-                        print (average_loss_dc/10)
+                                     i, average_loss_dc / 20)
+                        print 'supervised dc loss is ', (average_loss_dc/20)
                         average_loss_dc = 0
         obs = obs_reshaped[0][1]
         img = self.single_img_with_fp(obs, 0, 64,80,3)
@@ -425,7 +461,7 @@ class PolicyOptTf(PolicyOpt):
         fps_vals= self.sess.run(fps, feed_dict)[0]
         fx_v = fps_vals[::2].astype(int)
         fy_v = fps_vals[1::2].astype(int)
-        img = obs[self.img_idx]
+        img = obs[self.img_idx[robot_number]]
 
         img = img.reshape((num_channels, img_width, img_height))
         img = np.transpose(img, [2,1,0])

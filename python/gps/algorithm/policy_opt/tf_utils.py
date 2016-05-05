@@ -81,7 +81,7 @@ class TfSolver:
     """ A container for holding solver hyperparams in tensorflow. Used to execute backwards pass. """
     def __init__(self, loss_scalar, solver_name='adam', base_lr=None, lr_policy=None,
                  momentum=None, weight_decay=None, robot_number=0, fc_vars=None, 
-                 last_conv_vars=None, dc_vars=None, pretraining_loss=None):
+                 last_conv_vars=None, dc_vars=None, pretraining_loss=None,vars_to_opt=None):
         self.base_lr = base_lr
         self.lr_policy = lr_policy
         self.momentum = momentum
@@ -98,8 +98,15 @@ class TfSolver:
                 if dc_vars is None or var not in dc_vars:
                     loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
             self.loss_scalar = loss_with_reg
+        self.trainable_variables = tf.trainable_variables()
         if dc_vars is None:
-            self.solver_op = self.get_solver_op()
+            # self.solver_op = self.get_solver_op() 
+            if vars_to_opt is not None:
+                self.solver_op = self.get_solver_op(var_list=vars_to_opt)
+            else:
+                self.solver_op = self.get_solver_op()
+
+
         else:
             var_list = tf.trainable_variables()
             new_var_list = []
@@ -114,7 +121,7 @@ class TfSolver:
         if pretraining_loss is not None:
             self.pretraining_loss = pretraining_loss
             self.pretraining_solver_op = self.get_solver_op(loss=self.pretraining_loss)
-        self.trainable_variables = tf.trainable_variables()
+
 
     def get_solver_op(self, var_list=None, loss=None):
         solver_string = self.solver_name.lower()
@@ -177,6 +184,7 @@ class DcTfSolver:
         self.loss_scalar = loss_scalar
         if self.lr_policy != 'fixed':
             raise NotImplementedError('learning rate policies other than fixed are not implemented')
+        self.trainable_variables = tf.trainable_variables()
 
         self.weight_decay = weight_decay
         if weight_decay is not None:
@@ -187,7 +195,6 @@ class DcTfSolver:
                 self.loss_scalar = loss_with_reg
 
         self.solver_op = self.get_solver_op(var_list=dc_vars)
-        self.trainable_variables = tf.trainable_variables()
 
     def get_solver_op(self, var_list=None):
         solver_string = self.solver_name.lower()

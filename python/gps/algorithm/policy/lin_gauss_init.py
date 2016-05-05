@@ -6,7 +6,7 @@ import scipy as sp
 from gps.algorithm.dynamics.dynamics_utils import guess_dynamics
 from gps.algorithm.policy.lin_gauss_policy import LinearGaussianPolicy
 from gps.algorithm.policy.config import INIT_LG_PD, INIT_LG_LQR
-
+from gps.utility.data_logger import DataLogger
 
 def init_lqr(hyperparams):
     """
@@ -140,3 +140,11 @@ def init_pd(hyperparams):
     invPSig = (1.0 / config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
 
     return LinearGaussianPolicy(K, k, PSig, cholPSig, invPSig)
+
+
+def init_from_file(hyperparams):
+    filename = hyperparams["filename"]
+    data_logger = DataLogger()
+    new_policy = data_logger.unpickle(filename)
+    return new_policy
+

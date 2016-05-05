@@ -75,13 +75,13 @@ common = {
     'data_files_dir': EXP_DIR + 'data_files/',
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
-    'conditions': 8,
+    'conditions': 8, 
     'train_conditions': [0,1,2,3,],
-    'test_conditions':[4,5,6,7],
+    'test_conditions': [4,5,6,7],
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': multi_input_multi_output_images_shared_dc,
+        'network_model': multi_input_multi_output_images_shared_dc, 
         'network_params': [{
             'dim_hidden': [10],
             'num_filters': [10, 20],
@@ -111,7 +111,7 @@ common = {
         'iterations': 500,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-        'dc_mode': True
+        'dc_mode': True 
     }
 }
 
@@ -337,8 +337,8 @@ algorithm[1]['policy_prior'] = {
 
 config = {
     'iterations': 25,
-    'num_samples': 3,
-    'verbose_trials': 3,
+    'num_samples': 10,
+    'verbose_trials': 10,
     'verbose_policy_trials': 5,
     # 'save_wts': True,
     'common': common,

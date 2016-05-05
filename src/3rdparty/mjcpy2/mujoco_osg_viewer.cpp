@@ -327,6 +327,23 @@ MujocoOSGViewer::MujocoOSGViewer(int width, int height, osg::Vec3 cam_pos, osg::
 {
     m_viewer.setThreadingModel(osgViewer::ViewerBase::SingleThreaded);
 
+    // osg::ref_ptr<osg::GraphicsContext::Traits> traits ( new osg::GraphicsContext::Traits );
+    // traits->x = 0;
+    // traits->y = 0;
+    // traits->width = width;
+    // traits->height = height;
+    // traits->red = 8;
+    // traits->green = 8;
+    // traits->blue = 8;
+    // // traits->alpha = 8;
+    // traits->depth = 24;
+    // traits->windowDecoration = false;
+    // traits->pbuffer = true; // We want a pixel buffer.
+    // traits->doubleBuffer = true;
+    // traits->sharedContext = 0x0;
+    // osg::ref_ptr<osg::GraphicsContext> gc ( osg::GraphicsContext::createGraphicsContext ( traits.get() ) );
+
+
     m_root = new osg::Group;
     m_robot = new osg::Group;
     m_root->addChild(m_robot);
@@ -335,17 +352,81 @@ MujocoOSGViewer::MujocoOSGViewer(int width, int height, osg::Vec3 cam_pos, osg::
     osg::ref_ptr<PhotoCallback> pcb = new PhotoCallback( m_image.get() );
     m_viewer.getCamera()->setPostDrawCallback( pcb.get() );
 
+
+
     m_viewer.setSceneData(m_root.get());
     m_viewer.setUpViewInWindow(0, 0, width, height);
     m_viewer.realize();
+    // m_viewer.getCamera()->setGraphicsContext( gc.get() );
 
     osg::ref_ptr<osgGA::TrackballManipulator> man = new osgGA::TrackballManipulator;
     man->setHomePosition(cam_pos, cam_target, cam_pos);
     m_viewer.setCameraManipulator(man);
 
+
     m_handler = new EventHandler(this);
     m_viewer.addEventHandler(m_handler.get());
+
 }
+// MujocoOSGViewer::MujocoOSGViewer(int width, int height, osg::Vec3 cam_pos, osg::Vec3 cam_target)
+//   : m_data(NULL), m_model(NULL)
+// {
+//   m_viewer.setThreadingModel(osgViewer::ViewerBase::SingleThreaded);
+
+//   m_root = new osg::Group;
+//   m_robot = new osg::Group;
+//   m_root->addChild(m_robot);
+
+//   m_image = new osg::Image;
+//   osg::ref_ptr<PhotoCallback> pcb = new PhotoCallback( m_image.get() );
+//   m_viewer.getCamera()->setPostDrawCallback( pcb.get() );
+
+//   m_viewer.getCamera()->setRenderTargetImplementation( osg::Camera::PIXEL_BUFFER );
+
+//   const double fovy   ( 45.0 );
+//   const double zNear  ( 0.01f );
+//   const double zFar   ( 100.0 );
+//   const double w      ( width ), h ( height );
+//   const double aspect ( w / h );
+
+//   m_viewer.getCamera()->setViewport ( new osg::Viewport  ( 0 ,0, w, h ) );
+//   m_viewer.getCamera()->setProjectionMatrixAsPerspective ( fovy, aspect, zNear, zFar );
+
+
+//   m_viewer.setSceneData(m_root.get());
+
+//   osg::ref_ptr<osg::Image> image ( new osg::Image );
+//   image->allocateImage ( width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE );
+//   //#if 0
+//   // Set up the texture.
+//   osg::ref_ptr< osg::Texture2D > tex ( new osg::Texture2D );
+//   tex->setTextureSize(width, height);
+//   tex->setInternalFormat( GL_RGBA );
+//   tex->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
+//   tex->setFilter(osg::Texture::MAG_FILTER, osg::Texture::LINEAR);
+//   tex->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
+//   tex->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
+//   tex->setResizeNonPowerOfTwoHint ( false );
+
+//   // Make the fbo.
+//   osg::ref_ptr< osg::FrameBufferObject > fbo ( new osg::FrameBufferObject );
+//   fbo->setAttachment((osg::FrameBufferObject::BufferComponent)GL_COLOR_ATTACHMENT0_EXT, osg::FrameBufferAttachment(tex.get()));
+//   fbo->setAttachment((osg::FrameBufferObject::BufferComponent)GL_DEPTH_ATTACHMENT_EXT, osg::FrameBufferAttachment(new osg::RenderBuffer(width, height, GL_DEPTH_COMPONENT24)));
+
+//   m_viewer.getCamera()->setRenderTargetImplementation( osg::Camera::FRAME_BUFFER_OBJECT );
+//   //#endif
+//   m_viewer.getCamera()->attach ( osg::Camera::COLOR_BUFFER, image.get() );
+
+//   //m_viewer.setUpViewInWindow(0, 0, width, height);
+//   m_viewer.realize();
+
+//   osg::ref_ptr<osgGA::TrackballManipulator> man = new osgGA::TrackballManipulator;
+//   man->setHomePosition(cam_pos, cam_target, cam_pos);
+//   m_viewer.setCameraManipulator(man);
+
+//   m_handler = new EventHandler(this);
+//   m_viewer.addEventHandler(m_handler.get());
+// }
 
 MujocoOSGViewer::MujocoOSGViewer(osg::Vec3 cam_pos, osg::Vec3 cam_target)
 : m_data(NULL), m_model(NULL)

@@ -244,23 +244,23 @@ fk_cost_1 = [{
 } for i in common['train_conditions']
 ]
 
-# data_logger = DataLogger()
-# traj_samples = data_logger.unpickle('/home/coline/abhishek_gps/gps/experiments/mjc_singlerobot_3link_reach_multicondition/data_files/traj_sample_3link_itr2')
+data_logger = DataLogger()
+traj_samples = data_logger.unpickle('/home/coline/abhishek_gps/gps/experiments/mjc_singlerobot_3link_reach_multicondition/data_files/traj_sample_3link_itr2')
 
-# dev_cost = [{
-#     'type': CostStateDev,
-#     'data_types': {
-#         END_EFFECTOR_POINTS: {
-#             'target_state': traj_samples[0][i][0].get(END_EFFECTOR_POINTS),
-#             'wp': np.array([1., 1., 1.])
-#         },
-#         JOINT_ANGLES: {
-#             'target_state': traj_samples[0][i][0].get(JOINT_ANGLES),
-#             'wp': np.array([1., 1., 1.])
-#         }
+dev_cost = [{
+    'type': CostStateDev,
+    'data_types': {
+        END_EFFECTOR_POINTS: {
+            'target_state': traj_samples[0][i][0].get(END_EFFECTOR_POINTS),
+            'wp': np.array([1., 1., 1.])
+        },
+        JOINT_ANGLES: {
+            'target_state': traj_samples[0][i][0].get(JOINT_ANGLES),
+            'wp': np.array([1., 1., 1.])
+        }
         
-#     }
-# } for i in common['train_conditions']]
+    }
+} for i in common['train_conditions']]
 
 algorithm[0]['cost'] = [{
     'type': CostSum,

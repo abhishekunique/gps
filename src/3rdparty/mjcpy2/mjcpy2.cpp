@@ -214,7 +214,24 @@ void PyMJCWorld2::_PlotInit(float x, float y, float z, float px, float py, float
 
 void PyMJCWorld2::_PlotInit(int width, int height, float x, float y, float z, float px, float py, float pz) {
     if (m_viewer == NULL) {
+        // osg::ref_ptr<osg::GraphicsContext::Traits> traits ( new osg::GraphicsContext::Traits );
+        // traits->x = 0;
+	// traits->y = 0;
+	// traits->width = width;
+	// traits->height = height;
+	// traits->red = 8;
+	// traits->green = 8;
+	// traits->blue = 8;
+	// // traits->alpha = 8;
+	// traits->depth = 24;
+	// traits->windowDecoration = false;
+	// traits->pbuffer = true; // We want a pixel buffer.
+	// traits->doubleBuffer = true;
+	// traits->sharedContext = 0x0;
+	// osg::ref_ptr<osg::GraphicsContext> gc ( osg::GraphicsContext::createGraphicsContext ( traits.get() ) );
         m_viewer = new MujocoOSGViewer(width, height, osg::Vec3(x, y, z),osg::Vec3(px, py, pz));
+	// m_viewer->m_viewer.getCamera()->setGraphicsContext ( gc.get() );
+
         m_viewer->SetModel(m_model);
     }
 }

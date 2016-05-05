@@ -20,7 +20,7 @@ from gps.utility.data_logger import DataLogger
 from gps.sample.sample_list import SampleList
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
-from gps.proto.gps_pb2 import ACTION, RGB_IMAGE
+from gps.proto.gps_pb2 import ACTION, RGB_IMAGE, END_EFFECTOR_POINTS
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
@@ -164,7 +164,7 @@ class GPSMain(object):
             # import IPython
             # IPython.embed()
             for robot_number in range(self.num_robots):
-                self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_numer)
+                self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
             for robot_number in range(self.num_robots):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
@@ -185,8 +185,16 @@ class GPSMain(object):
         Returns: None
         """
         # self.collect_img_dataset(1)
+        # import pickle as p
+        # f = open('/home/coline/abhishek_gps/gps/policy_dict.pkl')
+        # d = p.load(f)
+        # self.policy_opt.policy[0].scale = d['scale']
+        # self.policy_opt.policy[0].x_idx = d['x_idx']
+        # self.policy_opt.policy[0].bias = d['bias']
+        # self.policy_opt.var = d['var']
 
-
+        # import IPython
+        # IPython.embed()
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
@@ -215,7 +223,7 @@ class GPSMain(object):
                 self.policy_opt.save_shared_wts()
             if self.save_wts:
                 self.policy_opt.save_all_wts(itr)
-            if itr % 2 == 0 and itr > 0:
+            if itr % 8 == 0:# and itr > 0:
                 import IPython
                 IPython.embed()
 
@@ -259,8 +267,13 @@ class GPSMain(object):
                 thread_samples_pollog[robot_number].start()
             for robot_number in range(self.num_robots):
                 thread_samples_pollog[robot_number].join()
+
+            if self.save_shared:
+                self.policy_opt.save_shared_wts()
+            if self.save_wts:
+                self.policy_opt.save_all_wts(itr)
                 
-            if itr % 5 == 0 and itr > 0:
+            if itr % 4 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
@@ -280,7 +293,7 @@ class GPSMain(object):
     def polsamples_log(self, itr, traj_sample_list, robot_number):
         pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
         self._log_data(itr, traj_sample_list, pol_sample_lists, robot_number=robot_number)
-        self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
+        # self.save_policy_samples(N=5, robot_number=robot_number, itr=itr)
 
 
     def _take_iteration_start(self, itr, sample_lists, robot_number=0):
@@ -296,7 +309,7 @@ class GPSMain(object):
 
     def _take_iteration_shared(self):
         """
-        Take an iteration of the algorithm.
+        Take an iteration of the axlgorithm.
         Args:
             itr: Iteration number.
         Returns: None
@@ -493,8 +506,8 @@ class GPSMain(object):
             N  : number of policy samples to take per condition
         Returns: None
         """
-        # if 'verbose_policy_trials' not in self._hyperparams:
-        #     return None
+        if 'verbose_policy_trials' not in self._hyperparams:
+            return None
         if not N:
             N = self._hyperparams['verbose_policy_trials']
         if self.gui:
@@ -529,14 +542,15 @@ class GPSMain(object):
         #     self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
         #     copy.copy(self.algorithm)
         # )
-        self.data_logger.pickle(
-            self._data_files_dir + ('traj_sample_itr_%02d_rn_%02d.pkl' % (itr,robot_number)),
-            copy.copy(traj_sample_lists)
-        )
+        # self.data_logger.pickle(
+        #     self._data_files_dir + ('traj_sample_itr_%02d_rn_%02d.pkl' % (itr,robot_number)),
+        #     copy.copy(traj_sample_lists)
+        # )
         if pol_sample_lists:
+            pol_ee = [samplelist.get(END_EFFECTOR_POINTS) for samplelist in pol_sample_lists]
             self.data_logger.pickle(
-                self._data_files_dir + ('pol_sample_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
-                copy.copy(pol_sample_lists)
+                self._data_files_dir + ('pol_sample_ee_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
+                pol_ee
             )
 
     def _end(self):
@@ -544,7 +558,7 @@ class GPSMain(object):
         if self.gui:
             for robot_number in range(self.num_robots):
                 self.gui[robot_number].set_status_text('Training complete.')
-                self.gui[robot_number].end_mode()
+                sseelf.gui[robot_number].end_mode()
 
 
 def main():
@@ -650,8 +664,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(1)
-        np.random.seed(1)
+        random.seed(44)
+        np.random.seed(44)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:
