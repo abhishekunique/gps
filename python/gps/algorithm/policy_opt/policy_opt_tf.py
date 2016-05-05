@@ -87,9 +87,23 @@ class PolicyOptTf(PolicyOpt):
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-       
-        tf_maps, fc_vars, last_conv_vars, av, ls = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
-                                    network_config=self._hyperparams['network_params'])
+
+        if ('dc_mode' in self._hyperparams) and self._hyperparams['dc_mode']:
+            tf_maps, fc_vars, last_conv_vars, dc_vars, dc_loss = tf_map_generator(
+                dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
+                network_config=self._hyperparams['network_params'])
+
+            self.dc_vars = dc_vars
+            self.dc_loss = tf.add_n(dc_loss)
+            self.dc_mode = True
+            self.dc_labels = [m.dc_labels for m in tf_maps]
+        else:
+            tf_maps, fc_vars, last_conv_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, 
+                                                                batch_size=self.batch_size, 
+                                                                network_config=self._hyperparams['network_params'])
+            self.dc_mode = False
+            self.dc_vars = None
+            self.dc_loss = None
         self.obs_tensors = []
         self.action_tensors = []
         self.precision_tensors = []
@@ -106,8 +120,6 @@ class PolicyOptTf(PolicyOpt):
             self.loss_scalars.append(tf_map.get_loss_op())
             self.feature_points.append(tf_map.feature_points)
         self.combined_loss = tf.add_n(self.loss_scalars)
-        self.av = av
-        self.ls = ls
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
@@ -119,7 +131,20 @@ class PolicyOptTf(PolicyOpt):
                                    momentum=self._hyperparams['momentum'],
                                    weight_decay=self._hyperparams['weight_decay'],
                                    fc_vars=self.fc_vars,
-                                   last_conv_vars=self.last_conv_vars)
+                                   last_conv_vars=self.last_conv_vars, dc_vars =self.dc_vars)
+        if self.dc_mode:
+            non_dc_vars = self.solver.trainable_variables
+            self.dc_solver = TfSolver(loss_scalar=self.dc_loss,
+                                      solver_name=self._hyperparams['solver_type'],
+                                      base_lr=self._hyperparams['lr'],
+                                      lr_policy=self._hyperparams['lr_policy'],
+                                      momentum=self._hyperparams['momentum'],
+                                      weight_decay=self._hyperparams['weight_decay'],
+                                      # # fc_vars=self.fc_vars,
+                                      # last_conv_vars=self.last_conv_vars, 
+                                      dc_vars =non_dc_vars)
+        import IPython
+        IPython.embed()
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
@@ -241,15 +266,6 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
 
-            # conv2vals = self.sess.run(self.ls[1], feed_dict)
-            # num_nonzeros = np.count_nonzero(conv2vals)
-            # ffpvals = self.sess.run(self.ls[2], feed_dict)
-            # if np.abs(ffpvals[0,0] - 31.5) < 0.5 and np.abs(ffpvals[0,1] - 39.5) < 0.5:
-            #     import IPython
-            #     IPython.embed()
-            
-            # if i % 100 == 0:
-            #     print(ffpvals)
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
             average_loss += train_loss
@@ -259,6 +275,27 @@ class PolicyOptTf(PolicyOpt):
                 print 'supervised tf loss is '
                 print (average_loss/100)
                 average_loss = 0
+
+            if self.dc_mode:
+                dc_dict = {}
+                for robot_number in range(self.num_robots):
+                    start_idx = int(i * self.batch_size %
+                                    (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                    idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                    dc_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                    robot_onehots = np.zeros((self.batch_size, self.num_robots))
+                    robot_onehots[:, robot_number] = np.ones((self.batch_size,))
+                    dc_dict[self.dc_labels[robot_number]] = robot_onehots
+                dc_train_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
+
+                average_loss_dc += dc_train_loss
+                if i % 100 == 0 and i != 0:
+                    LOGGER.debug('tensorflow iteration %d, dc loss %f',
+                                i, average_loss_dc / 10)
+                    print 'supervised dc loss is '
+                    print (average_loss_dc/10)
+                    average_loss_dc = 0
+
 
         obs_plot = obs_reshaped[0][1]
         img_plot = self.single_img_with_fp(obs_plot, 0, 64,80,3)

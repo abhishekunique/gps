@@ -11,22 +11,27 @@ class TfMap:
     """ a container for inputs, outputs, and loss in a tf graph. This object exists only
     to make well-defined the tf inputs, outputs, and losses used in the policy_opt_tf class."""
 
-    def __init__(self, input_tensor, target_output_tensor, precision_tensor, output_op, loss_op, feature_points=None):
+    def __init__(self, input_tensor, target_output_tensor, precision_tensor, output_op, loss_op, 
+                 feature_points=None, dc_labels=None):
         self.input_tensor = input_tensor
         self.target_output_tensor = target_output_tensor
         self.precision_tensor = precision_tensor
         self.output_op = output_op
         self.loss_op = loss_op
         self.feature_points = feature_points
+        self.dc_labels = dc_labels
 
     @classmethod
-    def init_from_lists(cls, inputs, outputs, loss, feature_points=None):
+    def init_from_lists(cls, inputs, outputs, loss, feature_points=None, dc_labels=None):
         inputs = check_list_and_convert(inputs)
         outputs = check_list_and_convert(outputs)
         loss = check_list_and_convert(loss)
         if len(inputs) < 3:  # pad for the constructor if needed.
             inputs += [None]*(3 - len(inputs))
-        return cls(inputs[0], inputs[1], inputs[2], outputs[0], loss[0], feature_points=feature_points)
+        if dc_labels is not None:
+            dc_labels = check_list_and_convert(dc_labels)
+        return cls(inputs[0], inputs[1], inputs[2], outputs[0], loss[0], feature_points=feature_points,
+                   dc_labels=dc_labels)
 
     def get_input_tensor(self):
         return self.input_tensor
@@ -63,23 +68,31 @@ class TfSolver:
     """ A container for holding solver hyperparams in tensorflow. Used to execute backwards pass. """
     def __init__(self, loss_scalar, solver_name='adam', base_lr=None, lr_policy=None,
                  momentum=None, weight_decay=None, robot_number=0, fc_vars=None, 
-                 last_conv_vars=None):
+                 last_conv_vars=None, dc_vars= None):
         self.base_lr = base_lr
         self.lr_policy = lr_policy
         self.momentum = momentum
         self.solver_name = solver_name
         self.loss_scalar = loss_scalar
+        self.dc_vars = dc_vars
         if self.lr_policy != 'fixed':
             raise NotImplementedError('learning rate policies other than fixed are not implemented')
 
         self.weight_decay = weight_decay
+        self.trainable_variables = tf.trainable_variables()
+        if self.dc_vars is not None:
+            new_vars = []
+            for var in self.trainable_variables:
+                if var not in self.dc_vars:
+                    new_vars.append(var)
+            self.trainable_variables = new_vars
+
         if weight_decay is not None:
-            trainable_vars = tf.trainable_variables()
             loss_with_reg = self.loss_scalar
-            for var in trainable_vars:
+            for var in self.trainable_variables:
                 loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
             self.loss_scalar = loss_with_reg
-        
+
         self.solver_op = self.get_solver_op()
         if fc_vars is not None:
             self.fc_vars = fc_vars
@@ -87,10 +100,19 @@ class TfSolver:
             self.fc_solver_op = self.get_solver_op(var_list=fc_vars)
         self.trainable_variables = tf.trainable_variables()
 
+        # have to do this twice to get the optimization vars into the trainable vars
+        if self.dc_vars is not None:
+            new_vars = []
+            for var in self.trainable_variables:
+                if var not in self.dc_vars:
+                    new_vars.append(var)
+            self.trainable_variables = new_vars
+
+
     def get_solver_op(self, var_list=None, loss=None):
         solver_string = self.solver_name.lower()
         if var_list is None:
-            var_list = tf.trainable_variables()
+            var_list = self.trainable_variables
         if loss is None:
             loss = self.loss_scalar
         if solver_string == 'adam':
