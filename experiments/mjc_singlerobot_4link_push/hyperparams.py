@@ -43,7 +43,7 @@ PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/mjc_singlerobot_4link_push/'
-INIT_POLICY_DIR = '/home/abhigupta/gps/experiments/mjc_singlerobot_4link_push/data_files/'
+INIT_POLICY_DIR = '/home/abhigupta/gps/'
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),
@@ -87,10 +87,10 @@ agent = [{
     'substeps': 5,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
     'pos_body_offset': [
-                        [np.array([1.0, 0.0, 0.4]),np.array([0.4, 0.0, 0.4])],
-                        [np.array([1.0, 0.0, -0.4]),np.array([0.6, 0.0, -0.4])],
-                        [np.array([0.6, 0.0, 0.6]),np.array([0.2, 0.0, 0.6])],
-                        [np.array([0.8, 0.0, -0.6]),np.array([0.4, 0.0, -0.6])],
+                        [np.array([1.0, 0.0, 0.45]),np.array([0.4, 0.0, 0.45])],
+                        [np.array([1.0, 0.0, -0.5]),np.array([0.6, 0.0, -0.5])],
+                        [np.array([0.6, 0.0, 0.65]),np.array([0.2, 0.0, 0.65])],
+                        [np.array([0.8, 0.0, -0.7]),np.array([0.6, 0.0, -0.7])],
 
                         [np.array([0.8, 0.0, 0.5]),np.array([0.3, 0.0, 0.5])],
                         [np.array([0.8, 0.0, -0.5]),np.array([0.4, 0.0, -0.5])],
@@ -146,19 +146,19 @@ algorithm = [{
 # }]
 
 # DIFFERENT!!!!
-algorithm[0]['init_traj_distr'] = {
-    'type': init_pd,
-    'init_var': 10.0,
-    'pos_gains': 10.0,
-    'dQ': SENSOR_DIMS[0][ACTION],
-    'dt': agent[0]['dt'],
-    'T': agent[0]['T'],
-}
 # algorithm[0]['init_traj_distr'] = {
-#     'type': init_from_file,
-#     'filename': [INIT_POLICY_DIR + ('alg_dist_cond%d.pkl' % i)
-#             for i in common['train_conditions']]
+#     'type': init_pd,
+#     'init_var': 10.0,
+#     'pos_gains': 10.0,
+#     'dQ': SENSOR_DIMS[0][ACTION],
+#     'dt': agent[0]['dt'],
+#     'T': agent[0]['T'],
 # }
+algorithm[0]['init_traj_distr'] = {
+    'type': init_from_file,
+    'filename': [INIT_POLICY_DIR + ('traj_dist%d.pkl' % i)
+            for i in common['train_conditions']]
+}
 
 # algorithm[0]['init_traj_distr'] = {
 #     'type': init_lqr,
