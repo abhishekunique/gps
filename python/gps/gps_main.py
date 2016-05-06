@@ -22,7 +22,10 @@ from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.proto.gps_pb2 import ACTION, RGB_IMAGE
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-
+from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
+        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, \
+        END_EFFECTOR_POINT_JACOBIANS, ACTION, RGB_IMAGE, RGB_IMAGE_SIZE, \
+        CONTEXT_IMAGE, CONTEXT_IMAGE_SIZE
 
 class GPSMain(object):
     """ Main class to run algorithms and experiments. """
@@ -121,6 +124,16 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
+
+        #Sanity check running the policy forward
+        # scale = np.load("scale_push_4link.npy")
+        # bias = np.load("bias_push_4link.npy")
+        # var_1 = np.load("var_push_4link.npy")
+        # xidx = np.load("xidx_push_4link.npy")
+        # self.policy_opt.policy[0].scale = scale
+        # self.policy_opt.policy[0].bias = bias
+        # self.policy_opt.var = var_1
+        # self.policy_opt.policy[0].x_idx = xidx
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             for robot_number in range(self.num_robots):
@@ -132,7 +145,7 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx
                 ]
-
+                
             for robot_number in range(self.num_robots):            
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
@@ -145,7 +158,7 @@ class GPSMain(object):
                 self.policy_opt.save_shared_wts()
             if self.save_wts:
                 self.policy_opt.save_all_wts(itr)
-            if itr % 1 == 0:#and itr > 0:
+            if itr % 4 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
@@ -161,7 +174,7 @@ class GPSMain(object):
         """
         if self.gui:
             self.gui[robot_number].set_status_text('Calculating.')
-        self.algorithm[robot_number].iteration_start(sample_lists, itr)
+        self.algorithm[robot_number].iteration_start(sample_lists)
 
     def _take_iteration_shared(self):
         """
@@ -380,10 +393,16 @@ class GPSMain(object):
         #     self._data_files_dir + ('traj_sample_itr_%02d_rn_%02d.pkl' % (itr,robot_number)),
         #     copy.copy(traj_sample_lists)
         # )
+        # if pol_sample_lists:
+            # self.data_logger.pickle(
+            #     self._data_files_dir + ('pol_sample_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
+            #     copy.copy(pol_sample_lists)
+            # )
         if pol_sample_lists:
+            pol_ee = [samplelist.get(END_EFFECTOR_POINTS) for samplelist in pol_sample_lists]
             self.data_logger.pickle(
-                self._data_files_dir + ('pol_sample_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
-                copy.copy(pol_sample_lists)
+                self._data_files_dir + ('pol_sample_ee_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
+                pol_ee
             )
 
     def _end(self):
@@ -497,8 +516,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(0)
-        np.random.seed(0)
+        random.seed(1)
+        np.random.seed(1)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:

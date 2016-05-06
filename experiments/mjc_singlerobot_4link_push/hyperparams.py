@@ -73,6 +73,7 @@ common = {
         'iterations': 500,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
+        'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
     }
 }
 
@@ -90,12 +91,12 @@ agent = [{
                         [np.array([1.0, 0.0, 0.45]),np.array([0.4, 0.0, 0.45])],
                         [np.array([1.0, 0.0, -0.5]),np.array([0.6, 0.0, -0.5])],
                         [np.array([0.6, 0.0, 0.65]),np.array([0.2, 0.0, 0.65])],
-                        [np.array([0.8, 0.0, -0.7]),np.array([0.6, 0.0, -0.7])],
+                        [np.array([0.8, 0.0, -0.65]),np.array([0.6, 0.0, -0.65])],
 
                         [np.array([0.8, 0.0, 0.5]),np.array([0.3, 0.0, 0.5])],
                         [np.array([0.8, 0.0, -0.5]),np.array([0.4, 0.0, -0.5])],
                         [np.array([0.7, 0.0, 0.6]),np.array([0.4, 0.0, 0.6])],
-                        [np.array([0.65, 0.0, -0.6]),np.array([0.3, 0.0, -0.6])],
+                        [np.array([0.75, 0.0, -0.55]),np.array([0.45, 0.0, -0.55])],
                         ],
     'pos_body_idx': np.array([7,9]),
     'conditions': common['conditions'],

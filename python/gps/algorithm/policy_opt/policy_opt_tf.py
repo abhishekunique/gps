@@ -44,6 +44,10 @@ class PolicyOptTf(PolicyOpt):
             self.action_tensors.append(None)
             self.var.append(self._hyperparams['init_var'] * np.ones(dU_ind))
         self.init_network()
+        # tv = tf.trainable_variables()
+        # num_weights = 4
+        # self.shared_vars_array = tv[:4]
+        # self.other_vars_array = tv[4:]
         self.init_solver()
         self.sess = tf.Session()
         self.policy = []
@@ -79,6 +83,15 @@ class PolicyOptTf(PolicyOpt):
                 self.shared_vars.append(var)
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
+
+        # if 'restore_all_wts' in self._hyperparams and self._hyperparams['restore_all_wts']:
+        #     val_vars = np.load(self._hyperparams['restore_all_wts'])
+        #     for i in range(num_weights):
+        #         assign_op = tv[i].assign(val_vars[i])
+        #         self.sess.run(assign_op)
+        #     import IPython
+        #     IPython.embed()
+
         # if self._hyperparams['restore_shared_wts']:
         #     self.restore_shared_wts()
         # merged = tf.merge_all_summaries()
@@ -119,7 +132,8 @@ class PolicyOptTf(PolicyOpt):
                                    momentum=self._hyperparams['momentum'],
                                    weight_decay=self._hyperparams['weight_decay'],
                                    fc_vars=self.fc_vars,
-                                   last_conv_vars=self.last_conv_vars)
+                                   last_conv_vars=self.last_conv_vars)#,
+                                   #vars_to_opt=self.other_vars_array)
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
@@ -240,14 +254,6 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                 feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-
-            # conv2vals = self.sess.run(self.ls[1], feed_dict)
-            # num_nonzeros = np.count_nonzero(conv2vals)
-            # ffpvals = self.sess.run(self.ls[2], feed_dict)
-            # if np.abs(ffpvals[0,0] - 31.5) < 0.5 and np.abs(ffpvals[0,1] - 39.5) < 0.5:
-            #     import IPython
-            #     IPython.embed()
-            
             # if i % 100 == 0:
             #     print(ffpvals)
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)

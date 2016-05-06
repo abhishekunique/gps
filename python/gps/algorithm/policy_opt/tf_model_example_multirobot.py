@@ -339,7 +339,6 @@ def example_tf_network(dim_input=27, dim_output=7, batch_size=25, network_config
 
     return TfMap.init_from_lists([nn_input, action, precision], [mlp_applied], [loss_out])
 
-
 def conv2d(img, w, b):
     #print img.get_shape().dims[3].value
     return tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(img, w, strides=[1, 1, 1, 1], padding='SAME'), b))
