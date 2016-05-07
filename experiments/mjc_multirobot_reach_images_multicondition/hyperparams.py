@@ -29,15 +29,6 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
 from gps.gui.config import generate_experiment_info
 
 SENSOR_DIMS = [{
-    JOINT_ANGLES: 3,
-    JOINT_VELOCITIES: 3,
-    END_EFFECTOR_POINTS: 3,
-    END_EFFECTOR_POINT_VELOCITIES: 3,
-    ACTION: 3,
-    RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
-    RGB_IMAGE_SIZE: 3,
-},
-{
     JOINT_ANGLES: 4,
     JOINT_VELOCITIES: 4,
     END_EFFECTOR_POINTS: 3,
@@ -45,9 +36,18 @@ SENSOR_DIMS = [{
     ACTION: 4,
     RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
     RGB_IMAGE_SIZE: 3,
+},
+{
+    JOINT_ANGLES: 3,
+    JOINT_VELOCITIES: 3,
+    END_EFFECTOR_POINTS: 3,
+    END_EFFECTOR_POINT_VELOCITIES: 3,
+    ACTION: 3,
+    RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
+    RGB_IMAGE_SIZE: 3,
 }]
 
-PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
+PR2_GAINS = [np.array([1.0, 1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/mjc_multirobot_reach_images_multicondition/'
@@ -74,9 +74,9 @@ common = {
     'data_files_dir': EXP_DIR + 'data_files/',
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
-    'conditions': 8,
-    'train_conditions': [0,1,2,3,],
-    'test_conditions':[4,5,6,7],
+    'conditions': 8, #EDITED
+    'train_conditions': [0,1,2,3,],#EDITED
+    'test_conditions': [4,5,6,7],
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
@@ -119,12 +119,12 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = [{
     'type': AgentMuJoCo,
-    'filename': './mjc_models/arm_3link_reach.xml',
-    'x0': np.zeros(6),
+    'filename': './mjc_models/arm_4link_reach.xml',
+    'x0': np.zeros(8),
     'dt': 0.05,
     'substeps': 5,
-    'pos_body_offset':  all_offsets,
-    'pos_body_idx': np.array([6]),
+    'pos_body_offset':  all_offsets, # EDITED
+    'pos_body_idx': np.array([7]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
@@ -142,12 +142,12 @@ agent = [{
 },
 {
     'type': AgentMuJoCo,
-    'filename': './mjc_models/arm_4link_reach.xml',
-    'x0': np.zeros(8),
+    'filename': './mjc_models/arm_3link_reach.xml',
+    'x0': np.zeros(6),
     'dt': 0.05,
     'substeps': 5,
-    'pos_body_offset':  all_offsets,
-    'pos_body_idx': np.array([7]),
+    'pos_body_offset':  all_offsets, #EDITED
+    'pos_body_idx': np.array([6]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
@@ -236,7 +236,6 @@ algorithm[1]['init_traj_distr'] = {
 }
 
 
-
 torque_cost_1 = [{
     'type': CostAction,
     'wu': 5e-5 / PR2_GAINS[0],
@@ -259,7 +258,7 @@ torque_cost_2 = [{
 
 fk_cost_2 = [{
     'type': CostFK,
-    'target_end_effector': np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i],
+    'target_end_effector': np.array([0.8, 0.0, 0.5])+ agent[1]['pos_body_offset'][i],
     'wp': np.array([1, 1, 1]),
     'l1': 0.1,
     'l2': 10.0,
@@ -337,8 +336,8 @@ algorithm[1]['policy_prior'] = {
 
 config = {
     'iterations': 25,
-    'num_samples': 10,
-    'verbose_trials': 10,
+    'num_samples': 10,#EDITED
+    'verbose_trials': 10,#EDITED
     'verbose_policy_trials': 5,
     'save_wts': True,
     'common': common,

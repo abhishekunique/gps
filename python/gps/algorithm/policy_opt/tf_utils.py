@@ -31,7 +31,7 @@ class TfMap:
         if dc_labels is not None:
             dc_labels = check_list_and_convert(dc_labels)
         return cls(inputs[0], inputs[1], inputs[2], outputs[0], loss[0], feature_points=feature_points,
-                   dc_labels=dc_labels)
+                   dc_labels=dc_labels[0])
 
     def get_input_tensor(self):
         return self.input_tensor

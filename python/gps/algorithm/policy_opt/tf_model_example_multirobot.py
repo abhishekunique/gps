@@ -342,6 +342,7 @@ def multi_input_multi_output_images_shared_conv_dc(dim_input=[27, 27], dim_outpu
 
     dc_classification_loss = []
     #need to fix whatever this is 
+    tensors = {}
     with tf.variable_scope("shared_wts"):
         for robot_number, robot_params in enumerate(network_config):
             n_layers = 3
@@ -415,17 +416,20 @@ def multi_input_multi_output_images_shared_conv_dc(dim_input=[27, 27], dim_outpu
             dc_classification_loss.append(tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(dc_output, dc_labels)))
             dc_entropy_loss = (network_config[robot_number]['dc_weight']*
                                (-1/float(num_robots))*tf.reduce_sum(tf.log(tf.nn.softmax(dc_output))))
-
+            tensors['dc_output'+str(robot_number)] = dc_output
+            tensors['dc_entropyloss'+str(robot_number)] = dc_entropy_loss
+            tensors['fc_output'+str(robot_number)] = fc_output
+            tensors['fc_input'+str(robot_number)] = fc_input
             dc_vars = [weights['dc'], biases['dc']]
             fc_vars += weights_FC
             fc_vars += biases_FC
             last_conv_vars.append(fc_input)
             last_conv_vars.append(full_feature_points)
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
-            loss = loss + dc_entropy_loss
+            loss = loss #+ dc_entropy_loss
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss],
                                                feature_points=full_feature_points, dc_labels=[dc_labels]))
-    return nnets, fc_vars, last_conv_vars, dc_vars, dc_classification_loss
+    return nnets, fc_vars, last_conv_vars, dc_vars, dc_classification_loss, tensors
 
 
 def get_loss_layer(mlp_out, action, precision, batch_size):

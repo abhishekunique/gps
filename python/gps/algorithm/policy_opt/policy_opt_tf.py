@@ -89,14 +89,17 @@ class PolicyOptTf(PolicyOpt):
         tf_map_generator = self._hyperparams['network_model']
 
         if ('dc_mode' in self._hyperparams) and self._hyperparams['dc_mode']:
-            tf_maps, fc_vars, last_conv_vars, dc_vars, dc_loss = tf_map_generator(
+            tf_maps, fc_vars, last_conv_vars, dc_vars, dc_loss, tensors = tf_map_generator(
                 dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
                 network_config=self._hyperparams['network_params'])
 
+            self.tensors = tensors
             self.dc_vars = dc_vars
             self.dc_loss = tf.add_n(dc_loss)
             self.dc_mode = True
             self.dc_labels = [m.dc_labels for m in tf_maps]
+            print "-------------------------------"
+            print "dc_labels", self.dc_labels
         else:
             tf_maps, fc_vars, last_conv_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, 
                                                                 batch_size=self.batch_size, 
@@ -143,8 +146,6 @@ class PolicyOptTf(PolicyOpt):
                                       # # fc_vars=self.fc_vars,
                                       # last_conv_vars=self.last_conv_vars, 
                                       dc_vars =non_dc_vars)
-        import IPython
-        IPython.embed()
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
@@ -244,7 +245,8 @@ class PolicyOptTf(PolicyOpt):
                     idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                     feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                     feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-                    feed_dict[self.last_conv_vars[robot_number]] = conv_values[robot_number][idx_i]
+                for c in range(len(self.last_conv_vars)):
+                    feed_dict[self.last_conv_vars[c]] = conv_values[c][idx_i]
 
                 train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_fc_solver=True)
                 average_loss += train_loss
@@ -278,23 +280,25 @@ class PolicyOptTf(PolicyOpt):
 
             if self.dc_mode:
                 dc_dict = {}
-                for robot_number in range(self.num_robots):
-                    start_idx = int(i * self.batch_size %
-                                    (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-                    idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                    dc_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                    robot_onehots = np.zeros((self.batch_size, self.num_robots))
-                    robot_onehots[:, robot_number] = np.ones((self.batch_size,))
-                    dc_dict[self.dc_labels[robot_number]] = robot_onehots
-                dc_train_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
+                average_loss_dc = 0
+                if i% 1 == 0:
+                    for robot_number in range(self.num_robots):
+                        start_idx = int(i * self.batch_size %
+                                        (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                        idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                        dc_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                        robot_onehots = np.zeros((self.batch_size, self.num_robots))
+                        robot_onehots[:, robot_number] = np.ones((self.batch_size,))
+                        dc_dict[self.dc_labels[robot_number]] = robot_onehots
+                    dc_train_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
 
-                average_loss_dc += dc_train_loss
-                if i % 100 == 0 and i != 0:
-                    LOGGER.debug('tensorflow iteration %d, dc loss %f',
-                                i, average_loss_dc / 10)
-                    print 'supervised dc loss is '
-                    print (average_loss_dc/10)
-                    average_loss_dc = 0
+                    average_loss_dc += dc_train_loss
+                    if i % 100 == 0 and i != 0:
+                        LOGGER.debug('tensorflow iteration %d, dc loss %f',
+                                     i, average_loss_dc / 10)
+                        print 'supervised dc loss is '
+                        print (average_loss_dc/20)
+                        average_loss_dc = 0
 
 
         obs_plot = obs_reshaped[0][1]

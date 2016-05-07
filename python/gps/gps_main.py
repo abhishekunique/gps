@@ -20,7 +20,7 @@ from gps.utility.data_logger import DataLogger
 from gps.sample.sample_list import SampleList
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
-from gps.proto.gps_pb2 import ACTION, RGB_IMAGE
+from gps.proto.gps_pb2 import ACTION, RGB_IMAGE, END_EFFECTOR_POINTS
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
@@ -145,7 +145,7 @@ class GPSMain(object):
                 self.policy_opt.save_shared_wts()
             if self.save_wts:
                 self.policy_opt.save_all_wts(itr)
-            if itr % 1 == 0:#and itr > 0:
+            if itr % 2 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
@@ -381,10 +381,12 @@ class GPSMain(object):
         #     copy.copy(traj_sample_lists)
         # )
         if pol_sample_lists:
+            pol_ee = [samplelist.get(END_EFFECTOR_POINTS) for samplelist in pol_sample_lists]
             self.data_logger.pickle(
-                self._data_files_dir + ('pol_sample_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
-                copy.copy(pol_sample_lists)
+                self._data_files_dir + ('pol_sample_ee_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
+                pol_ee
             )
+
 
     def _end(self):
         """ Finish running and exit. """
@@ -497,8 +499,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(0)
-        np.random.seed(0)
+        random.seed(44)
+        np.random.seed(44)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:

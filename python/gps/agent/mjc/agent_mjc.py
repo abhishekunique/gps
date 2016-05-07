@@ -65,7 +65,7 @@ class AgentMuJoCo(Agent):
             for j in range(len(self._hyperparams['pos_body_idx'][i])):
                 idx = self._hyperparams['pos_body_idx'][i][j]
                 self._model[i]['body_pos'][idx, :] += \
-                        self._hyperparams['pos_body_offset'][i][j]
+                        self._hyperparams['pos_body_offset'][i]
             self._world[i].set_model(self._model[i])
             x0 = self._hyperparams['x0'][i]
             idx = len(x0) // 2

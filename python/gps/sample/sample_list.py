@@ -13,11 +13,11 @@ class SampleList(object):
     def __init__(self, samples):
         self._samples = samples
 
-    # def get(self, sensor_name, idx=None):
-    #     """ Returns N x T x dU numpy array of actions. """
-    #     if idx is None:
-    #         idx = range(len(self._samples))
-    #     return np.asarray([self._samples[i].get(sensor_name) for i in idx])
+    def get(self, sensor_name, idx=None):
+        """ Returns N x T x dU numpy array of actions. """
+        if idx is None:
+            idx = range(len(self._samples))
+        return np.asarray([self._samples[i].get(sensor_name) for i in idx])
 
 
     def get_X(self, idx=None):
