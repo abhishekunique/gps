@@ -17,7 +17,7 @@ from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
 from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
-from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared_conv_dc
+from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared_conv2
 
 
 IMAGE_WIDTH = 80
@@ -80,7 +80,7 @@ common = {
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': multi_input_multi_output_images_shared_conv_dc,
+        'network_model': multi_input_multi_output_images_shared_conv2,
         'network_params': [{
             'dim_hidden': [10],
             'num_filters': [10, 20],
@@ -110,7 +110,7 @@ common = {
         'iterations': 500,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-        'dc_mode': True,
+        'dc_mode': False,
     }
 }
 
