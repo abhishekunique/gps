@@ -79,6 +79,7 @@ def get_mlp_layers(mlp_input, number_layers, dimension_hidden, robot_number):
     cur_top = mlp_input
     weights = []
     biases = []
+    layers = []
     for layer_step in range(0, number_layers):
         in_shape = cur_top.get_shape().dims[1].value
         cur_weight = init_weights([in_shape, dimension_hidden[layer_step]], name='w_' + str(layer_step) + 'rn' + str(robot_number))
@@ -89,8 +90,9 @@ def get_mlp_layers(mlp_input, number_layers, dimension_hidden, robot_number):
             cur_top = tf.nn.relu(tf.matmul(cur_top, cur_weight) + cur_bias)
         else:
             cur_top = tf.matmul(cur_top, cur_weight) + cur_bias
+        layers.append(cur_top)
 
-    return cur_top, weights, biases
+    return cur_top, weights, biases, layers
 
 def multi_input_multi_output_images_shared_conv2(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
     """
@@ -471,37 +473,23 @@ def example_tf_network_multi(dim_input=[27, 27], dim_output=[7, 7], batch_size=2
     
     num_robots = len(dim_input)
     nnets = []
-    st_idx = []
-    im_idx = []
-    i = []
-    for robot_number in range(num_robots):
-        st_idx.append([])
-        im_idx.append([])
-        i.append(0)
     with tf.variable_scope("shared_wts"):
         for robot_number, robot_params in enumerate(network_config):
-            n_layers = 3
-            layer_size = 20
+            n_layers = 4
+            layer_size = 60
             dim_hidden = (n_layers - 1)*[layer_size]
             dim_hidden.append(dim_output[robot_number])
-            for sensor in robot_params['obs_include']:
-                dim = robot_params['sensor_dims'][sensor]
-                if sensor in robot_params['obs_image_data']:
-                    im_idx[robot_number] = im_idx[robot_number] + list(range(i[robot_number], i[robot_number]+dim))
-                else:
-                    st_idx[robot_number] = st_idx[robot_number] + list(range(i[robot_number], i[robot_number]+dim))
-                i[robot_number] += dim
 
             nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
 
             state_input = nn_input
 
-            fc_output, weights_FC, biases_FC = get_mlp_layers(state_input, n_layers, dim_hidden, robot_number=robot_number)
+            fc_output, weights_FC, biases_FC, layers = get_mlp_layers(state_input, n_layers, dim_hidden, robot_number=robot_number)
 
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
 
-    return nnets, None, None, None, None
+    return nnets, None, None, weights_FC + biases_FC, layers
 
 def conv2d(img, w, b):
     #print img.get_shape().dims[3].value

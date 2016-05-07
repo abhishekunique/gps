@@ -146,11 +146,12 @@ def init_from_file(hyperparams):
     filename = hyperparams["filename"]
     data_logger = DataLogger()
     new_policy = data_logger.unpickle(filename)
-    config = copy.deepcopy(INIT_LG_PD)
-    config.update(hyperparams)
-    dU, dQ, dX = config['dU'], config['dQ'], config['dX']
-    T = config['T']
-    PSig = config['init_var'] * np.tile(np.eye(dU), [T, 1, 1])
-    cholPSig = np.sqrt(config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
-    invPSig = (1.0 / config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
-    return LinearGaussianPolicy(new_policy.K, new_policy.k, PSig, cholPSig, invPSig)
+    return new_policy
+    # config = copy.deepcopy(INIT_LG_PD)
+    # config.update(hyperparams)
+    # dU, dQ, dX = config['dU'], config['dQ'], config['dX']
+    # T = config['T']
+    # PSig = config['init_var'] * np.tile(np.eye(dU), [T, 1, 1])
+    # cholPSig = np.sqrt(config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
+    # invPSig = (1.0 / config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
+    # return LinearGaussianPolicy(new_policy.K, new_policy.k, PSig, cholPSig, invPSig)

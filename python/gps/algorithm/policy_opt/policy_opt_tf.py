@@ -195,8 +195,10 @@ class PolicyOptTf(PolicyOpt):
             if itr == 0 and inner_itr == 1:
                 #TODO: may need to change this
                 self.policy[robot_number].x_idx = self.x_idx[robot_number]
-                self.policy[robot_number].scale = np.diag(1.0 / np.std(obs[:, self.x_idx[robot_number]], axis=0))
-                self.policy[robot_number].bias = -np.mean(obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)
+                import IPython
+                IPython.embed()
+                self.policy[robot_number].scale = np.eye(np.diag(1.0 / (np.std(obs[:, self.x_idx[robot_number]], axis=0) + 1e-8)).shape[0])
+                self.policy[robot_number].bias = np.zeros((-np.mean(obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)).shape)
             obs[:, self.x_idx[robot_number]] = obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
 
             # Assuming that N*T >= self.batch_size.
@@ -218,31 +220,34 @@ class PolicyOptTf(PolicyOpt):
         average_loss = 0
         print "itr_full", itr_full
         print "inner_itr", inner_itr
-        if itr_full[0] > 0:
-            feed_dict = {}
-            for robot_number in range(self.num_robots):
-                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number]
+        if itr_full[0] == 1 and inner_itr == 0:
+            import IPython
+            IPython.embed()
+        # if itr_full[0] > 0:
+        #     feed_dict = {}
+        #     for robot_number in range(self.num_robots):
+        #         feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number]
 
-            num_values = obs_reshaped[0].shape[0]
-            conv_values = self.solver.get_last_conv_values(self.sess, feed_dict, num_values, 100)
-            for i in range(self._hyperparams['fc_only_iterations'] ):
-                feed_dict = {}
-                for robot_number in range(self.num_robots):
-                    start_idx = int(i * self.batch_size %
-                                    (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-                    idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                    feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
-                    feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-                    feed_dict[self.last_conv_vars[robot_number]] = conv_values[robot_number][idx_i]
+        #     num_values = obs_reshaped[0].shape[0]
+        #     conv_values = self.solver.get_last_conv_values(self.sess, feed_dict, num_values, 100)
+        #     for i in range(self._hyperparams['fc_only_iterations'] ):
+        #         feed_dict = {}
+        #         for robot_number in range(self.num_robots):
+        #             start_idx = int(i * self.batch_size %
+        #                             (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+        #             idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+        #             feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+        #             feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+        #             feed_dict[self.last_conv_vars[robot_number]] = conv_values[robot_number][idx_i]
 
-                train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_fc_solver=True)
-                average_loss += train_loss
-                if i % 100 == 0 and i != 0:
-                    LOGGER.debug('tensorflow iteration %d, average loss %f',
-                                 i, average_loss / 100)
-                    print 'supervised fc_only tf loss is '
-                    print (average_loss/100)
-                    average_loss = 0
+        #         train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_fc_solver=True)
+        #         average_loss += train_loss
+        #         if i % 100 == 0 and i != 0:
+        #             LOGGER.debug('tensorflow iteration %d, average loss %f',
+        #                          i, average_loss / 100)
+        #             print 'supervised fc_only tf loss is '
+        #             print (average_loss/100)
+        #             average_loss = 0
         average_loss = 0
         for i in range(self._hyperparams['iterations']):
             # Load in data for this batch.
@@ -266,11 +271,11 @@ class PolicyOptTf(PolicyOpt):
                 print (average_loss/100)
                 average_loss = 0
 
-        obs_plot = obs_reshaped[0][1]
-        img_plot = self.single_img_with_fp(obs_plot, 0, 64,80,3)
-        import matplotlib.image as mpimg
-        import time
-        mpimg.imsave('test_itr'+str(time.clock())+'.png', img_plot) 
+        # obs_plot = obs_reshaped[0][1]
+        # img_plot = self.single_img_with_fp(obs_plot, 0, 64,80,3)
+        # import matplotlib.image as mpimg
+        # import time
+        # mpimg.imsave('test_itr'+str(time.clock())+'.png', img_plot) 
 
         for robot_number in range(self.num_robots):
             # Keep track of tensorflow iterations for loading solver states.
