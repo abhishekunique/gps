@@ -18,7 +18,7 @@ class CostSum(Cost):
         for cost in self._hyperparams['costs']:
             self._costs.append(cost['type'](cost))
 
-    def eval(self, sample, itr):
+    def eval(self, sample):
         """
         Evaluate cost function and derivatives.
         Args:
