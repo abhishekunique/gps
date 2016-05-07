@@ -45,9 +45,9 @@ class PolicyOptTf(PolicyOpt):
             self.var.append(self._hyperparams['init_var'] * np.ones(dU_ind))
         self.init_network()
         # tv = tf.trainable_variables()
-        # num_weights = 4
-        # self.shared_vars_array = tv[:4]
-        # self.other_vars_array = tv[4:]
+        # num_weights = 10
+        # self.shared_vars_array = tv[:6]
+        # self.other_vars_array = tv[6:]
         self.init_solver()
         self.sess = tf.Session()
         self.policy = []

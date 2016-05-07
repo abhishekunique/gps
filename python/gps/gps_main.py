@@ -174,7 +174,7 @@ class GPSMain(object):
         """
         if self.gui:
             self.gui[robot_number].set_status_text('Calculating.')
-        self.algorithm[robot_number].iteration_start(sample_lists)
+        self.algorithm[robot_number].iteration_start(sample_lists, itr)
 
     def _take_iteration_shared(self):
         """

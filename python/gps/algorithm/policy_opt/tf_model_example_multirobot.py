@@ -452,6 +452,57 @@ def example_tf_network(dim_input=27, dim_output=7, batch_size=25, network_config
 
     return TfMap.init_from_lists([nn_input, action, precision], [mlp_applied], [loss_out])
 
+
+def example_tf_network_multi(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
+    """
+    An example a network in theano that has both state and image inputs.
+
+    Args:
+        dim_input: Dimensionality of input.
+        dim_output: Dimensionality of the output.
+        batch_size: Batch size.
+        network_config: dictionary of network structure parameters
+    Returns:
+        a dictionary containing inputs, outputs, and the loss function representing scalar loss.
+    """
+    # List of indices for state (vector) data and image (tensor) data in observation.
+    print 'making multi-input/output-network'
+    
+    
+    num_robots = len(dim_input)
+    nnets = []
+    st_idx = []
+    im_idx = []
+    i = []
+    for robot_number in range(num_robots):
+        st_idx.append([])
+        im_idx.append([])
+        i.append(0)
+    with tf.variable_scope("shared_wts"):
+        for robot_number, robot_params in enumerate(network_config):
+            n_layers = 3
+            layer_size = 20
+            dim_hidden = (n_layers - 1)*[layer_size]
+            dim_hidden.append(dim_output[robot_number])
+            for sensor in robot_params['obs_include']:
+                dim = robot_params['sensor_dims'][sensor]
+                if sensor in robot_params['obs_image_data']:
+                    im_idx[robot_number] = im_idx[robot_number] + list(range(i[robot_number], i[robot_number]+dim))
+                else:
+                    st_idx[robot_number] = st_idx[robot_number] + list(range(i[robot_number], i[robot_number]+dim))
+                i[robot_number] += dim
+
+            nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
+
+            state_input = nn_input
+
+            fc_output, weights_FC, biases_FC = get_mlp_layers(state_input, n_layers, dim_hidden, robot_number=robot_number)
+
+            loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
+            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
+
+    return nnets, None, None, None, None
+
 def conv2d(img, w, b):
     #print img.get_shape().dims[3].value
     return tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(img, w, strides=[1, 1, 1, 1], padding='SAME'), b))

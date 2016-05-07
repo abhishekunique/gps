@@ -30,7 +30,7 @@ class AlgorithmBADMM(Algorithm):
             self.cur[m].pol_info.policy_prior = \
                     policy_prior['type'](policy_prior)
 
-    def iteration_start(self, sample_lists):
+    def iteration_start(self, sample_lists, itr):
         """
         Run iteration of BADMM-based guided policy search.
 
@@ -43,9 +43,9 @@ class AlgorithmBADMM(Algorithm):
         self._set_interp_values()
         self._update_dynamics()  # Update dynamics model using all sample.
         self._update_policy_samples()  # Choose samples to use with the policy.
-        self._update_step_size()  # KL Divergence step size.
+        self._update_step_size(itr)  # KL Divergence step size.
 
-    def iteration(self, sample_lists):
+    def iteration(self, sample_lists, itr):
         """
         Run iteration of BADMM-based guided policy search.
 
@@ -58,7 +58,7 @@ class AlgorithmBADMM(Algorithm):
         self._set_interp_values()
         self._update_dynamics()  # Update dynamics model using all sample.
         self._update_policy_samples()  # Choose samples to use with the policy.
-        self._update_step_size()  # KL Divergence step size.
+        self._update_step_size(itr)  # KL Divergence step size.
 
         # Run inner loop to compute new policies.
         for inner_itr in range(self._hyperparams['inner_iterations']):
@@ -118,12 +118,12 @@ class AlgorithmBADMM(Algorithm):
             for m in range(self.M):
                 self.cur[m].pol_info.policy_samples = self.cur[m].sample_list
 
-    def _update_step_size(self):
+    def _update_step_size(self, itr):
         """ Evaluate costs on samples, and adjust the step size. """
         # Evaluate cost function for all conditions and samples.
         for m in range(self.M):
             self._update_policy_fit(m, init=True)
-            self._eval_cost(m)
+            self._eval_cost(m, itr)
             # Adjust step size relative to the previous iteration.
             if self.iteration_count >= 1 and self.prev[m].sample_list:
                 self._stepadjust(m)
