@@ -18,7 +18,7 @@ from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
 from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
-from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared_conv1conv2
+from gps.algorithm.policy_opt.tf_model_example_multirobot import multi_input_multi_output_images_shared_dc
 
 
 IMAGE_WIDTH = 80
@@ -51,7 +51,7 @@ SENSOR_DIMS = [{
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
-EXP_DIR = BASE_DIR + '/../experiments/mjc_multirobot_reach_images_multicondition/'
+EXP_DIR = BASE_DIR + '/../experiments/mjc_multirobot_reach_domain_confusion/'
 # mjc_reach = {
 #     'top_pos_offsets' : [np.asarray([-1.9, 0.0, 0.]), np.asarray([0., 0., -1.7]), np.asarray([-1.3, 0.0, -0.5]), np.asarray([-0.5, 0., -1.0])],
 #     'bottom_pos_offsets' : [np.asarray([-0.3, 0.0, 0.8]), np.asarray([0.7, 0., 0.]), np.asarray([0.3, 0.0, 0.5]), np.asarray([-0.5, 0.0, 0.5])], 
@@ -81,7 +81,7 @@ common = {
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': multi_input_multi_output_images_shared_conv1conv2,
+        'network_model': multi_input_multi_output_images_shared_dc,
         'network_params': [{
             'dim_hidden': [10],
             'num_filters': [10, 20],
@@ -93,6 +93,7 @@ common = {
             'image_channels': IMAGE_CHANNELS,
             'sensor_dims': SENSOR_DIMS[0],
             'batch_size': 25,
+            'dc_weight': 0.1,
         },
         {
             'dim_hidden': [10],
@@ -105,10 +106,12 @@ common = {
             'image_channels': IMAGE_CHANNELS,
             'sensor_dims': SENSOR_DIMS[1],
             'batch_size': 25,
+            'dc_weight': 0.1,
         }],
         'iterations': 500,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
+        'dc_mode': True
     }
 }
 
