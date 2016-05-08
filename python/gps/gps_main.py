@@ -158,7 +158,7 @@ class GPSMain(object):
                 self.policy_opt.save_shared_wts()
             if self.save_wts:
                 self.policy_opt.save_all_wts(itr)
-            if itr % 2 == 0 and itr > 0:
+            if itr % 4 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
@@ -489,8 +489,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(44)
-        np.random.seed(44)
+        random.seed(0)
+        np.random.seed(0)
 
         data_files_dir = exp_dir + 'data_files/'
         data_filenames = os.listdir(data_files_dir)
@@ -516,8 +516,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(44)
-        np.random.seed(44)
+        random.seed(0)
+        np.random.seed(0)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:

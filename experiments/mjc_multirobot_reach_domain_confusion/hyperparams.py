@@ -75,9 +75,9 @@ common = {
     'data_files_dir': EXP_DIR + 'data_files/',
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
-    'conditions': 1,#8, #EDITED
-    'train_conditions': [0], #1,2,3,], #EDITED
-    'test_conditions': [0], ###[4,5,6,7],#EDITED
+    'conditions': 8, #EDITED
+    'train_conditions': [0,1,2,3,], #EDITED
+    'test_conditions': [4,5,6,7],#EDITED
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
@@ -124,7 +124,7 @@ agent = [{
     'x0': np.zeros(6),
     'dt': 0.05,
     'substeps': 5,
-    'pos_body_offset':  all_offsets[:1],#EDITED
+    'pos_body_offset':  all_offsets,#EDITED
     'pos_body_idx': np.array([6]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
@@ -143,11 +143,11 @@ agent = [{
 },
 {
     'type': AgentMuJoCo,
-    'filename': './mjc_models/arm_4link_reach.xml',
+    'filename': './mjc_models/arm_4link_reach_diffcolor.xml',
     'x0': np.zeros(8),
     'dt': 0.05,
     'substeps': 5,
-    'pos_body_offset':  all_offsets[:1], #EDITED
+    'pos_body_offset':  all_offsets, #EDITED
     'pos_body_idx': np.array([7]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],

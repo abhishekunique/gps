@@ -150,6 +150,8 @@ class PolicyOptTf(PolicyOpt):
                                fc_vars=self.fc_vars,
                                last_conv_vars=self.last_conv_vars,
                                vars_to_opt=self.main_vars)
+        import IPython
+        IPython.embed()
         if self.dc_mode:
             self.dc_solver = TfSolver(loss_scalar= self.dc_loss,
                                       solver_name=self._hyperparams['solver_type'],
@@ -258,8 +260,8 @@ class PolicyOptTf(PolicyOpt):
                     idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                     feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                     feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-                for iv, var in enumerate(self.last_conv_vars):
-                    feed_dict[var] = conv_values[iv][idx_i]
+                    feed_dict[self.last_conv_vars[robot_number*2]] = conv_values[robot_number*2][idx_i]
+                    feed_dict[self.last_conv_vars[robot_number*2 + 1]] = conv_values[robot_number*2 + 1][idx_i]
 
                 train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_fc_solver=True)
                 average_loss += train_loss
@@ -292,25 +294,25 @@ class PolicyOptTf(PolicyOpt):
                 print 'supervised tf loss is '
                 print (average_loss/100)
                 average_loss = 0
-            # dc_dict = {}
-            # for robot_number in range(self.num_robots):
-            #     start_idx = int(i * self.batch_size %
-            #                     (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-            #     idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-            #     dc_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-            #     dc_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
-            #     dc_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-            # # if i % 100 == 0:
-            # #     print(ffpvals)
-            # dc_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
+            dc_dict = {}
+            for robot_number in range(self.num_robots):
+                start_idx = int(i * self.batch_size %
+                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                dc_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                dc_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+                dc_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+            # if i % 100 == 0:
+            #     print(ffpvals)
+            dc_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
 
-            # average_dc_loss += dc_loss
-            # if i % 100 == 0 and i != 0:
-            #     LOGGER.debug('tensorflow iteration %d, average loss %f',
-            #                  i, average_loss / 100)
-            #     print 'supervised dc loss is '
-            #     print (average_dc_loss/100)
-            #     average_loss = 0
+            average_dc_loss += dc_loss
+            if i % 100 == 0 and i != 0:
+                LOGGER.debug('tensorflow iteration %d, average loss %f',
+                             i, average_loss / 100)
+                print 'supervised dc loss is '
+                print (average_dc_loss/100)
+                average_loss = 0
 
 
         obs_plot = obs_reshaped[0][1]
