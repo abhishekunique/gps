@@ -101,7 +101,7 @@ class PolicyOptTf(PolicyOpt):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
        
-        tf_maps, fc_vars, last_conv_vars, av, ls = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
+        tf_maps, fc_vars, last_conv_vars, dc_vars, dc_loss, other_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
                                     network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
@@ -119,8 +119,8 @@ class PolicyOptTf(PolicyOpt):
             self.loss_scalars.append(tf_map.get_loss_op())
             self.feature_points.append(tf_map.feature_points)
         self.combined_loss = tf.add_n(self.loss_scalars)
-        self.av = av
-        self.ls = ls
+        # self.av = av
+        # self.ls = ls
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
