@@ -66,7 +66,7 @@ common = {
     'log_filename': EXP_DIR + 'log.txt',
     'conditions': 8,
     'train_conditions': [0,1,2,3,],
-    'test_conditions':[4,5,6,7],
+    'test_conditions': [4,5,6,7],
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
@@ -386,7 +386,8 @@ config = {
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
-    'inner_iterations': 4
+    'inner_iterations': 4,
+    'robot_iters': [range(25), range(0,25,2)],
 }
 
 common['info'] = generate_experiment_info(config)

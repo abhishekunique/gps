@@ -56,13 +56,21 @@ def model_fc_shared(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, networ
     #need to fix whatever this is 
     all_vars = []
     feature_layers = []
+    individual_weights = []
+    n_layers = 4
+    layer_size = 60
+    dim_hidden = (n_layers - 1)*[layer_size]
+
     with tf.variable_scope("shared_wts"):
+        shared_weights = {
+            'w1' : init_weights((dim_hidden[0], dim_hidden[1]), name='w1'),
+            'w2' : init_weights((dim_hidden[1], dim_hidden[2]), name='w2'),
+            'b1' : init_bias((dim_hidden[1],), name='b1'),
+            'b2' : init_bias((dim_hidden[2],), name='b2'),
+        }
 
         for robot_number, robot_params in enumerate(network_config):
             inv = []
-            n_layers = 4
-            layer_size = 60
-            dim_hidden = (n_layers - 1)*[layer_size]
             #dim_hidden.append(dim_output[robot_number])
 
 
@@ -72,20 +80,27 @@ def model_fc_shared(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, networ
             mlp_input = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
             print dim_hidden[1:]
             print n_layers-2
-            fc_output, weights_FC, biases_FC, layers = get_mlp_layers_shared(mlp_input, n_layers-2, dim_hidden[1:], robot_number=robot_number)
+            # fc_output, weights_FC, biases_FC, layers = get_mlp_layers_shared(mlp_input, n_layers-2, dim_hidden[1:], robot_number=robot_number)
+            layer1 = tf.nn.relu(tf.matmul(mlp_input, shared_weights['w1']) + shared_weights['b1'])
+            layer2 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2']) + shared_weights['b2'])
 
             w_output = init_weights((dim_hidden[-1], dim_output[robot_number]), name='w_output'+str(robot_number))
             b_output = init_bias((dim_output[robot_number],), name = 'b_output'+str(robot_number))
-            output = tf.matmul(fc_output, w_output) + b_output
+            output = tf.matmul(layer2, w_output) + b_output
+
             loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
-            tf.get_variable_scope().reuse_variables()
-            feature_layers.append(layers[-1])
+
+            feature_layers.append(layer2)
             if robot_number == 1:
                 contrastive = tf.nn.l2_loss(feature_layers[0]-feature_layers[1])
-                loss = loss + contrastive
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
             fc_vars = None
-    return nnets, fc_vars, last_conv_vars, all_vars, []
+
+            inv = [w_input, b_input, w_output, b_output]
+            inv += shared_weights.values()
+            individual_weights.append(inv)
+
+    return nnets, fc_vars, last_conv_vars, all_vars, [], individual_weights, contrastive
 
 def example_tf_network_multi(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
     """
