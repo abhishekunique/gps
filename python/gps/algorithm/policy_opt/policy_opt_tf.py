@@ -100,7 +100,7 @@ class PolicyOptTf(PolicyOpt):
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-       
+
         tf_maps, fc_vars, last_conv_vars, av, ls = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size, 
                                     network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
@@ -156,13 +156,19 @@ class PolicyOptTf(PolicyOpt):
         idx_reshaped = []
         batches_per_epoch_reshaped = []
         tgt_prc_orig_reshaped = []
+
+
+        N, T = obs_full[0].shape[:2]
+        idx = range(N*T)
+        np.random.shuffle(idx)
+
         for robot_number in range(self.num_robots):
             obs = obs_full[robot_number]
             tgt_mu = tgt_mu_full[robot_number]
             tgt_prc = tgt_prc_full[robot_number]
             tgt_wt = tgt_wt_full[robot_number]
             itr = itr_full[robot_number]
-            N, T = obs.shape[:2]
+
             dU, dO = self._dU[robot_number], self._dO[robot_number]
 
             # TODO - Make sure all weights are nonzero?
@@ -195,17 +201,14 @@ class PolicyOptTf(PolicyOpt):
             if itr == 0 and inner_itr == 1:
                 #TODO: may need to change this
                 self.policy[robot_number].x_idx = self.x_idx[robot_number]
-                import IPython
-                IPython.embed()
+                # import IPython
+                # IPython.embed()
                 self.policy[robot_number].scale = np.eye(np.diag(1.0 / (np.std(obs[:, self.x_idx[robot_number]], axis=0) + 1e-8)).shape[0])
                 self.policy[robot_number].bias = np.zeros((-np.mean(obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)).shape)
             obs[:, self.x_idx[robot_number]] = obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
 
             # Assuming that N*T >= self.batch_size.
             batches_per_epoch = np.floor(N*T / self.batch_size)
-            idx = range(N*T)
-            
-            np.random.shuffle(idx)
             obs_reshaped.append(obs)
             tgt_mu_reshaped.append(tgt_mu)
             tgt_prc_reshaped.append(tgt_prc)
@@ -213,16 +216,22 @@ class PolicyOptTf(PolicyOpt):
             N_reshaped.append(N)
             T_reshaped.append(T)
             itr_reshaped.append(itr)
+
+            # Should be samething twice
             idx_reshaped.append(idx)
+
             batches_per_epoch_reshaped.append(batches_per_epoch)
             tgt_prc_orig_reshaped.append(tgt_prc_orig)
-
+        # print "___________________ INDEX TEST", np.sum(idx_reshaped[0] - idx_reshaped[1])
         average_loss = 0
         print "itr_full", itr_full
         print "inner_itr", inner_itr
-        if itr_full[0] == 1 and inner_itr == 0:
+        if itr_full[0] == 0 and inner_itr == 0:
             import IPython
             IPython.embed()
+        # if itr_full[0] == 1 and inner_itr == 0:
+            # import IPython
+            # IPython.embed()
         # if itr_full[0] > 0:
         #     feed_dict = {}
         #     for robot_number in range(self.num_robots):

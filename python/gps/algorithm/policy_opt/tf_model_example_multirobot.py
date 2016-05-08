@@ -510,6 +510,7 @@ def example_tf_network_multi_contrastive(dim_input=[27, 27], dim_output=[7, 7], 
     
     num_robots = len(dim_input)
     nnets = []
+    feature_layers = []
     with tf.variable_scope("shared_wts"):
         for robot_number, robot_params in enumerate(network_config):
             n_layers = 4
@@ -522,12 +523,15 @@ def example_tf_network_multi_contrastive(dim_input=[27, 27], dim_output=[7, 7], 
             state_input = nn_input
 
             fc_output, weights_FC, biases_FC, layers = get_mlp_layers(state_input, n_layers, dim_hidden, robot_number=robot_number)
-
+            feature_layers.append(layers[-2])
             
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
+            if robot_number == 1:
+                contrastive = tf.nn.l2_loss(feature_layers[0]-feature_layers[1])
+                loss = loss + contrastive
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
 
-    return nnets, None, None, weights_FC + biases_FC, layers
+    return nnets, None, None, weights_FC + biases_FC, contrastive
 
 def conv2d(img, w, b):
     #print img.get_shape().dims[3].value

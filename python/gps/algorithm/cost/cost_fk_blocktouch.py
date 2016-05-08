@@ -61,7 +61,7 @@ class CostFKBlock(Cost):
         #        counting.
         #        (see pts_jacobian_only in matlab costinfos code)
         jx = sample.get(END_EFFECTOR_POINT_JACOBIANS)
-        jx_1 = jx[:, :3, :] - jx[:, 3:, :]
+        jx_1 = jx[:, 0:3, :] - jx[:, 3:6, :]
         # Evaluate penalty term. Use estimated Jacobians and no higher
         # order terms.
         jxx_zeros = np.zeros((T, dist.shape[1], jx.shape[2], jx.shape[2]))
