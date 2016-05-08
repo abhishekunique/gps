@@ -116,22 +116,18 @@ class GPSMain(object):
         Returns: None
         """
         # self.collect_img_dataset(1)
-        robot_skip = self._hyperparams['robot_skip']
+        robot_iters = self._hyperparams['robot_iters']
 
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
 
         for itr in range(itr_start, self._hyperparams['iterations']):
-            itr_robots = []
-            for robot_number in range(self.num_robots):
-                if itr % robot_skip[robot_number] == 0:
-                    itr_robots.append(True)
-                else:
-                    itr_robots.append(False)
+            itr_robot_status = [itr in robot for robot in robot_iters]
+            print "ITR ROBOTS STATUS", itr_robot_status
             traj_sample_lists = {}
             for robot_number in range(self.num_robots):
-                if itr_robots[robot_number]:
+                if itr_robot_status:
                     for cond in self._train_idx:
                         for i in range(self._hyperparams['num_samples']):
                             self._take_sample(itr, cond, i, robot_number=robot_number)
@@ -142,13 +138,13 @@ class GPSMain(object):
                     ]
 
             for robot_number in range(self.num_robots):            
-                if itr_robots[robot_number]:
+                if itr_robot_status[itr]:
                     self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
-            self._take_iteration_shared(itr_robots)
+            self._take_iteration_shared(itr_robot_status)
 
             for robot_number in range(self.num_robots):
-                if itr_robots[robot_number]:
+                if itr_robot_status[robot_number]:
                     pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                     self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
             if self.save_shared:
