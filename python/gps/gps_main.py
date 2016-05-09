@@ -498,8 +498,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(44)
-        np.random.seed(44)
+        random.seed(0)
+        np.random.seed(0)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:
