@@ -460,7 +460,10 @@ class GPSMain(object):
             i: Sample number.
         Returns: None
         """
-        pol = self.algorithm[robot_number].cur[cond].traj_distr
+        if 'agent_use_nn_policy' in self.algorithm[robot_number]._hyperparams and self.algorithm[robot_number].iteration_count > 0:
+            pol = self.algorithm[robot_number].policy_opt.policy[robot_number]
+        else:
+            pol = self.algorithm[robot_number].cur[cond].traj_distr
         if self.gui:
             self.gui[robot_number].set_image_overlays(cond)   # Must call for each new cond.
             redo = True

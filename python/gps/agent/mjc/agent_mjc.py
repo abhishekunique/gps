@@ -102,7 +102,7 @@ class AgentMuJoCo(Agent):
                                        cam_pos[0], cam_pos[1], cam_pos[2],
                                        cam_pos[3], cam_pos[4], cam_pos[5])
 
-    def sample(self, policy, condition, verbose=True, save=True):
+    def sample(self, policy, condition, verbose=True, save=True, noisy=True):
         """
         Runs a trial and constructs a new sample containing information
         about the trial.
@@ -111,6 +111,7 @@ class AgentMuJoCo(Agent):
             condition: Which condition setup to run.
             verbose: Whether or not to plot the trial.
             save: Whether or not to store the trial into the samples.
+            noisy: Whether or not to use noise during sampling
         """
         # Create new sample, populate first time step.
         act = np.load('/home/kavi/gps/actions.npy')
@@ -154,7 +155,7 @@ class AgentMuJoCo(Agent):
         for t in range(self.T):
             X_t = new_sample.get_X(t=t)
             obs_t = new_sample.get_obs(t=t)
-            mj_U = policy.act(X_t, obs_t, t, noise[t, :])
+            mj_U = policy.act(X_t, obs_t, t, noise[t, :] * noisy)
             if np.any(np.isnan(X_t)) or np.any(np.isnan(obs_t))  or np.any(np.isnan(mj_U)) :
                 self.nan_flag = True
                 self.nan_info.append({'t':t, 'cond': condition, 'X_t': X_t,
