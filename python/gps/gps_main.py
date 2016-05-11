@@ -21,6 +21,7 @@ sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
 from gps.gui.gps_training_gui import GPSTrainingGUI
 from gps.utility.data_logger import DataLogger
 from gps.sample.sample_list import SampleList
+
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.proto.gps_pb2 import ACTION, RGB_IMAGE, END_EFFECTOR_POINTS,END_EFFECTOR_POINT_VELOCITIES
@@ -34,6 +35,9 @@ def parallel_traj_samples(info):
     cond = info[0]
     for i in range(info[1]):
        info[4].append(info[2].sample(info[3], cond, verbose=True))
+
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+
 
 
 class GPSMain(object):

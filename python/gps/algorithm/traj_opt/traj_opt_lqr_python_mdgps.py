@@ -11,11 +11,10 @@ from gps.algorithm.traj_opt.traj_opt import TrajOpt
 from gps.algorithm.traj_opt.traj_opt_utils import LineSearch, traj_distr_kl, \
         DGD_MAX_ITER, THRESHA, THRESHB
 
-
 LOGGER = logging.getLogger(__name__)
 
 
-class TrajOptLQRPython(TrajOpt):
+class TrajOptLQRPythonMDGPS(TrajOpt):
     """ LQR trajectory optimization, Python implementation. """
     def __init__(self, hyperparams):
         config = copy.deepcopy(TRAJ_OPT_LQR)
@@ -30,7 +29,15 @@ class TrajOptLQRPython(TrajOpt):
         step_mult = algorithm.cur[m].step_mult
         prev_eta = algorithm.cur[m].eta
         traj_info = algorithm.cur[m].traj_info
-        prev_traj_distr = algorithm.cur[m].traj_distr
+
+        # Constrain to previous policy linearization
+        # NOTE: we only copy in necessary params
+        #       (pol_K, pol_k, chol_pol_covar)
+        pol_info = algorithm.cur[m].pol_info
+        prev_nn_traj_distr = algorithm.cur[m].traj_distr.nans_like()
+        prev_nn_traj_distr.K = pol_info.pol_K
+        prev_nn_traj_distr.k = pol_info.pol_k
+        prev_nn_traj_distr.chol_pol_covar = pol_info.chol_pol_S
 
         # Set KL-divergence step size (epsilon).
         kl_step = algorithm.base_kl_step * step_mult
@@ -39,7 +46,7 @@ class TrajOptLQRPython(TrajOpt):
         min_eta = -np.Inf
 
         for itr in range(DGD_MAX_ITER):
-            traj_distr, new_eta = self.backward(prev_traj_distr, traj_info,
+            traj_distr, new_eta = self.backward(prev_nn_traj_distr, traj_info,
                                                 prev_eta, algorithm, m)
             new_mu, new_sigma = self.forward(traj_distr, traj_info)
 
@@ -49,13 +56,13 @@ class TrajOptLQRPython(TrajOpt):
 
             # Compute KL divergence between prev and new distribution.
             kl_div = traj_distr_kl(new_mu, new_sigma,
-                                   traj_distr, prev_traj_distr)
+                                   traj_distr, prev_nn_traj_distr)
 
             traj_info.last_kl_step = kl_div
 
             # Main convergence check - constraint satisfaction.
-            if (abs(kl_div - kl_step*T) < 0.1*kl_step*T):#  or
-                # (itr >= 20 and kl_div < kl_step*T)):
+            if (abs(kl_div - kl_step*T) < 0.1*kl_step*T or
+                    (itr >= 20 and kl_div < kl_step*T)):
                 LOGGER.debug("Iteration %i, KL: %f / %f converged",
                              itr, kl_div, kl_step * T)
                 eta = prev_eta  # TODO - Should this be here?
@@ -221,8 +228,6 @@ class TrajOptLQRPython(TrajOpt):
 
                 # Add in the value function from the next time step.
                 if t < T - 1:
-                    #TODO: Should multiply by
-                    #      (pol_wt[t+1] + eta)/(pol_wt[t] + eta) here.
                     Qtt = Qtt + \
                             Fm[t, :, :].T.dot(Vxx[t+1, :, :]).dot(Fm[t, :, :])
                     Qt = Qt + \
@@ -279,5 +284,5 @@ class TrajOptLQRPython(TrajOpt):
                         raise ValueError('NaNs encountered in dynamics!')
                     raise ValueError('Failed to find PD solution even for very \
                             large eta (check that dynamics and cost are \
-                            reasonably well conditioned)! for condition %d'%(m))
+                            reasonably well conditioned)!')
         return traj_distr, eta
