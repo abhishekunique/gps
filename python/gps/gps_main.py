@@ -134,7 +134,7 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
-            
+
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
@@ -216,14 +216,14 @@ class GPSMain(object):
                         print ag, cond
                         newtraj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
                 self.data_logger.pickle(TRAJ_DISTR_COLOR_REACH, newtraj_distr)
-        
+
 
         if False: # TODO use for blockpush, etc.
             for cond in range(4):
                 samples = [self.agent[0].sample(self.algorithm[0].policy_opt.policy[0], cond,
                                                 verbose=True, save=False) for j in range(5)]
                 self.data_logger.pickle(self._data_files_dir+'nn_list_'+str(cond)+'.pkl', samples)
-            sl0 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_0.pkl')) 
+            sl0 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_0.pkl'))
             sl1 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_1.pkl'))
             sl2 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_2.pkl'))
             sl3 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_3.pkl'))
@@ -369,7 +369,7 @@ class GPSMain(object):
             #May want to make this shared across robots
             if self.algorithm[0].iteration_count > 0 or inner_itr > 0:
                 print "policy opt update"
-                self.policy_opt.update_ee(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, 
+                self.policy_opt.update_ee(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full,
                                           next_ee_full, itr_full, inner_itr)
             for robot_number in range(self.num_robots):
                 print "update pol fit", robot_number
@@ -441,7 +441,7 @@ class GPSMain(object):
             if self.algorithm is None:
                 print("Error: cannot find '%s.'" % algorithm_file)
                 os._exit(1) # called instead of sys.exit(), since this is in a thread
-                
+
             if self.gui:
                 traj_sample_lists = self.data_logger.unpickle(self._data_files_dir +
                     ('traj_sample_itr_%02d.pkl' % itr_load))
@@ -454,7 +454,7 @@ class GPSMain(object):
                     'Press \'go\' to begin.') % itr_load)
             return itr_load + 1
 
- 
+
     def _take_sample(self, itr, cond, i, robot_number=0):
         """
         Collect a sample from the agent.
@@ -591,6 +591,9 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 self.gui[robot_number].set_status_text('Training complete.')
                 self.gui[robot_number].end_mode()
+            self.gui.set_status_text('Training complete.')
+            self.gui.end_mode()
+        os._exit(0)
 
 
 def main():
@@ -698,8 +701,9 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(3)
-        np.random.seed(3)
+        seed = hyperparams.config.get('seed', 0)
+        random.seed(seed)
+        np.random.seed(seed)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:
