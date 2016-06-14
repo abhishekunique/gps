@@ -83,7 +83,7 @@ class PolicyOptTf(PolicyOpt):
         #         assign_op = v.assign(val_vars[k])
         #         self.sess.run(assign_op)
 
- 
+
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
@@ -211,7 +211,7 @@ class PolicyOptTf(PolicyOpt):
             # Assuming that N*T >= self.batch_size.
             batches_per_epoch = np.floor(N*T / self.batch_size)
             idx = range(N*T)
-            
+
             np.random.shuffle(idx)
             obs_reshaped.append(obs)
             tgt_mu_reshaped.append(tgt_mu)
@@ -234,7 +234,7 @@ class PolicyOptTf(PolicyOpt):
                 start_idx = int(i * self.batch_size %
                                 (batches_per_epoch_reshaped[robot_number] * self.batch_size))
                 idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                
+
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                 feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
@@ -280,7 +280,7 @@ class PolicyOptTf(PolicyOpt):
         except AttributeError:
             pass  # TODO: Should prob be called before update?
 
-        output = np.zeros((N, T, dU)) 
+        output = np.zeros((N, T, dU))
         for i in range(N):
             feed_dict = {self.obs_tensors[robot_number]: obs[i, :]}
             feed_dict[self.ls['keep_prob']] = 1.0
@@ -419,7 +419,7 @@ class PolicyOptTf(PolicyOpt):
             # Assuming that N*T >= self.batch_size.
             batches_per_epoch = np.floor(N*T / self.batch_size)
             idx = range(N*T)
-            
+
             np.random.shuffle(idx)
             obs_reshaped.append(obs)
             tgt_mu_reshaped.append(tgt_mu)
@@ -459,7 +459,7 @@ class PolicyOptTf(PolicyOpt):
 
                         #feed_dict[self.ls['ee_input'][robot_number]] = ee_reshaped[robot_number][idx_i]
                     robot_dict.update(feed_dict)
-                    #robot_dict[self.ls['task_output'][robot_number]] = ee_reshaped[robot_number][idx_i]               
+                    #robot_dict[self.ls['task_output'][robot_number]] = ee_reshaped[robot_number][idx_i]
 
                 #task_loss = self.task_solver(feed_dict, self.sess, device_string=self.device_string)
                 train_loss = self.robot_solver(robot_dict, self.sess, device_string=self.device_string)

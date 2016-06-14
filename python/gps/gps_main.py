@@ -16,6 +16,7 @@ import pickle
 import tensorflow as tf
 import IPython
 from datetime import datetime
+import numpy as np
 # Add gps/python to path so that imports work.
 sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
 from gps.gui.gps_training_gui import GPSTrainingGUI
