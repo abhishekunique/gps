@@ -78,27 +78,20 @@ class PolicyOptTf(PolicyOpt):
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        tf_maps, fc_vars, last_conv_vars, av, ls = (
-            tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
-                             network_config=self._hyperparams['network_params']))
+        tf_maps = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
+                             network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
         self.precision_tensors = []
         self.act_ops = []
         self.loss_scalars = []
-        self.fc_vars = fc_vars
-        self.last_conv_vars = last_conv_vars
-        self.feature_points= []
         for tf_map in tf_maps:
             self.obs_tensors.append(tf_map.get_input_tensor())
             self.action_tensors.append(tf_map.get_target_output_tensor())
             self.precision_tensors.append(tf_map.get_precision_tensor())
             self.act_ops.append(tf_map.get_output_op())
             self.loss_scalars.append(tf_map.get_loss_op())
-            self.feature_points.append(tf_map.feature_points)
         self.combined_loss = tf.add_n(self.loss_scalars)
-        self.av = av
-        self.ls = ls
 
     def init_solver(self):
         """ Helper method to initialize the solver. """

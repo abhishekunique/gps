@@ -62,8 +62,7 @@ class TfMap:
 class TfSolver:
     """ A container for holding solver hyperparams in tensorflow. Used to execute backwards pass. """
     def __init__(self, loss_scalar, solver_name='adam', base_lr=None, lr_policy=None,
-                 momentum=None, weight_decay=None, robot_number=0, fc_vars=None, 
-                 last_conv_vars=None, vars_to_opt=None):
+                 momentum=None, weight_decay=None):
         self.base_lr = base_lr
         self.lr_policy = lr_policy
         self.momentum = momentum
@@ -74,28 +73,19 @@ class TfSolver:
 
         self.weight_decay = weight_decay
         if weight_decay is not None:
-            if vars_to_opt is None:
-                trainable_vars = tf.trainable_variables()
-            else:
-                trainable_vars = vars_to_opt
+            trainable_vars = tf.trainable_variables()
             loss_with_reg = self.loss_scalar
             for var in trainable_vars:
                 loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
             self.loss_scalar = loss_with_reg
         
-        self.solver_op = self.get_solver_op(var_list=vars_to_opt)
-        if fc_vars is not None:
-            self.fc_vars = fc_vars
-            self.last_conv_vars = last_conv_vars
-            self.fc_solver_op = self.get_solver_op(var_list=fc_vars)
+        self.solver_op = self.get_solver_op()
         self.trainable_variables = tf.trainable_variables()
 
     def get_solver_op(self, var_list=None, loss=None):
         solver_string = self.solver_name.lower()
-        if var_list is None:
-            var_list = tf.trainable_variables()
-        if loss is None:
-            loss = self.loss_scalar
+        var_list = tf.trainable_variables()
+        loss = self.loss_scalar
         if solver_string == 'adam':
             return tf.train.AdamOptimizer(learning_rate=self.base_lr,
                                           beta1=self.momentum).minimize(loss, var_list=var_list)
@@ -113,29 +103,7 @@ class TfSolver:
         else:
             raise NotImplementedError("Please select a valid optimizer.")
 
-    def get_last_conv_values(self, sess, feed_dict, num_values, batch_size):
-        i = 0
-        values = []
-        while i < num_values:
-            batch_dict = {}
-            start = i
-            end = min(i+batch_size, num_values)
-            for k,v in feed_dict.iteritems():
-                batch_dict[k] = v[start:end]
-            batch_vals = sess.run(self.last_conv_vars, batch_dict)
-            values.append(batch_vals)
-            i = end
-        final_values = [None for v in self.last_conv_vars]
-        i = 0
-
-        for v in range(len(self.last_conv_vars)):
-            final_values[v] = np.concatenate([values[i][v] for i in range(len(values))])
-        return final_values
-
     def __call__(self, feed_dict, sess, device_string="/cpu:0", use_fc_solver=False):
         with tf.device(device_string):
-            if use_fc_solver:
-                loss = sess.run([self.loss_scalar, self.fc_solver_op], feed_dict)
-            else:
-                loss = sess.run([self.loss_scalar, self.solver_op], feed_dict)
+            loss = sess.run([self.loss_scalar, self.fc_solver_op], feed_dict)   
             return loss[0]
