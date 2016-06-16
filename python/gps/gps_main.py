@@ -28,15 +28,15 @@ class GPSMain(object):
     """ Main class to run algorithms and experiments. """
     def __init__(self, config):
         self._hyperparams = config
-        self._conditions = config['common']['conditions']
-        if 'train_conditions' in config['common']:
-            self._train_idx = config['common']['train_conditions']
-            self._test_idx = config['common']['test_conditions']
-        else:
-            self._train_idx = range(self._conditions)
-            config['common']['train_conditions'] = config['common']['conditions']
-            self._hyperparams=config
-            self._test_idx = self._train_idx
+        self._conditions = [] #config['common']['conditions']
+
+        self._train_idx = [] #config['common']['train_conditions']
+        self._test_idx = []#config['common']['test_conditions']
+        # else:
+        #     self._train_idx = range(self._conditions)
+        #     config['common']['train_conditions'] = config['common']['conditions']
+        #     self._hyperparams=config
+        #     self._test_idx = self._train_idx
 
         self._data_files_dir = config['common']['data_files_dir']
         self.num_robots = config['common']['num_robots']
@@ -44,11 +44,24 @@ class GPSMain(object):
         self.gui = []
         for robot_number in range(self.num_robots):
             self.agent.append(config['agent'][robot_number]['type'](config['agent'][robot_number]))
+            self._conditions.append(config['agent'][robot_number]['conditions'])
+            if 'train_conditions' in config['agent'][robot_number]:
+                self._train_idx.append(config['agent'][robot_number]['train_conditions'])
+                self._test_idx.append(config['agent'][robot_number]['train_conditions'])
+            else:
+                self._train_idx.append(range(self._conditions[robot_number]))
+                self._test_idx.append(range(self._conditions[robot_number]))
+                config['agent'][robot_number]['train_conditions'] = self._train_idx[robot_number]
+                self._hyperparams = config
             if config['gui_on']:
                 self.gui.append(GPSTrainingGUI(config['common']))
             else:
                 self.gui = None
         self.data_logger = DataLogger()
+
+        self.pol_data_logs = [{key:[] for key in self._hyperparams['to_log']} for r in range(self.num_robots)]
+        self.traj_data_logs = [{key:[] for key in self._hyperparams['to_log']} for r in range(self.num_robots)]
+
         self.algorithm = []
         for robot_number in range(self.num_robots):
             config['algorithm'][robot_number]['agent'] = self.agent[robot_number]
@@ -85,13 +98,13 @@ class GPSMain(object):
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             for robot_number in range(self.num_robots):
-                for cond in self._train_idx:
+                for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
                         self._take_sample(itr, cond, i, robot_number=robot_number)
 
                 traj_sample_lists[robot_number] = [
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
-                    for cond_1 in self._train_idx
+                    for cond_1 in self._train_idx[robot_number]
                 ]
 
             for robot_number in range(self.num_robots):
@@ -100,7 +113,7 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 pol_sample_lists = None #self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-            if itr % 8 == 0 and itr > 0:
+            if itr % 4 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
@@ -124,13 +137,13 @@ class GPSMain(object):
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             for robot_number in range(self.num_robots):
-                for cond in self._train_idx:
+                for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
                         self._take_sample(itr, cond, i, robot_number=robot_number)
                         
                 traj_sample_lists[robot_number] = [
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
-                    for cond_1 in self._train_idx
+                    for cond_1 in self._train_idx[robot_number]
                 ]
 
             for robot_number in range(self.num_robots):
@@ -146,7 +159,7 @@ class GPSMain(object):
             #     self.policy_opt.save_shared_wts()
             # if self.save_wts:
             #     self.policy_opt.save_all_wts(itr)
-            if itr % 2 == 0 and itr > 0:
+            if itr % 8 == 0 and itr > 2:
                 import IPython
                 IPython.embed()
 
@@ -192,13 +205,13 @@ class GPSMain(object):
             if self.algorithm[0].iteration_count > 0 or inner_itr > 0:
                 self.policy_opt.update(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr)
             for robot_number in range(self.num_robots):
-                for m in self._train_idx:
+                for m in self._train_idx[robot_number]:
                     self.algorithm[robot_number]._update_policy_fit(m)  # Update policy priors.
             for robot_number in range(self.num_robots):
                 if self.algorithm[robot_number].iteration_count > 0 or inner_itr > 0:
                     step = (inner_itr == self._hyperparams['inner_iterations'] - 1)
                     # Update dual variables.
-                    for m in self._train_idx:
+                    for m in self._train_idx[robot_number]:
                         self.algorithm[robot_number]._policy_dual_step(m, step=step)
             for robot_number in range(self.num_robots):
                 self.algorithm[robot_number]._update_trajectories()
@@ -329,7 +342,7 @@ class GPSMain(object):
         if self.gui:
             self.gui[robot_number].set_status_text('Calculating.')
             self.gui[robot_number].start_display_calculating()
-        self.algorithm[robot_number].iteration(sample_lists)
+        self.algorithm[robot_number].iteration(sample_lists, itr)
         if self.gui:
             self.gui[robot_number].stop_display_calculating()
 
@@ -347,8 +360,8 @@ class GPSMain(object):
             N = self._hyperparams['verbose_policy_trials']
         if self.gui:
             self.gui[robot_number].set_status_text('Taking policy samples.')
-        pol_samples = [[None for _ in range(N)] for _ in range(self._conditions)]
-        for cond in range(self._conditions):
+        pol_samples = [[None for _ in range(N)] for _ in range(self._conditions[robot_number])]
+        for cond in range(self._conditions[robot_number]):
             for i in range(N):
                 pol_samples[cond][i] = self.agent[robot_number].sample(
                     self.algorithm[robot_number].policy_opt.policy[robot_number], cond,
@@ -381,11 +394,21 @@ class GPSMain(object):
         #     self._data_files_dir + ('traj_sample_itr_%02d_rn_%02d.pkl' % (itr,robot_number)),
         #     copy.copy(traj_sample_lists)
         # )
+        for key in self.traj_data_logs[robot_number].keys():
+            self.traj_data_logs[robot_number][key].append([samplelist.get(key) for samplelist in traj_sample_lists])
+        self.data_logger.pickle(
+            self._data_files_dir + ('traj_samples_combined_rn_%02d.pkl'% (robot_number)),
+            copy.copy(self.traj_data_logs[robot_number]))
         if pol_sample_lists:
             self.data_logger.pickle(
                 self._data_files_dir + ('pol_sample_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
                 copy.copy(pol_sample_lists)
             )
+            for key in self.pol_data_logs[robot_number].keys():
+                self.pol_data_logs[robot_number][key].append([samplelist.get(key) for samplelist in pol_sample_lists])
+            self.data_logger.pickle(
+                self._data_files_dir + ('pol_samples_combined_rn_%02d.pkl'% (robot_number)),
+                copy.copy(self.pol_data_logs[robot_number]))
 
     def _end(self):
         """ Finish running and exit. """
