@@ -89,7 +89,7 @@ agent = [
 {
     'type': AgentMuJoCo,
     'filename': './mjc_models/3link_gripper_catch.xml',
-    'x0': np.concatenate([np.zeros(8), np.asarray([-0.0, -1.5])]),
+    'x0': np.concatenate([np.zeros(8), np.asarray([-0.0, -2.0])]),
     'dt': 0.05,
     'substeps': 5,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
@@ -259,7 +259,7 @@ config = {
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
     'inner_iterations': 4,
-    'to_log' : [],
+    'to_log': [END_EFFECTOR_POINTS],
     'robot_iters': [range(25), range(0,25,2)],
 }
 
