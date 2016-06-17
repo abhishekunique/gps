@@ -259,7 +259,7 @@ config = {
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
     'inner_iterations': 4,
-    'to_log': [END_EFFECTOR_POINTS],
+    'to_log': [],
     'robot_iters': [range(25), range(0,25,2)],
 }
 
