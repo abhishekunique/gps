@@ -322,10 +322,17 @@ class GPSTrainingGUI(object):
             entropy = 2*np.sum(np.log(np.diagonal(algorithm.prev[m].traj_distr.chol_pol_covar,
                     axis1=1, axis2=2)))
             itr_data += ' | %8.2f %8.2f %8.2f' % (cost, step, entropy)
+            # Not sure if it's the next section or the section after this????
+            # TODO FIXME
             if pol_sample_lists is not None:
                 kl_div_i = algorithm.prev[m].pol_info.prev_kl[0]
                 kl_div_f = algorithm.prev[m].pol_info.prev_kl[-1]
                 itr_data += ' %8.2f %8.2f %8.2f' % (pol_costs[m], kl_div_i, kl_div_f)
+
+            # if algorithm.prev[0].pol_info is not None:
+            #     kl_div_i = algorithm.cur[m].pol_info.init_kl.sum()
+            #     kl_div_f = algorithm.cur[m].pol_info.prev_kl.sum()
+            #     itr_data += ' %8.2f %8.2f' % (kl_div_i, kl_div_f)
         self.append_output_text(itr_data)
 
     def _update_trajectory_visualizations(self, algorithm, agent,
