@@ -542,16 +542,22 @@ def model_fc_shared(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, networ
     all_vars = []
     feature_layers = []
     individual_weights = []
-    n_layers = 4
-    layer_size = 60
+    n_layers = 6
+    layer_size = 100
     dim_hidden = (n_layers - 1)*[layer_size]
 
     with tf.variable_scope("shared_wts"):
         shared_weights = {
             'w1' : init_weights((dim_hidden[0], dim_hidden[1]), name='w1'),
             'w2' : init_weights((dim_hidden[1], dim_hidden[2]), name='w2'),
+            'w3' : init_weights((dim_hidden[2], dim_hidden[3]), name='w3'),
+            'w4' : init_weights((dim_hidden[3], dim_hidden[4]), name='w4'),
+            # 'w5' : init_weights((dim_hidden[4], dim_hidden[5]), name='w5'),
             'b1' : init_bias((dim_hidden[1],), name='b1'),
             'b2' : init_bias((dim_hidden[2],), name='b2'),
+            'b3' : init_bias((dim_hidden[2],), name='b3'),
+            'b4' : init_bias((dim_hidden[2],), name='b4'),
+            # 'b5' : init_bias((dim_hidden[2],), name='b5'),
         }
 
         for robot_number, robot_params in enumerate(network_config):
@@ -568,10 +574,13 @@ def model_fc_shared(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, networ
             # fc_output, weights_FC, biases_FC, layers = get_mlp_layers_shared(mlp_input, n_layers-2, dim_hidden[1:], robot_number=robot_number)
             layer1 = tf.nn.relu(tf.matmul(mlp_input, shared_weights['w1']) + shared_weights['b1'])
             layer2 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2']) + shared_weights['b2'])
+            layer3 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2']) + shared_weights['b3'])
+            layer4 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2']) + shared_weights['b4'])
+            # layer5 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2']) + shared_weights['b5'])
 
             w_output = init_weights((dim_hidden[-1], dim_output[robot_number]), name='w_output'+str(robot_number))
             b_output = init_bias((dim_output[robot_number],), name = 'b_output'+str(robot_number))
-            output = tf.matmul(layer2, w_output) + b_output
+            output = tf.matmul(layer4, w_output) + b_output
 
             loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
 

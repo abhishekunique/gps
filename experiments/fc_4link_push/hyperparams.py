@@ -103,13 +103,13 @@ agent = [{
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
     'pos_body_offset': [
                         [np.array([1.0, 0.0, 0.45]),np.array([0.4, 0.0, 0.45])],
-                        [np.array([1.0, 0.0, -0.5]),np.array([0.6, 0.0, -0.5])],
                         [np.array([0.6, 0.0, 0.65]),np.array([0.2, 0.0, 0.65])],
-                        [np.array([0.8, 0.0, -0.65]),np.array([0.6, 0.0, -0.65])],
-
                         [np.array([0.8, 0.0, 0.5]),np.array([0.3, 0.0, 0.5])],
-                        [np.array([0.8, 0.0, -0.5]),np.array([0.4, 0.0, -0.5])],
                         [np.array([0.7, 0.0, 0.6]),np.array([0.4, 0.0, 0.6])],
+
+                        [np.array([1.0, 0.0, -0.5]),np.array([0.6, 0.0, -0.5])],
+                        [np.array([0.8, 0.0, -0.65]),np.array([0.6, 0.0, -0.65])],
+                        [np.array([0.8, 0.0, -0.5]),np.array([0.4, 0.0, -0.5])],
                         [np.array([0.75, 0.0, -0.55]),np.array([0.45, 0.0, -0.55])],
                         ],
     'pos_body_idx': np.array([7,9]),
@@ -378,6 +378,7 @@ config = {
     'test_conditions': common['test_conditions'],
     'inner_iterations': 4,
     'robot_iters': [range(25), range(0,25,2)],
+    'to_log': [END_EFFECTOR_POINTS, JOINT_ANGLES, ACTION],
 }
 
 common['info'] = generate_experiment_info(config)

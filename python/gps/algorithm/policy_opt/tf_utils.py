@@ -82,7 +82,7 @@ class TfSolver:
             for var in trainable_vars:
                 loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
             self.loss_scalar = loss_with_reg
-        
+
         self.solver_op = self.get_solver_op(var_list=vars_to_opt)
         if fc_vars is not None:
             self.fc_vars = fc_vars

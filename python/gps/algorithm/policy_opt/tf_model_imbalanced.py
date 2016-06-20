@@ -90,17 +90,17 @@ def model_fc_shared(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, networ
 
             loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
 
-            feature_layers.append(layer2)
-            if robot_number == 1:
-                contrastive = tf.nn.l2_loss(feature_layers[0]-feature_layers[1])
+            # feature_layers.append(layer2)
+            # if robot_number == 1:
+            #     contrastive = tf.nn.l2_loss(feature_layers[0]-feature_layers[1])
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
             fc_vars = None
 
-            inv = [w_input, b_input, w_output, b_output]
-            inv += shared_weights.values()
-            individual_weights.append(inv)
+            # inv = [w_input, b_input, w_output, b_output]
+            # inv += shared_weights.values()
+            # individual_weights.append(inv)
 
-    return nnets, fc_vars, last_conv_vars, all_vars, [], individual_weights, contrastive
+    return nnets, None, None, all_vars, [],
 
 def example_tf_network_multi(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
     """
