@@ -33,11 +33,9 @@ from gps.gui.config import generate_experiment_info
 SENSOR_DIMS = [{
     JOINT_ANGLES: 5,
     JOINT_VELOCITIES: 5,
-    END_EFFECTOR_POINTS: 9,
-    END_EFFECTOR_POINT_VELOCITIES: 9,
+    END_EFFECTOR_POINTS: 6,
+    END_EFFECTOR_POINT_VELOCITIES: 6,
     ACTION: 3,
-    RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
-    RGB_IMAGE_SIZE: 3,
 }]
 
 PR2_GAINS = [np.array([ 1.0, 1.0, 1.0])]
@@ -89,7 +87,7 @@ agent = [
 {
     'type': AgentMuJoCo,
     'filename': './mjc_models/3link_gripper_catch.xml',
-    'x0': np.concatenate([np.zeros(8), np.asarray([-0.0, -2.0])]),
+    'x0': np.concatenate([np.zeros(8), np.asarray([-0.0, -1.6])]),
     'dt': 0.05,
     'substeps': 5,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
@@ -200,9 +198,8 @@ fkblock_cost_1 = [{
 fk_cost_1 = [{
     'type': CostFK,
     'target_end_effector': np.concatenate([np.array([0,0,0]), 
-                                           np.array([1.25, 0.05, 0.05]),
-                                           np.array([0,0,0])]),
-    'wp': np.array([0, 0, 0, 1, 1, 1, 0, 0, 0]),
+                                           np.array([1.25, 0.05, 0.05])]),
+    'wp': np.array([0, 0, 0, 1, 1, 1]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
@@ -247,8 +244,8 @@ algorithm[0]['policy_prior'] = {
 
 config = {
     'iterations': 25,
-    'num_samples': 7,
-    'verbose_trials': 7,
+    'num_samples': 10,
+    'verbose_trials': 10,
     'verbose_policy_trials': 5,
     'save_wts': True,
     'common': common,

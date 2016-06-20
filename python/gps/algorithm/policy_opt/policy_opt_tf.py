@@ -74,6 +74,15 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = self._hyperparams['ent_reg']
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
+        # import pickle
+        # val_vars = pickle.load(open('multi_weights.pkl', 'rb'))
+        # for k,v in self.av.items():
+        #     if k in val_vars:            
+        #         assign_op = v.assign(val_vars[k])
+        #         self.sess.run(assign_op)
+        # import IPython
+        # IPython.embed()
+
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
@@ -171,6 +180,8 @@ class PolicyOptTf(PolicyOpt):
                 self.policy[robot_number].x_idx = self.x_idx[robot_number]
                 self.policy[robot_number].scale = np.eye(np.diag(1.0 / (np.std(obs[:, self.x_idx[robot_number]], axis=0) + 1e-8)).shape[0])
                 self.policy[robot_number].bias = np.zeros((-np.mean(obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)).shape)
+                print("FIND")
+
             obs[:, self.x_idx[robot_number]] = obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
 
             # Assuming that N*T >= self.batch_size.

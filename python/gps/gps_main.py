@@ -134,6 +134,12 @@ class GPSMain(object):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
 
+        # self.policy_opt.policy[0].scale = np.eye(18)
+        # self.policy_opt.policy[0].bias = np.zeros((18,))
+        # self.policy_opt.var = np.ones((3,))*0.01
+        # self.policy_opt.policy[0].x_idx = range(18)
+        # import IPython
+        # IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             for robot_number in range(self.num_robots):
@@ -159,7 +165,7 @@ class GPSMain(object):
             #     self.policy_opt.save_shared_wts()
             # if self.save_wts:
             #     self.policy_opt.save_all_wts(itr)
-            if itr % 8 == 0 and itr > 2:
+            if itr % 4 == 0 and itr > 2:
                 import IPython
                 IPython.embed()
 
