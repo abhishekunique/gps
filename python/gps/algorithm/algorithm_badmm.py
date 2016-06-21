@@ -9,7 +9,7 @@ from gps.algorithm.algorithm import Algorithm
 from gps.algorithm.algorithm_utils import PolicyInfo, gauss_fit_joint_prior
 from gps.algorithm.config import ALG_BADMM
 from gps.sample.sample_list import SampleList
-
+from gps.algorithm.policy.lin_gauss_policy import LinearGaussianPolicy
 
 LOGGER = logging.getLogger(__name__)
 
@@ -249,6 +249,56 @@ class AlgorithmBADMM(Algorithm):
             pol_info.pol_K[t, :, :], pol_info.pol_k[t, :] = pol_K, pol_k
             pol_info.pol_S[t, :, :], pol_info.chol_pol_S[t, :, :] = \
                     pol_S, sp.linalg.cholesky(pol_S)
+
+
+    def reinitialize_net(self, m, sample_list_nn):
+        """
+        Re-estimate the local policy values in the neighborhood of the
+        trajectory.
+        Args:
+            m: Condition
+            init: Whether this is the initial fitting of the policy.
+        """
+        dX, dU, T = self.dX, self.dU, self.T
+        # Choose samples to use.
+        samples = sample_list_nn
+        N = len(samples)
+
+        pol_info = self.cur[m].pol_info #JUST INITIALIZE AS whatever it is.
+        X = samples.get_X()
+        pol_mu, pol_sig = self.policy_opt.prob(samples.get_obs().copy())[:2]
+        pol_sig = np.mean(pol_sig, axis=0)
+        self.cur[m].pol_info.policy_prior.update(
+            samples, self.policy_opt,
+            samples, robot_number=self.robot_number
+        )
+        # Estimate the policy linearization at each time step
+        pol_K_temp = np.zeros(pol_info.pol_K.shape)
+        pol_k_temp = np.zeros(pol_info.pol_k.shape)
+        pol_S_temp = np.zeros(pol_info.pol_S.shape)
+        pol_chol_pol_S_temp = np.zeros(pol_info.chol_pol_S.shape)
+        pol_inv_S_temp = np.zeros(self.cur[m].traj_distr.inv_pol_covar.shape)
+        for t in range(T):
+            # Assemble diagonal weights matrix and data.
+            dwts = (1.0 / N) * np.ones(N)
+            Ts = X[:, t, :]
+            Ps = pol_mu[:, t, :]
+            Ys = np.concatenate((Ts, Ps), axis=1)
+            # Obtain Normal-inverse-Wishart prior.
+            mu0, Phi, mm, n0 = self.cur[m].pol_info.policy_prior.eval(Ts, Ps)
+            sig_reg = np.zeros((dX+dU, dX+dU))
+            # On the first time step, always slightly regularize covariance.
+            if t == 0:
+                sig_reg[:dX, :dX] = 1e-8 * np.eye(dX)
+            # Perform computation.
+            pol_K, pol_k, pol_S = gauss_fit_joint_prior(Ys, mu0, Phi, mm, n0,
+                                                        dwts, dX, dU, sig_reg)
+            pol_S += pol_sig[t, :, :]
+            pol_K_temp[t, :, :], pol_k_temp[t, :] = pol_K, pol_k
+            pol_S_temp[t, :, :], pol_chol_pol_S_temp[t, :, :] = \
+                    pol_S, sp.linalg.cholesky(pol_S)
+            pol_inv_S_temp[t, :, :] = np.linalg.inv(pol_S)
+        self.cur[m].traj_distr = LinearGaussianPolicy(pol_K_temp, pol_k_temp, pol_S_temp, pol_chol_pol_S_temp, pol_inv_S_temp)
 
     def _policy_dual_step(self, m, step=False):
         """

@@ -134,12 +134,28 @@ class GPSMain(object):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
 
-        # self.policy_opt.policy[0].scale = np.eye(18)
-        # self.policy_opt.policy[0].bias = np.zeros((18,))
-        # self.policy_opt.var = np.ones((3,))*0.01
-        # self.policy_opt.policy[0].x_idx = range(18)
-        # import IPython
-        # IPython.embed()
+        self.policy_opt.policy[0].scale = np.eye(20)
+        self.policy_opt.policy[0].bias = np.zeros((20,))
+        self.policy_opt.var = [np.load('/home/abhigupta/gps/pol_var_1.npy')[-2]]
+        self.policy_opt.policy[0].x_idx = range(20)
+
+
+        sl0 = self.data_logger.unpickle(self._data_files_dir + 'nn_list_0.pkl')
+        sl1 = self.data_logger.unpickle(self._data_files_dir + 'nn_list_1.pkl')
+        sl2 = self.data_logger.unpickle(self._data_files_dir + 'nn_list_2.pkl')
+        sl3 = self.data_logger.unpickle(self._data_files_dir + 'nn_list_3.pkl')
+        for j in range(5):
+            sl0[j].agent = self.agent[0]
+            sl1[j].agent = self.agent[0]
+            sl2[j].agent = self.agent[0]
+            sl3[j].agent = self.agent[0]
+
+        self.algorithm[0].reinitialize_net(0, sl0)
+        self.algorithm[0].reinitialize_net(1, sl1)
+        self.algorithm[0].reinitialize_net(2, sl2)
+        self.algorithm[0].reinitialize_net(3, sl3)
+        import IPython
+        IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             for robot_number in range(self.num_robots):
@@ -165,7 +181,7 @@ class GPSMain(object):
             #     self.policy_opt.save_shared_wts()
             # if self.save_wts:
             #     self.policy_opt.save_all_wts(itr)
-            if itr % 4 == 0 and itr > 2:
+            if itr % 2 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
