@@ -129,7 +129,9 @@ class GPSMain(object):
         Returns: None
         """
         # self.collect_img_dataset(1)
-
+        print("test")
+        import IPython
+        IPython.embed()
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
@@ -144,6 +146,7 @@ class GPSMain(object):
         sl1 = self.data_logger.unpickle(self._data_files_dir + 'nn_list_1.pkl')
         sl2 = self.data_logger.unpickle(self._data_files_dir + 'nn_list_2.pkl')
         sl3 = self.data_logger.unpickle(self._data_files_dir + 'nn_list_3.pkl')
+
         for j in range(5):
             sl0[j].agent = self.agent[0]
             sl1[j].agent = self.agent[0]
@@ -186,6 +189,37 @@ class GPSMain(object):
                 IPython.embed()
 
         self._end()
+
+
+    def run_subspace_learning(self, itr_load=None):
+        """
+        Run training by iteratively sampling and taking an iteration.
+        Args:
+            itr_load: If specified, loads algorithm state from that
+                iteration, and resumes training at the next iteration.
+        Returns: None
+        """
+        # self.collect_img_dataset(1)
+        obs_full = [None]*self.num_robots
+        for robot_number in range(self.num_robots):
+            if robot_number == 0:
+                obs_sample = self.data_logger.unpickle('/home/abhigupta/gps/experiments/mjc_3link_reach/data_files/pol_sample_itr_04_rn_00.pkl')
+                for slist in obs_sample:
+                    for s in slist._samples:
+                        s.agent = self.agent[0]
+
+            else:
+                obs_sample = self.data_logger.unpickle('/home/abhigupta/gps/experiments/mjc_4link_reach/data_files/pol_sample_itr_04_rn_00.pkl')
+                for slist in obs_sample:
+                    for s in slist._samples:
+                        s.agent = self.agent[1]
+        
+            dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
+            obs_data = np.zeros((0, T, dO))
+            for samples in obs_sample:
+                obs_data = np.concatenate((obs_data, samples.get_obs()))
+            obs_full[robot_number] = obs_data
+        self.policy_opt.train_invariant(obs_full)
 
 
     def _take_iteration_start(self, itr, sample_lists, robot_number=0):
@@ -550,16 +584,16 @@ def main():
         if hyperparams.config['gui_on']:
             if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
                 run_gps = threading.Thread(
-                    target=lambda: gps.run(itr_load=resume_training_itr)
+                    target=lambda: gps.run_subspace_learning(itr_load=resume_training_itr)
                 )
             else:
                 if args.multithread:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_badmm_parallel(itr_load=resume_training_itr)
+                        target=lambda: gps.run_subspace_learning(itr_load=resume_training_itr)
                     )
                 else:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_badmm(itr_load=resume_training_itr)
+                        target=lambda: gps.run_subspace_learning(itr_load=resume_training_itr)
                     )
             run_gps.daemon = True
             run_gps.start()

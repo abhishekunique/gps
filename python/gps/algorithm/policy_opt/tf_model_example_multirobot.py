@@ -846,6 +846,36 @@ def multitask_forward(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, netw
         nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
     return nnets, None, None, shared_weights, None
 
+def invariant_subspace_test(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
+    num_robots = len(dim_input)
+    nnets = []
+    n_layers = 4
+    layer_size = 60
+    dim_hidden = (n_layers - 1)*[layer_size]
+    feature_layers = []
+    with tf.variable_scope("shared_wts"):
+        for robot_number, robot_params in enumerate(network_config):
+            nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
+            w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
+            b_input = init_bias((dim_hidden[0],), name='b_input'+str(robot_number))
+            w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_' + str(robot_number))
+            b1 = init_bias((dim_hidden[1],), name='b1_' + str(robot_number))
+            w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_' + str(robot_number))
+            b2 = init_bias((dim_hidden[2],), name='b2_' + str(robot_number))
+            w_output = init_weights((dim_hidden[2], dim_input[robot_number]), name='w_output'+str(robot_number))
+            b_output = init_bias((dim_input[robot_number],), name = 'b_output'+str(robot_number))
+            layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
+            layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
+            layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
+            feature_layers.append(layer2)
+            output = tf.matmul(layer2, w_output) + b_output
+            loss = tf.nn.l2_loss(nn_input - output) #euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
+            if robot_number == 1:
+                contrastive = tf.nn.l2_loss(feature_layers[0]-feature_layers[1])
+                #might need to scale here
+                loss = loss + contrastive
+            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss], layer2))
+    return nnets
 
 def conv2d(img, w, b):
     #print img.get_shape().dims[3].value

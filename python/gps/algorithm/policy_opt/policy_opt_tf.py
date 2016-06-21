@@ -74,29 +74,18 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = self._hyperparams['ent_reg']
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
-        import pickle
-        val_vars = pickle.load(open('/home/abhigupta/gps/weights_multitaskmultirobot_1.pkl', 'rb'))
-        for k,v in self.av.items():
-            if k in val_vars:            
-                assign_op = v.assign(val_vars[k])
-                self.sess.run(assign_op)
-        # import IPython
-        # IPython.embed()
 
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        tf_maps, fc_vars, last_conv_vars, av, ls = (
-            tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
-                             network_config=self._hyperparams['network_params']))
+        tf_maps = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
+                             network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
         self.precision_tensors = []
         self.act_ops = []
         self.loss_scalars = []
-        self.fc_vars = fc_vars
-        self.last_conv_vars = last_conv_vars
         self.feature_points= []
         for tf_map in tf_maps:
             self.obs_tensors.append(tf_map.get_input_tensor())
@@ -106,8 +95,6 @@ class PolicyOptTf(PolicyOpt):
             self.loss_scalars.append(tf_map.get_loss_op())
             self.feature_points.append(tf_map.feature_points)
         self.combined_loss = tf.add_n(self.loss_scalars)
-        self.av = av
-        self.ls = ls
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
@@ -117,6 +104,60 @@ class PolicyOptTf(PolicyOpt):
                               lr_policy=self._hyperparams['lr_policy'],
                               momentum=self._hyperparams['momentum'],
                               weight_decay=self._hyperparams['weight_decay'])
+
+    def train_invariant(self, obs_full):
+        obs_reshaped = []
+        for robot_number in range(self.num_robots):
+            obs = obs_full[robot_number]
+            N, T = obs.shape[:2]
+            dU, dO = self._dU[robot_number], self._dO[robot_number]
+            obs = np.reshape(obs, (N*T, dO))
+            obs_reshaped.append(obs)
+        idx = range(N*T)
+        np.random.shuffle(idx)
+        batches_per_epoch = np.floor(N*T / self.batch_size)
+        average_loss = 0
+        for i in range(self._hyperparams['iterations']):
+            feed_dict = {}
+            start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
+            idx_i = idx[start_idx:start_idx+self.batch_size]
+            for robot_number in range(self.num_robots):
+                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
+            average_loss += train_loss
+            if i % 100 == 0 and i != 0:
+                LOGGER.debug('tensorflow iteration %d, average loss %f',
+                             i, average_loss / 100)
+                print 'supervised tf loss is '
+                print (average_loss/100)
+                average_loss = 0
+        print("subspace training")
+        import IPython
+        IPython.embed()
+
+    def run_features_forward(self, obs_full):
+        fps = []
+        for robot_number in range(self.num_robots):
+            feed_dict = {}
+            obs = obs_full[robot_number]
+            N, T = obs.shape[:2]
+            dU, dO = self._dU[robot_number], self._dO[robot_number]
+            obs = np.reshape(obs, (N*T, dO))
+            feed_dict[self.obs_tensors[robot_number]] = obs
+            fps.append(self.sess.run(self.feature_points[robot_number], feed_dict=feed_dict))
+        return fps
+
+    def run_outputs_forward(self, obs_full):
+        outs = []
+        for robot_number in range(self.num_robots):
+            feed_dict = {}
+            obs = obs_full[robot_number]
+            N, T = obs.shape[:2]
+            dU, dO = self._dU[robot_number], self._dO[robot_number]
+            obs = np.reshape(obs, (N*T, dO))
+            feed_dict[self.obs_tensors[robot_number]] = obs
+            outs.append(self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict))
+        return outs
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
