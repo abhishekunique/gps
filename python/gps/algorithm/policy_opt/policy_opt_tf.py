@@ -243,10 +243,10 @@ class PolicyOptTf(PolicyOpt):
             val_loss = self.sess.run(self.val_loss, val_dict)
             avg_val_loss += val_loss
             average_loss += train_loss
-            if i % 500 == 0:
+            if (i+1) % 500 == 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 500)
-                print 'supervised tf loss is ' (average_loss/800)
+                             i+1, average_loss / 500)
+                print ('supervised tf loss is ' + str(average_loss))
                 average_loss = 0
 
         for robot_number in range(self.num_robots):
