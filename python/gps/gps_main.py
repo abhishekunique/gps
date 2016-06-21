@@ -466,7 +466,7 @@ class GPSMain(object):
             i: Sample number.
         Returns: None
         """
-        if 'agent_use_nn_policy' in self.algorithm[robot_number]._hyperparams and self.algorithm[robot_number].iteration_count > 0:
+        if self.algorithm[robot_number]._hyperparams['sample_on_policy'] and self.algorithm[robot_number].iteration_count > 0:
             pol = self.algorithm[robot_number].policy_opt.policy[robot_number]
         else:
             pol = self.algorithm[robot_number].cur[cond].traj_distr
