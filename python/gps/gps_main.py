@@ -129,15 +129,15 @@ class GPSMain(object):
         Returns: None
         """
         # self.collect_img_dataset(1)
-
+        import IPython
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-
-        # self.policy_opt.policy[0].scale = np.eye(18)
-        # self.policy_opt.policy[0].bias = np.zeros((18,))
-        # self.policy_opt.var = np.ones((3,))*0.01
-        # self.policy_opt.policy[0].x_idx = range(18)
+        # size = 18
+        # self.policy_opt.policy[0].scale = np.eye(size)
+        # self.policy_opt.policy[0].bias = np.zeros((size,))
+        # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-1]]
+        # self.policy_opt.policy[0].x_idx = range(size)
         # import IPython
         # IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
@@ -146,11 +146,14 @@ class GPSMain(object):
                 for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
                         self._take_sample(itr, cond, i, robot_number=robot_number)
-                        
+
                 traj_sample_lists[robot_number] = [
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
+
+                if self.agent[robot_number].nan_flag:
+                    IPython.embed()
 
             for robot_number in range(self.num_robots):
                 # self.policy_opt.prepare_solver(itr_robot_status, self.)
@@ -160,6 +163,8 @@ class GPSMain(object):
 
             for robot_number in range(self.num_robots):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
+                if self.agent[robot_number].nan_flag:
+                    IPython.embed()
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
             # if self.save_shared:
             #     self.policy_opt.save_shared_wts()

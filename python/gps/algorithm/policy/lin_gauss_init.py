@@ -155,3 +155,32 @@ def init_from_file(hyperparams):
     # cholPSig = np.sqrt(config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
     # invPSig = (1.0 / config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
     # return LinearGaussianPolicy(new_policy.K, new_policy.k, PSig, cholPSig, invPSig)
+
+def init_demo(hyperparams):
+    """
+    Return initial gains for a time-varying linear gaussian controller that
+    just replays a demonstrated trajectory.
+    Returns:
+        K: T x dU x dX linear controller gains matrix
+        k: T x dU controller bias term
+        PSig: T x dU x dU controller action covariance
+        cholPSig: Cholesky decomposition of PSig
+        invPSig: Inverse of PSig
+    """
+    config = copy.deepcopy(INIT_LG_LQR)
+    config.update(hyperparams)
+
+    demo = np.load(config['demonstration_file'])
+    print "DEMO FILE Is", config['demonstration_file']
+
+    dU, dQ, dX = config['dU'], config['dQ'], config['dX']
+    x0, T = config['x0'], config['T']
+    assert(demo.shape == (T, dU))
+    K = np.zeros((T, dU, dX))
+    k = demo
+    
+    PSig = config['init_var'] * np.tile(np.eye(dU), [T, 1, 1])
+    cholPSig = np.sqrt(config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
+    invPSig = (1. / config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
+    
+    return LinearGaussianPolicy(K, k, PSig, cholPSig, invPSig)

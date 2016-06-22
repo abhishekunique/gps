@@ -75,13 +75,11 @@ class PolicyOptTf(PolicyOpt):
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
         # import pickle
-        # val_vars = pickle.load(open('multi_weights.pkl', 'rb'))
+        # val_vars = pickle.load(open('/home/coline/Downloads/weights_multitaskmultirobot_1.pkl', 'rb'))
         # for k,v in self.av.items():
         #     if k in val_vars:            
         #         assign_op = v.assign(val_vars[k])
         #         self.sess.run(assign_op)
-        # import IPython
-        # IPython.embed()
 
 
     def init_network(self):
