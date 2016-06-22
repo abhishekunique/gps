@@ -182,5 +182,6 @@ def init_demo(hyperparams):
     PSig = config['init_var'] * np.tile(np.eye(dU), [T, 1, 1])
     cholPSig = np.sqrt(config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
     invPSig = (1. / config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
-    
+
     return LinearGaussianPolicy(K, k, PSig, cholPSig, invPSig)
+

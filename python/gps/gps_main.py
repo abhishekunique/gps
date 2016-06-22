@@ -138,6 +138,12 @@ class GPSMain(object):
         # self.policy_opt.policy[0].bias = np.zeros((size,))
         # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-1]]
         # self.policy_opt.policy[0].x_idx = range(size)
+
+        # self.policy_opt.policy[0].scale = np.eye(20)
+        # self.policy_opt.policy[0].bias = np.zeros((20,))
+        # self.policy_opt.var = [np.load('/home/abhigupta/gps/pol_var_1.npy')[-2]]
+        # self.policy_opt.policy[0].x_idx = range(20)
+
         # import IPython
         # IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
@@ -170,7 +176,7 @@ class GPSMain(object):
             #     self.policy_opt.save_shared_wts()
             # if self.save_wts:
             #     self.policy_opt.save_all_wts(itr)
-            if itr % 4 == 0 and itr > 2:
+            if itr % 2 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
