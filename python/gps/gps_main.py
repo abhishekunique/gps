@@ -171,7 +171,7 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
-                feature_lists.append(self.policy_opt.run_features_forward(self._extract_features(traj_sample_lists[robot_number], robot_number), robot_number))
+                # feature_lists.append(self.policy_opt.run_features_forward(self._extract_features(traj_sample_lists[robot_number], robot_number), robot_number))
             for robot_number in range(self.num_robots):
                 # self.policy_opt.prepare_solver(itr_robot_status, self.)
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)

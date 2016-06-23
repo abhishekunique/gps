@@ -46,7 +46,7 @@ class PolicyOptTf(PolicyOpt):
         self.init_network()
         self.init_solver()
         self.tf_vars = tf.trainable_variables()
-        self.init_feature_space()
+        # self.init_feature_space()
         self.sess = tf.Session()
         self.policy = []
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
@@ -75,13 +75,13 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = self._hyperparams['ent_reg']
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
-        import pickle
-        val_vars = pickle.load(open('/home/abhigupta/gps/subspace_weights.pkl', 'rb'))
-        for k,v in self.var_list_feat.items():
-            if k in val_vars:   
-                print(k)         
-                assign_op = v.assign(val_vars[k])
-                self.sess.run(assign_op)
+        # import pickle
+        # val_vars = pickle.load(open('/home/abhigupta/gps/subspace_weights.pkl', 'rb'))
+        # for k,v in self.var_list_feat.items():
+        #     if k in val_vars:   
+        #         print(k)         
+        #         assign_op = v.assign(val_vars[k])
+        #         self.sess.run(assign_op)
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """

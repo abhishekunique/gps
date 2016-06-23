@@ -96,8 +96,7 @@ class TfSolver:
             var_list = tf.trainable_variables()
         if loss is None:
             loss = self.loss_scalar
-        import IPython
-        IPython.embed()
+
         if solver_string == 'adam':
             return tf.train.AdamOptimizer(learning_rate=self.base_lr,
                                           beta1=self.momentum).minimize(loss, var_list=var_list)
