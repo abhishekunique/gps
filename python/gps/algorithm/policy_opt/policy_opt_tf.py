@@ -23,6 +23,8 @@ class PolicyOptTf(PolicyOpt):
         self.num_robots = len(dU)
         self.tf_iter = [0 for r_no in range(len(dU))]
         self.checkpoint_prefix = self._hyperparams['checkpoint_prefix']
+        tf.set_random_seed(self._hyperparams['random_seed'])
+
         self.batch_size = self._hyperparams['batch_size']
         self.device_string = "/cpu:0"
         if self._hyperparams['use_gpu'] == 1:
