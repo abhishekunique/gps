@@ -45,12 +45,13 @@ class PolicyOptTf(PolicyOpt):
             self.var.append(self._hyperparams['init_var'] * np.ones(dU_ind))
         self.init_network()
         self.init_solver()
+        self.tf_vars = tf.trainable_variables()
+        self.init_feature_space()
         self.sess = tf.Session()
         self.policy = []
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
             self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string))
         # List of indices for state (vector) data and image (tensor) data in observation.
-
         self.x_idx = []
         self.img_idx = []
         i = []
@@ -74,7 +75,13 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = self._hyperparams['ent_reg']
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
-
+        import pickle
+        val_vars = pickle.load(open('/home/abhigupta/gps/subspace_weights.pkl', 'rb'))
+        for k,v in self.var_list_feat.items():
+            if k in val_vars:   
+                print(k)         
+                assign_op = v.assign(val_vars[k])
+                self.sess.run(assign_op)
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
@@ -95,6 +102,23 @@ class PolicyOptTf(PolicyOpt):
             self.loss_scalars.append(tf_map.get_loss_op())
             self.feature_points.append(tf_map.feature_points)
         self.combined_loss = tf.add_n(self.loss_scalars)
+
+    def init_feature_space(self):
+        """ Helper method to initialize the tf networks used """
+        tf_map_generator = self._hyperparams['network_model_feat']
+        tf_maps, var_list = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
+                             network_config=self._hyperparams['network_params'])
+        self.obs_tensors_feat = []
+        self.act_ops_feat = []
+        self.loss_scalars_feat = []
+        self.feature_points_feat = []
+        for tf_map in tf_maps:
+            self.obs_tensors_feat.append(tf_map.get_input_tensor())
+            self.act_ops_feat.append(tf_map.get_output_op())
+            self.loss_scalars_feat.append(tf_map.get_loss_op())
+            self.feature_points_feat.append(tf_map.feature_points)
+        self.combined_loss_feat = tf.add_n(self.loss_scalars_feat)
+        self.var_list_feat = var_list
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
@@ -135,17 +159,15 @@ class PolicyOptTf(PolicyOpt):
         import IPython
         IPython.embed()
 
-    def run_features_forward(self, obs_full):
-        fps = []
-        for robot_number in range(self.num_robots):
-            feed_dict = {}
-            obs = obs_full[robot_number]
-            N, T = obs.shape[:2]
-            dU, dO = self._dU[robot_number], self._dO[robot_number]
-            obs = np.reshape(obs, (N*T, dO))
-            feed_dict[self.obs_tensors[robot_number]] = obs
-            fps.append(self.sess.run(self.feature_points[robot_number], feed_dict=feed_dict))
-        return fps
+    def run_features_forward(self, obs, robot_number):
+        feed_dict = {}
+        N, T = obs.shape[:2]
+        dU, dO = self._dU[robot_number], self._dO[robot_number]
+        obs = np.reshape(obs, (N*T, dO))
+        feed_dict[self.obs_tensors_feat[robot_number]] = obs
+        output = self.sess.run(self.feature_points_feat[robot_number], feed_dict=feed_dict)
+        output = np.reshape(output, (N, T, 60))
+        return output
 
     def run_outputs_forward(self, obs_full):
         outs = []
