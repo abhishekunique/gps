@@ -190,7 +190,7 @@ class PolicyOptTf(PolicyOpt):
             # TODO: Find entries with very low weights?
 
             # Normalize obs, but only compute normalzation at the beginning.
-            if not hasattr(self.policy, 'scale'):
+            if self.policy.scale is None or self.policy.bias is None:
                 #TODO: may need to change this
                 self.policy[robot_number].x_idx = self.x_idx[robot_number]
                 self.policy[robot_number].scale = np.eye(np.diag(1.0 / (np.std(obs[:, self.x_idx[robot_number]], axis=0) + 1e-8)).shape[0])
@@ -263,14 +263,10 @@ class PolicyOptTf(PolicyOpt):
         N, T = obs.shape[:2]
 
         # Normalize obs.
-        try:
+        if self.policy[robot_number].scale != None and self.policy[robot_number].bias != None:
             for n in range(N):
-                if self.policy[robot_number].scale is not None and self.policy[robot_number].bias is not None:
-                    obs[n, :, self.x_idx[robot_number]] = (obs[n, :, self.x_idx[robot_number]].T.dot(self.policy[robot_number].scale)
-                                             + self.policy[robot_number].bias).T
-        except AttributeError:
-            pass  # TODO: Should prob be called before update?
-
+                obs[n, :, self.x_idx[robot_number]] = (obs[n, :, self.x_idx[robot_number]].T.dot(self.policy[robot_number].scale)
+                                         + self.policy[robot_number].bias).T
         output = np.zeros((N, T, dU))
         for i in range(N):
             feed_dict = {self.obs_tensors[robot_number]: obs[i, :]}
