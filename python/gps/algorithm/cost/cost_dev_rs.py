@@ -26,7 +26,7 @@ class CostDevRs(Cost):
     def init_feature_space(self):
         """ Helper method to initialize the tf networks used """
         import pickle
-        val_vars = pickle.load(open('/home/abhigupta/gps/subspace_weights.pkl', 'rb'))
+        val_vars = pickle.load(open(self.hyperparams['load_file'], 'rb'))
         g = tf.Graph()
         self.graph = g
         n_layers = 4
