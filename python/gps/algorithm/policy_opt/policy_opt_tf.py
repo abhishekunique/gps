@@ -132,15 +132,6 @@ class PolicyOptTf(PolicyOpt):
                                     weight_decay=self._hyperparams['weight_decay'],
                                     # vars_to_opt = self.robot_vars)
                                     vars_to_opt= self.av.values())
-        # task_loss = tf.add_n(self.ls['task_loss'])
-        # self.task_solver =TfSolver(loss_scalar=task_loss,
-        #                            solver_name=self._hyperparams['solver_type'],
-        #                            base_lr=self._hyperparams['lr'],
-        #                            lr_policy=self._hyperparams['lr_policy'],
-        #                            momentum=self._hyperparams['momentum'],
-        #                            weight_decay=self._hyperparams['weight_decay'],
-        #                            vars_to_opt = self.task_vars)
-
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
@@ -199,7 +190,7 @@ class PolicyOptTf(PolicyOpt):
             # TODO: Find entries with very low weights?
 
             # Normalize obs, but only compute normalzation at the beginning.
-            if itr == 0 and inner_itr == 1:
+            if not hasattr(self.policy, 'scale'):
                 #TODO: may need to change this
                 self.policy[robot_number].x_idx = self.x_idx[robot_number]
                 self.policy[robot_number].scale = np.eye(np.diag(1.0 / (np.std(obs[:, self.x_idx[robot_number]], axis=0) + 1e-8)).shape[0])
