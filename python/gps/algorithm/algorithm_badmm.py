@@ -64,6 +64,10 @@ class AlgorithmBADMM(Algorithm):
           # save initial kl for debugging / visualization
           self.cur[m].pol_info.init_kl = self._policy_kl(m)[0]
 
+        for m in range(self.M):
+          # save initial kl for debugging / visualization
+          self.cur[m].pol_info.init_kl = self._policy_kl(m)[0]
+
         # Run inner loop to compute new policies.
         for inner_itr in range(self._hyperparams['inner_iterations']):
             #TODO: Could start from init controller.
