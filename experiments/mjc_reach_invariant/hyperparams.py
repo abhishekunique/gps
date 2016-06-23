@@ -69,7 +69,10 @@ common = {
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': invariant_subspace_test,
+        'network_model': example_tf_network_multi,
+        'network_model_feat': invariant_subspace_test,
+        'run_feats': True,
+        'load_weights': '/home/abhigupta/gps/subspace_weights.pkl',
         'network_params': [{
             'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
             'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],

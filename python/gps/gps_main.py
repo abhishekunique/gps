@@ -84,7 +84,7 @@ class GPSMain(object):
         else: self.save_wts = False
 
 
-    def run(self, itr_load=None):
+    def run(self, itr_load=None, rf=False):
         """
         Run training by iteratively sampling and taking an iteration.
         Args:
@@ -120,7 +120,7 @@ class GPSMain(object):
 
         self._end()
 
-    def run_badmm(self, itr_load=None):
+    def run_badmm(self, itr_load=None, rf=False):
         """
         Run training by iteratively sampling and taking an iteration.
         Args:
@@ -128,37 +128,9 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
-        # self.collect_img_dataset(1)
-        # print("test")
-        # import IPython
-        # IPython.embed()
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-
-        # self.policy_opt.policy[0].scale = np.eye(20)
-        # self.policy_opt.policy[0].bias = np.zeros((20,))
-        # self.policy_opt.var = [np.load('/home/abhigupta/gps/pol_var_1.npy')[-2]]
-        # self.policy_opt.policy[0].x_idx = range(20)
-
-
-        # sl0 = self.data_logger.unpickle(self._data_files_dir + 'nn_list_0.pkl')
-        # sl1 = self.data_logger.unpickle(self._data_files_dir + 'nn_list_1.pkl')
-        # sl2 = self.data_logger.unpickle(self._data_files_dir + 'nn_list_2.pkl')
-        # sl3 = self.data_logger.unpickle(self._data_files_dir + 'nn_list_3.pkl')
-
-        # for j in range(5):
-        #     sl0[j].agent = self.agent[0]
-        #     sl1[j].agent = self.agent[0]
-        #     sl2[j].agent = self.agent[0]
-        #     sl3[j].agent = self.agent[0]
-
-        # self.algorithm[0].reinitialize_net(0, sl0)
-        # self.algorithm[0].reinitialize_net(1, sl1)
-        # self.algorithm[0].reinitialize_net(2, sl2)
-        # self.algorithm[0].reinitialize_net(3, sl3)
-        # import IPython
-        # IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             feature_lists = []
@@ -171,9 +143,9 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
-                # feature_lists.append(self.policy_opt.run_features_forward(self._extract_features(traj_sample_lists[robot_number], robot_number), robot_number))
+                if rf:
+                    feature_lists.append(self.policy_opt.run_features_forward(self._extract_features(traj_sample_lists[robot_number], robot_number), robot_number))
             for robot_number in range(self.num_robots):
-                # self.policy_opt.prepare_solver(itr_robot_status, self.)
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
             self._take_iteration_shared()
@@ -181,11 +153,8 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-                np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
-            # if self.save_shared:
-            #     self.policy_opt.save_shared_wts()
-            # if self.save_wts:
-            #     self.policy_opt.save_all_wts(itr)
+                if rf:
+                    np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
             if itr % 2 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
@@ -499,6 +468,10 @@ def main():
                         help='take N policy samples (for BADMM only)')
     parser.add_argument('-m', '--multithread', action='store_true',
                         help='Perform the badmm algorithm in parallel')
+    parser.add_argument('-f', '--traininvariant', action='store_true',
+                        help='Train invariant subspace')
+    parser.add_argument('-g', '--recordfeats', action='store_true',
+                        help='Record features in feature space')
     args = parser.parse_args()
 
     exp_name = args.experiment
@@ -582,7 +555,8 @@ def main():
             plt.show()
         else:
             gps.test_policy(itr=current_itr, N=test_policy_N)
-    else:
+
+    elif args.traininvariant:
         import random
         import numpy as np
         import matplotlib.pyplot as plt
@@ -594,16 +568,16 @@ def main():
         if hyperparams.config['gui_on']:
             if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
                 run_gps = threading.Thread(
-                    target=lambda: gps.run(itr_load=resume_training_itr)
+                    target=lambda: gps.run_subspace_learning(itr_load=resume_training_itr)
                 )
             else:
                 if args.multithread:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_badmm(itr_load=resume_training_itr)
+                        target=lambda: gps.run_subspace_learning(itr_load=resume_training_itr)
                     )
                 else:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_badmm(itr_load=resume_training_itr)
+                        target=lambda: gps.run_subspace_learning(itr_load=resume_training_itr)
                     )
             run_gps.daemon = True
             run_gps.start()
@@ -615,6 +589,45 @@ def main():
                 gps.run(itr_load=resume_training_itr)
             else:
                 gps.run_badmm(itr_load=resume_training_itr)
+
+
+    else:
+        import random
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        random.seed(0)
+        np.random.seed(0)
+
+        gps = GPSMain(hyperparams.config)
+        if args.recordfeats:
+            recordfeats = True
+        else:
+            recordfeats=False
+        if hyperparams.config['gui_on']:
+            if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
+                run_gps = threading.Thread(
+                    target=lambda: gps.run(itr_load=resume_training_itr, rf=recordfeats)
+                )
+            else:
+                if args.multithread:
+                    run_gps = threading.Thread(
+                        target=lambda: gps.run_badmm(itr_load=resume_training_itr, rf=recordfeats)
+                    )
+                else:
+                    run_gps = threading.Thread(
+                        target=lambda: gps.run_badmm(itr_load=resume_training_itr, rf=recordfeats)
+                    )
+            run_gps.daemon = True
+            run_gps.start()
+
+            plt.ioff()
+            plt.show()
+        else:
+            if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
+                gps.run(itr_load=resume_training_itr, rf=recordfeats)
+            else:
+                gps.run_badmm(itr_load=resume_training_itr, rf=recordfeats)
 
 if __name__ == "__main__":
     main()

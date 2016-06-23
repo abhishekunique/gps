@@ -46,7 +46,8 @@ class PolicyOptTf(PolicyOpt):
         self.init_network()
         self.init_solver()
         self.tf_vars = tf.trainable_variables()
-        # self.init_feature_space()
+        if self._hyperparams['run_feats']:
+            self.init_feature_space()
         self.sess = tf.Session()
         self.policy = []
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
@@ -75,18 +76,21 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = self._hyperparams['ent_reg']
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
-        # import pickle
-        # val_vars = pickle.load(open('/home/abhigupta/gps/subspace_weights.pkl', 'rb'))
-        # for k,v in self.var_list_feat.items():
-        #     if k in val_vars:   
-        #         print(k)         
-        #         assign_op = v.assign(val_vars[k])
-        #         self.sess.run(assign_op)
+        if self._hyperparams['load_weights'] and self._hyperparams['run_feats']:
+            import pickle
+            val_vars = pickle.load(open(self._hyperparams['load_weights'], 'rb'))
+            import IPython
+            IPython.embed()
+            for k,v in self.var_list_feat.items():
+                if k in val_vars:   
+                    print(k)         
+                    assign_op = v.assign(val_vars[k])
+                    self.sess.run(assign_op)
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        tf_maps = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
+        tf_maps, var_list = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
@@ -177,8 +181,8 @@ class PolicyOptTf(PolicyOpt):
             N, T = obs.shape[:2]
             dU, dO = self._dU[robot_number], self._dO[robot_number]
             obs = np.reshape(obs, (N*T, dO))
-            feed_dict[self.obs_tensors[robot_number]] = obs
-            outs.append(self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict))
+            feed_dict[self.obs_tensors_feat[robot_number]] = obs
+            outs.append(self.sess.run(self.act_ops_feat[robot_number], feed_dict=feed_dict))
         return outs
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):

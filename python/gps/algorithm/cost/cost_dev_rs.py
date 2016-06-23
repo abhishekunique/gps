@@ -83,7 +83,7 @@ class CostDevRs(Cost):
         final_lxx = np.zeros((T, Dx, Dx))
         final_lux = np.zeros((T, Du, Dx))
 
-        tgt = np.zeros((T, 60)) #self._hyperparams['target_feats']
+        tgt = self._hyperparams['target_feats']
         x = sample.get_obs()
         feed_dict = {self.input: x}
         feat_forward = self.session.run(self.feature_layers, feed_dict=feed_dict)

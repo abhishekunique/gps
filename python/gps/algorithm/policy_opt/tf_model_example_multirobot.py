@@ -510,7 +510,7 @@ def example_tf_network_multi(dim_input=[27, 27], dim_output=[7, 7], batch_size=2
             loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
             nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
 
-    return nnets
+    return nnets, None
 
 def model_fc_shared(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
     """
