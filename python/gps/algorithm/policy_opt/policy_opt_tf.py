@@ -74,16 +74,12 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = self._hyperparams['ent_reg']
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
-        # import pickle
-<<<<<<< HEAD
-        # val_vars = pickle.load(open('/home/coline/Downloads/weights_multitaskmultirobot_1.pkl', 'rb'))
-=======
-        # val_vars = pickle.load(open('/home/abhigupta/gps/weights_multitaskmultirobot_1.pkl', 'rb'))
->>>>>>> 404af91a77e73bbec48e54e7966970cdbd6de58b
-        # for k,v in self.av.items():
-        #     if k in val_vars:            
-        #         assign_op = v.assign(val_vars[k])
-        #         self.sess.run(assign_op)
+        import pickle
+        val_vars = pickle.load(open('/home/coline/abhishek_gps/gps/weights_multitaks_no3push.pkl', 'rb'))
+        for k,v in self.av.items():
+            if k in val_vars:
+                assign_op = v.assign(val_vars[k])
+                self.sess.run(assign_op)
 
 
     def init_network(self):

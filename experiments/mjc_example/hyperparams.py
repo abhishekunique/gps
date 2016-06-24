@@ -88,7 +88,7 @@ torque_cost = {
 }
 
 fk_cost = {
-    'type': CostFK,
+xb    'type': CostFK,
     'target_end_effector': np.array([0.0, 0.3, -0.5, 0.0, 0.3, -0.2]),
     'wp': np.array([1, 1, 1, 1, 1, 1]),
     'l1': 0.1,

@@ -12,6 +12,7 @@ import copy
 import argparse
 import threading
 import time
+import pickle
 import tensorflow as tf
 # Add gps/python to path so that imports work.
 sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
@@ -133,19 +134,19 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-        # size = 18
-        # self.policy_opt.policy[0].scale = np.eye(size)
-        # self.policy_opt.policy[0].bias = np.zeros((size,))
-        # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-1]]
-        # self.policy_opt.policy[0].x_idx = range(size)
+        size = 18
+        self.policy_opt.policy[0].scale = np.eye(size)
+        self.policy_opt.policy[0].bias = np.zeros((size,))
+        self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-1]]
+        self.policy_opt.policy[0].x_idx = range(size)
 
         # self.policy_opt.policy[0].scale = np.eye(20)
         # self.policy_opt.policy[0].bias = np.zeros((20,))
         # self.policy_opt.var = [np.load('/home/abhigupta/gps/pol_var_1.npy')[-2]]
         # self.policy_opt.policy[0].x_idx = range(20)
 
-        # import IPython
-        # IPython.embed()
+        import IPython
+        IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             for robot_number in range(self.num_robots):
@@ -176,7 +177,12 @@ class GPSMain(object):
             #     self.policy_opt.save_shared_wts()
             # if self.save_wts:
             #     self.policy_opt.save_all_wts(itr)
-            if itr % 2 == 0 and itr > 0:
+            vars = {}
+            for k,v in self.policy_opt.av.iteritems():
+                vars[k] = self.policy_opt.sess.run(v)
+            # with open('weights_multitaks_no3push.pkl','wb') as f:
+            #     pickle.dump(vars, f)
+            if itr % 8 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
