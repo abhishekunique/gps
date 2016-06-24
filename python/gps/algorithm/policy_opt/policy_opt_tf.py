@@ -269,7 +269,7 @@ class PolicyOptTf(PolicyOpt):
         N, T = obs.shape[:2]
 
         # Normalize obs.
-        if self.policy[robot_number].scale != None and self.policy[robot_number].bias != None:
+        if self.policy[robot_number].scale != None:
             for n in range(N):
                 obs[n, :, self.x_idx[robot_number]] = (obs[n, :, self.x_idx[robot_number]].T.dot(self.policy[robot_number].scale)
                                          + self.policy[robot_number].bias).T
