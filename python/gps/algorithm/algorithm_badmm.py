@@ -61,8 +61,8 @@ class AlgorithmBADMM(Algorithm):
         self._update_step_size(itr)  # KL Divergence step size.
 
         for m in range(self.M):
-          # save initial kl for debugging / visualization
-          self.cur[m].pol_info.init_kl = self._policy_kl(m)[0]
+            # save initial kl for debugging / visualization
+            self.cur[m].pol_info.init_kl = self._policy_kl(m)[0]
 
         for m in range(self.M):
             # save initial kl for debugging / visualization
