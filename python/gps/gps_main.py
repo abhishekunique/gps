@@ -611,7 +611,7 @@ def main():
                         help='take N policy samples (for BADMM only)')
     parser.add_argument('-m', '--multithread', action='store_true',
                         help='Perform the badmm algorithm in parallel')
-    parser.add_argument('-s', '--silent', action='store_false',
+    parser.add_argument('-s', '--silent', action='store_true',
                         help='silent debug print outs')
     args = parser.parse_args()
 
@@ -626,9 +626,9 @@ def main():
     hyperparams_file = exp_dir + 'hyperparams.py'
 
     if args.silent:
-      logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
     else:
-      logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
     if args.new:
         from shutil import copy
