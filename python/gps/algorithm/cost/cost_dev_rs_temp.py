@@ -14,7 +14,7 @@ def init_weights(shape, name=None):
 def init_bias(shape, name=None):
     return tf.Variable(tf.zeros(shape, dtype='float'), name=name)
 
-class CostDevRs(Cost):
+class CostDevRsTemp(Cost):
     """ Computes l1/l2 distance to a fixed target state. """
     def __init__(self, hyperparams):
         #may need to change
@@ -68,7 +68,8 @@ class CostDevRs(Cost):
             for v in tf.trainable_variables():
                 self.var_list_feat[v.name] = v
             for k,v in self.var_list_feat.items():
-                if k in val_vars:   
+                if k in val_vars:  
+                    print("LOADING") 
                     print(k)         
                     assign_op = v.assign(val_vars[k])
                     self.session.run(assign_op)
@@ -92,6 +93,8 @@ class CostDevRs(Cost):
 
         tgt = self._hyperparams['target_feats']
         x = sample.get_obs()
+        x = np.concatenate([x[:, 0:4], x[:, 6:10], x[:, 12:15], x[:, 18:24], x[:, 27:30]], axis = 1)
+        #need to extract appropriate part here
         feed_dict = {self.input: x}
         feat_forward = self.session.run(self.feature_layers, feed_dict=feed_dict)
         num_feats = feat_forward.shape[1]
@@ -109,7 +112,21 @@ class CostDevRs(Cost):
             l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(60)/(2.0)).dot(feat_forward[t] - tgt[t])
             ls[t,:] = (feat_forward[t] - tgt[t]).dot(gradients_all[t])
             lss[t,:,:] = gradients_all[t].T.dot(gradients_all[t])
+        # final_l += l
+        # final_lx += ls
+        # final_lxx += lss
+
         final_l += l
-        final_lx += ls
-        final_lxx += lss
+        final_lx[:, 0:4] = ls[:, 0:4]
+        final_lx[:, 6:10] = ls[:,4:8]
+        final_lx[:, 12:15] = ls[:, 8:11]
+        final_lx[:, 18:24] = ls[:,11:17]
+        final_lx[:, 27:30] = ls[:,17:20]
+
+        final_lxx[:, 0:4, 0:4] = lss[:, 0:4, 0:4]
+        final_lxx[:, 6:10, 6:10] = lss[:,4:8,4:8]
+        final_lxx[:, 12:15, 12:15] = lss[:, 8:11, 8:11]
+        final_lxx[:, 18:24, 18:24] = lss[:, 11:17 ,11:17]
+        final_lxx[:, 27:30, 27:30] = lss[:,17:20, 17:20]
+
         return final_l, final_lx, final_lu, final_lxx, final_luu, final_lux

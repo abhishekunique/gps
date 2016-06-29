@@ -63,6 +63,8 @@ common = {
     'policy_opt': {
         'type': PolicyOptTf,
         'network_model': example_tf_network_multi,
+        'run_feats': False,
+        'load_weights': False,
         'network_params': [{
             'dim_hidden': [10],
             'num_filters': [10, 20],

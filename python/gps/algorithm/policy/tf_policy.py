@@ -102,4 +102,3 @@ class TfPolicy(Policy):
         cls_init.bias = pol_dict['bias']
         cls_init.x_idx = pol_dict['x_idx']
         return cls_init
-

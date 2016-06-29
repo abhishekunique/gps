@@ -17,7 +17,7 @@ from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
 from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, invariant_subspace_test
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, invariant_subspace_test,double_contrastive_invariance
 
 
 IMAGE_WIDTH = 80
@@ -69,9 +69,9 @@ common = {
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': example_tf_network_multi,
-        'network_model_feat': invariant_subspace_test,
-        'run_feats': True,
+        'network_model': double_contrastive_invariance,
+        'network_model_feat': double_contrastive_invariance,
+        'run_feats': False,
         'load_weights': '/home/abhigupta/gps/subspace_weights.pkl',
         'network_params': [{
             'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
@@ -93,11 +93,11 @@ common = {
             'image_width': IMAGE_WIDTH,
             'image_height': IMAGE_HEIGHT,
             'image_channels': IMAGE_CHANNELS,
-            'sensor_dims': SENSOR_DIMS[0],
+            'sensor_dims': SENSOR_DIMS[1],
             'batch_size': 25,
             # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
         }],
-        'iterations': 40000,
+        'iterations': 60000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
     }

@@ -51,7 +51,8 @@ class CostFKDev(Cost):
         # Choose target.
         # tgt = self._hyperparams['target_end_effector']
         # tgt = np.load('traj_robot_0.pkl')
-        tgt = self._hyperparams["target_traj"].get(END_EFFECTOR_POINTS)
+
+        tgt = self._hyperparams["traj"]
         pt = sample.get(END_EFFECTOR_POINTS)
         dist = pt - tgt
         # TODO - These should be partially zeros so we're not double
