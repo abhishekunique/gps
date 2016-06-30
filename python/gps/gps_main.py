@@ -134,19 +134,44 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-        size = 18
+        size = 28
         self.policy_opt.policy[0].scale = np.eye(size)
         self.policy_opt.policy[0].bias = np.zeros((size,))
-        self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-1]]
+        # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
         self.policy_opt.policy[0].x_idx = range(size)
 
+        # for r in range(5):
+        #     size = [18, 20, 28, 18, 20][r]
+        #     self.policy_opt.policy[r].scale = np.eye(size)
+        #     self.policy_opt.policy[r].bias = np.zeros((size,))
+        #     # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
+        #     self.policy_opt.policy[r].x_idx = range(size)
+
+ 
         # self.policy_opt.policy[0].scale = np.eye(20)
         # self.policy_opt.policy[0].bias = np.zeros((20,))
         # self.policy_opt.var = [np.load('/home/abhigupta/gps/pol_var_1.npy')[-2]]
         # self.policy_opt.policy[0].x_idx = range(20)
 
-        import IPython
-        IPython.embed()
+        # for cond in range(4):
+        #     samples = [self.agent[0].sample(self.algorithm[0].policy_opt.policy[0], cond,
+        #                                     verbose=True, save=False) for j in range(5)]
+        #     self.data_logger.pickle(self._data_files_dir+'nn_list_'+str(cond)+'.pkl', samples)
+
+        # sl0 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_0.pkl')) 
+        # sl1 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_1.pkl'))
+        # sl2 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_2.pkl'))
+        # sl3 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_3.pkl'))
+        # for j in range(5):
+        #     sl0[j].agent = self.agent[0]
+        #     sl1[j].agent = self.agent[0]
+        #     sl2[j].agent = self.agent[0]
+        #     sl3[j].agent = self.agent[0]
+        # self.algorithm[0].reinitialize_net(0, sl0)
+        # self.algorithm[0].reinitialize_net(1, sl1)
+        # self.algorithm[0].reinitialize_net(2, sl2)
+        # self.algorithm[0].reinitialize_net(3, sl3)
+
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             for robot_number in range(self.num_robots):
@@ -173,15 +198,16 @@ class GPSMain(object):
                 if self.agent[robot_number].nan_flag:
                     IPython.embed()
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-            # if self.save_shared:
-            #     self.policy_opt.save_shared_wts()
-            # if self.save_wts:
-            #     self.policy_opt.save_all_wts(itr)
+            if self.save_shared:
+                self.policy_opt.save_shared_wts()
+            if self.save_wts:
+                self.policy_opt.save_all_wts(itr)
             vars = {}
             for k,v in self.policy_opt.av.iteritems():
                 vars[k] = self.policy_opt.sess.run(v)
-            # with open('weights_multitaks_no3push.pkl','wb') as f:
-            #     pickle.dump(vars, f)
+            data_dump =[vars, self.policy_opt.var]
+            with open('weights_multitask.pkl','wb') as f:
+                pickle.dump(data_dump, f)
             if itr % 8 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
@@ -517,8 +543,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(0)
-        np.random.seed(0)
+        random.seed(45)
+        np.random.seed(45)
 
         data_files_dir = exp_dir + 'data_files/'
         data_filenames = os.listdir(data_files_dir)
@@ -544,8 +570,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(0)
-        np.random.seed(0)
+        random.seed(10)
+        np.random.seed(10)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:

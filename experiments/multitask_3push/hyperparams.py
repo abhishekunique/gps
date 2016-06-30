@@ -31,6 +31,7 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
 from gps.gui.config import generate_experiment_info
 
+
 SENSOR_DIMS = [{
     JOINT_ANGLES: 3,
     JOINT_VELOCITIES: 3,
@@ -662,7 +663,7 @@ algorithm[4]['cost'] = [{
     'weights': [1.0],
 } for i in agent[4]['train_conditions']]
 
-
+        
 for iter_var in range(5):
     algorithm[iter_var]['dynamics'] = {
         'type': DynamicsLRPrior,

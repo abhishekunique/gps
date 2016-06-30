@@ -74,14 +74,17 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = self._hyperparams['ent_reg']
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
-        import pickle
-        val_vars = pickle.load(open('/home/coline/abhishek_gps/gps/weights_multitaks_no3push.pkl', 'rb'))
-        for k,v in self.av.items():
-            if k in val_vars:
-                assign_op = v.assign(val_vars[k])
-                self.sess.run(assign_op)
+        # import pickle
+        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_multitask_no3push_16itr.pkl', 'rb'))
+        # #val_vars = pickle.load(open('/home/coline/Downloads/weights_multitaskmultirobot_1.pkl', 'rb'))
 
+        # self.var = pol_var#[pol_var[-2]]
+        # for k,v in self.av.items():
+        #     if k in val_vars:
+        #         assign_op = v.assign(val_vars[k])
+        #         self.sess.run(assign_op)
 
+ 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
@@ -244,6 +247,8 @@ class PolicyOptTf(PolicyOpt):
         # Normalize obs.
         try:
             for n in range(N):
+                # import IPython
+                # IPython.embed()
                 if self.policy[robot_number].scale is not None and self.policy[robot_number].bias is not None:
                     obs[n, :, self.x_idx[robot_number]] = (obs[n, :, self.x_idx[robot_number]].T.dot(self.policy[robot_number].scale)
                                              + self.policy[robot_number].bias).T
