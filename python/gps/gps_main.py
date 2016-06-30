@@ -42,7 +42,14 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 class GPSMain(object):
     """ Main class to run algorithms and experiments. """
-    def __init__(self, config):
+    def __init__(self, config, quit_on_end=False):
+        """
+        Initialize GPSMain
+        Args:
+            config: Hyperparameters for experiment
+            quit_on_end: When true, quit automatically on completion
+        """
+        self._quit_on_end = quit_on_end
         self._hyperparams = config
         self._conditions = [] #config['common']['conditions']
 
@@ -594,7 +601,9 @@ class GPSMain(object):
                 self.gui[robot_number].end_mode()
             self.gui.set_status_text('Training complete.')
             self.gui.end_mode()
-
+            if self._quit_on_end:
+                # Quit automatically (for running sequential expts)
+                os._exit(1)
 
 def main():
     """ Main function to be run. """
@@ -608,11 +617,13 @@ def main():
     parser.add_argument('-r', '--resume', metavar='N', type=int,
                         help='resume training from iter N')
     parser.add_argument('-p', '--policy', metavar='N', type=int,
-                        help='take N policy samples (for BADMM only)')
+                        help='take N policy samples (for BADMM/MDGPS only)')
     parser.add_argument('-m', '--multithread', action='store_true',
                         help='Perform the badmm algorithm in parallel')
     parser.add_argument('-s', '--silent', action='store_true',
                         help='silent debug print outs')
+    parser.add_argument('-q', '--quit', action='store_true',
+                        help='quit GUI automatically when finished')
     args = parser.parse_args()
 
     exp_name = args.experiment
@@ -682,8 +693,10 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(40)
-        np.random.seed(40)
+        seed = hyperparams.config.get('random_seed', 0)
+        random.seed(seed)
+        np.random.seed(seed)
+
         data_files_dir = exp_dir + 'data_files/'
         data_filenames = os.listdir(data_files_dir)
         algorithm_prefix = 'algorithm_itr_'
@@ -708,10 +721,11 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(0)
-        np.random.seed(0)
+        seed = hyperparams.config.get('random_seed', 0)
+        random.seed(seed)
+        np.random.seed(seed)
 
-        gps = GPSMain(hyperparams.config)
+        gps = GPSMain(hyperparams.config, args.quit)
         if hyperparams.config['gui_on']:
             if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
                 run_gps = threading.Thread(
