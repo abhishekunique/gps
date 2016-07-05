@@ -254,6 +254,7 @@ class GPSMain(object):
         import IPython
         #IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
+<<<<<<< f9352acfe0b0197db7643daa97fbba2f2cdc9a02
             time2 = time.clock()
             traj_sample_lists = {}
             thread_samples_sampling = []
@@ -308,6 +309,19 @@ class GPSMain(object):
                     print ag, cond
                     traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
             self.data_logger.pickle(TRAJ_DISTR_COLOR_REACH, traj_distr)
+=======
+            for cond in self._train_idx:
+                for i in range(self._hyperparams['num_samples']):
+                    self._take_sample(itr, cond, i)
+
+            traj_sample_lists = [
+                self.agent.get_samples(cond, -self._hyperparams['num_samples'])
+                for cond in self._train_idx
+            ]
+            self._take_iteration(itr, traj_sample_lists)
+            pol_sample_lists = self._take_policy_samples()
+            self._log_data(itr, traj_sample_lists, pol_sample_lists)
+>>>>>>> Removed gps_main changes
 
         self._end()
 
