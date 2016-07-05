@@ -851,7 +851,7 @@ def multitask_multirobot_fc(dim_input=[27, 27], dim_output=[7, 7], batch_size=25
         output = tf.matmul(lastlayer_input, shared_weights['wout_rn_' + str(robot_index)]) + shared_weights['bout_rn_' + str(robot_index)]
         loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
         nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
-    return nnets, None, None, shared_weights, tensors
+    return nnets, None, None, shared_weights, None
 
 
 def multitask_multirobot_fc_forward(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):

@@ -59,7 +59,7 @@ class PolicyOptTf(PolicyOpt):
             self.img_idx.append([])
             i.append(0)
 
-        for robot_number, robot_params in enumerate(self._hyperparams['network_params']['agent_params']):
+        for robot_number, robot_params in enumerate(self._hyperparams['network_params']):#['agent_params']):
             for sensor in robot_params['obs_include']:
                 dim = robot_params['sensor_dims'][sensor]
                 if sensor in robot_params['obs_image_data']:

@@ -194,6 +194,7 @@ class GPSMain(object):
 
             #     thread_samples_sampling[robot_number].join()
             for robot_number in range(self.num_robots):
+                print "sampling robot", robot_number
                 for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
                         self._take_sample(itr, cond, i, robot_number=robot_number)
@@ -209,11 +210,13 @@ class GPSMain(object):
 
             for robot_number in range(self.num_robots):
                 # self.policy_opt.prepare_solver(itr_robot_status, self.)
+                print "iter start", robot_number
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
             time4 = time.clock()
             self._take_iteration_shared()
             time5 = time.clock()
             for robot_number in range(self.num_robots):
+                print "pol samples", robot_number
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 if self.agent[robot_number].nan_flag:
                     IPython.embed()
@@ -266,6 +269,7 @@ class GPSMain(object):
         """
         # Run inner loop to compute new policies.
         for inner_itr in range(self._hyperparams['inner_iterations']):
+            print "inner iter", inner_itr
             #TODO: Could start from init controller.
             obs_full = [None]*self.num_robots
             tgt_mu_full = [None]*self.num_robots
@@ -274,6 +278,7 @@ class GPSMain(object):
             itr_full = [None]*self.num_robots
             for robot_number in range(self.num_robots):
                 if self.algorithm[robot_number].iteration_count > 0 or inner_itr > 0:
+                    print "update pol lists", robot_number
                     obs, tgt_mu, tgt_prc, tgt_wt = self.algorithm[robot_number]._update_policy_lists(self.algorithm[robot_number].iteration_count, inner_itr)
                     obs_full[robot_number] = obs
                     tgt_mu_full[robot_number] = tgt_mu
@@ -283,17 +288,21 @@ class GPSMain(object):
 
             #May want to make this shared across robots
             if self.algorithm[0].iteration_count > 0 or inner_itr > 0:
+                print "policy opt update"
                 self.policy_opt.update(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr)
             for robot_number in range(self.num_robots):
+                print "update pol fit", robot_number
                 for m in self._train_idx[robot_number]:
                     self.algorithm[robot_number]._update_policy_fit(m)  # Update policy priors.
             for robot_number in range(self.num_robots):
+                print "dual", robot_number
                 if self.algorithm[robot_number].iteration_count > 0 or inner_itr > 0:
                     step = (inner_itr == self._hyperparams['inner_iterations'] - 1)
                     # Update dual variables.
                     for m in self._train_idx[robot_number]:
                         self.algorithm[robot_number]._policy_dual_step(m, step=step)
             for robot_number in range(self.num_robots):
+                print "update traj", robot_number
                 self.algorithm[robot_number]._update_trajectories()
 
         for robot_number in range(self.num_robots):
@@ -442,6 +451,8 @@ class GPSMain(object):
             N = self._hyperparams['verbose_policy_trials']
         if self.gui:
             self.gui[robot_number].set_status_text('Taking policy samples.')
+        import IPython
+        IPython.embed()
         pol_samples = [[None for _ in range(N)] for _ in range(self._conditions[robot_number])]
         for cond in range(self._conditions[robot_number]):
             for i in range(N):
@@ -578,7 +589,6 @@ def main():
 
         random.seed(45)
         np.random.seed(45)
-
         data_files_dir = exp_dir + 'data_files/'
         data_filenames = os.listdir(data_files_dir)
         algorithm_prefix = 'algorithm_itr_'

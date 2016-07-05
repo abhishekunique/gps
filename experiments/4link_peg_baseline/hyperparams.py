@@ -307,8 +307,8 @@ algorithm[0]['policy_prior'] = {
 config = {
     'iterations': 25,
     'num_samples': 7,
-    'verbose_trials': 7,
-    'verbose_policy_trials': 5,
+    'verbose_trials': 1,
+    'verbose_policy_trials': 1,
     'save_wts': True,
     'common': common,
     'agent': agent,
@@ -317,7 +317,7 @@ config = {
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
-    'inner_iterations': 4,
+    'inner_iterations': 1,
     'robot_iters': [range(25), range(0,25,2)],
     'to_log': [END_EFFECTOR_POINTS, JOINT_ANGLES, ACTION],
 }
