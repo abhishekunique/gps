@@ -696,7 +696,7 @@ def multitask_multirobot_fc(dim_input=[27, 27], dim_output=[7, 7], batch_size=25
     # List of indices for state (vector) data and image (tensor) data in observation.
     print 'making multi-input/output-network'
     #need to create taskrobot_mapping
-    taskrobot_mapping = np.asarray([[0, 1], [ None, 2], [3, 4]])
+    taskrobot_mapping = np.asarray([[0, 1], [ 2,3], [4, None]])
     num_robots = taskrobot_mapping.shape[1]
     num_tasks = taskrobot_mapping.shape[0]
     task_list = [None]*(len(dim_input))
