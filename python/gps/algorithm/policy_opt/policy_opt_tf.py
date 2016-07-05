@@ -47,7 +47,6 @@ class PolicyOptTf(PolicyOpt):
         self.init_solver()
         self.sess = tf.Session()
         self.policy = []
-        self.max_robot_number = 0
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
             self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string))
         # List of indices for state (vector) data and image (tensor) data in observation.
@@ -259,14 +258,6 @@ class PolicyOptTf(PolicyOpt):
             feed_dict = {self.obs_tensors[robot_number]: obs[i, :]}
             with tf.device(self.device_string):
                 output[i, :, :] = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
-        if robot_number>1 and robot_number> self.max_robot_number:
-            self.max_robot_number = robot_number
-            task0 = self.sess.run(self.ls['task_input_'+str(robot_number)], feed_dict)
-            true_task0 = self.sess.run(self.ls['true_task_input_'+str(robot_number)], feed_dict)
-            robot0 = self.sess.run(self.ls['robot_input_'+str(robot_number)], feed_dict)
-            true_robot0 = self.sess.run(self.ls['true_robot_input_'+str(robot_number)], feed_dict)
-            import IPython
-            IPython.embed()
 
         pol_sigma = np.tile(np.diag(self.var[robot_number]), [N, T, 1, 1])
         pol_prec = np.tile(np.diag(1.0 / self.var[robot_number]), [N, T, 1, 1])
