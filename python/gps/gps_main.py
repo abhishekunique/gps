@@ -36,6 +36,8 @@ def parallel_traj_samples(info):
     for i in range(info[1]):
        info[4].append(info[2].sample(info[3], cond, verbose=True))
 
+os.environ['GLOG_minloglevel'] = '2'
+
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
@@ -252,7 +254,6 @@ class GPSMain(object):
         import IPython
         #IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
-
             time2 = time.clock()
             traj_sample_lists = {}
             thread_samples_sampling = []

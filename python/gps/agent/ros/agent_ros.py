@@ -180,8 +180,6 @@ class AgentROS(Agent):
             sample = msg_to_sample(sample_msg, self)
             if save:
                 self._samples[condition].append(sample)
-            import IPython
-            IPython.embed()
 
             return sample
         else:
@@ -190,8 +188,6 @@ class AgentROS(Agent):
             sample = msg_to_sample(sample_msg, self)
             if save:
                 self._samples[condition].append(sample)
-            import IPython
-            IPython.embed()
             return sample
 
     def run_trial_tf(self, policy, time_to_run=5):
