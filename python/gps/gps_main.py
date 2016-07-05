@@ -24,6 +24,15 @@ from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.proto.gps_pb2 import ACTION, RGB_IMAGE
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
+###from queue import Queue
+from threading import Thread
+from multiprocessing import Pool
+def parallel_traj_samples(info):
+    """info is [cond, num_samples, agent, pol, samples_out]"""
+    cond = info[0]
+    for i in range(info[1]):
+       info[4].append(info[2].sample(info[3], cond, verbose=True))
+
 
 class GPSMain(object):
     """ Main class to run algorithms and experiments. """
@@ -131,14 +140,15 @@ class GPSMain(object):
         """
         # self.collect_img_dataset(1)
         import IPython
+        time1 = time.clock()
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-        size = 28
-        self.policy_opt.policy[0].scale = np.eye(size)
-        self.policy_opt.policy[0].bias = np.zeros((size,))
-        # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
-        self.policy_opt.policy[0].x_idx = range(size)
+        # size = 20
+        # self.policy_opt.policy[0].scale = np.eye(size)
+        # self.policy_opt.policy[0].bias = np.zeros((size,))
+        # # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
+        # self.policy_opt.policy[0].x_idx = range(size)
 
         # for r in range(5):
         #     size = [18, 20, 28, 18, 20][r]
@@ -147,7 +157,7 @@ class GPSMain(object):
         #     # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
         #     self.policy_opt.policy[r].x_idx = range(size)
 
- 
+
         # self.policy_opt.policy[0].scale = np.eye(20)
         # self.policy_opt.policy[0].bias = np.zeros((20,))
         # self.policy_opt.var = [np.load('/home/abhigupta/gps/pol_var_1.npy')[-2]]
@@ -171,9 +181,18 @@ class GPSMain(object):
         # self.algorithm[0].reinitialize_net(1, sl1)
         # self.algorithm[0].reinitialize_net(2, sl2)
         # self.algorithm[0].reinitialize_net(3, sl3)
+        # pool = Pool()
 
         for itr in range(itr_start, self._hyperparams['iterations']):
+            time2 = time.clock()
             traj_sample_lists = {}
+            thread_samples_sampling = []
+            # for robot_number in range(self.num_robots):
+            #     thread_samples_sampling.append(threading.Thread(target=self.collect_samples, args=(itr, traj_sample_lists, robot_number)))
+            #     thread_samples_sampling[robot_number].start()
+            # for robot_number in range(self.num_robots):
+
+            #     thread_samples_sampling[robot_number].join()
             for robot_number in range(self.num_robots):
                 for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
@@ -183,37 +202,49 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
+            time3 = time.clock()
 
-                if self.agent[robot_number].nan_flag:
-                    IPython.embed()
+            if self.agent[robot_number].nan_flag:
+                IPython.embed()
 
             for robot_number in range(self.num_robots):
                 # self.policy_opt.prepare_solver(itr_robot_status, self.)
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
-
+            time4 = time.clock()
             self._take_iteration_shared()
-
+            time5 = time.clock()
             for robot_number in range(self.num_robots):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 if self.agent[robot_number].nan_flag:
                     IPython.embed()
-                self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
+                    self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
+            time6 = time.clock()
             if self.save_shared:
                 self.policy_opt.save_shared_wts()
             if self.save_wts:
                 self.policy_opt.save_all_wts(itr)
             vars = {}
-            for k,v in self.policy_opt.av.iteritems():
-                vars[k] = self.policy_opt.sess.run(v)
-            data_dump =[vars, self.policy_opt.var]
-            with open('weights_multitask.pkl','wb') as f:
-                pickle.dump(data_dump, f)
+            # for k,v in self.policy_opt.av.iteritems():
+            #     vars[k] = self.policy_opt.sess.run(v)
+            # data_dump =[vars, self.policy_opt.var]
+            # with open('weights_multitask.pkl','wb') as f:
+            #     pickle.dump(data_dump, f)
             if itr % 8 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
         self._end()
 
+    def collect_samples(self, itr, traj_sample_lists, robot_number):
+        for cond in self._train_idx[robot_number]:
+            for i in range(self._hyperparams['num_samples']):
+                self._take_sample(itr, cond, i, robot_number=robot_number)
+
+        traj_sample_lists[robot_number] = [
+            self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
+            for cond_1 in self._train_idx
+        ]
+        return traj_sample_lists
 
     def _take_iteration_start(self, itr, sample_lists, robot_number=0):
         """
@@ -264,6 +295,7 @@ class GPSMain(object):
                         self.algorithm[robot_number]._policy_dual_step(m, step=step)
             for robot_number in range(self.num_robots):
                 self.algorithm[robot_number]._update_trajectories()
+
         for robot_number in range(self.num_robots):
             self.algorithm[robot_number]._advance_iteration_variables()
             if self.gui:
@@ -332,6 +364,7 @@ class GPSMain(object):
                     'Press \'go\' to begin.') % itr_load)
             return itr_load + 1
 
+ 
     def _take_sample(self, itr, cond, i, robot_number=0):
         """
         Collect a sample from the agent.

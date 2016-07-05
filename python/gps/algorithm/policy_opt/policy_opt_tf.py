@@ -47,6 +47,7 @@ class PolicyOptTf(PolicyOpt):
         self.init_solver()
         self.sess = tf.Session()
         self.policy = []
+        self.max_robot_number = 0
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
             self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string))
         # List of indices for state (vector) data and image (tensor) data in observation.
@@ -59,7 +60,7 @@ class PolicyOptTf(PolicyOpt):
             self.img_idx.append([])
             i.append(0)
 
-        for robot_number, robot_params in enumerate(self._hyperparams['network_params']):
+        for robot_number, robot_params in enumerate(self._hyperparams['network_params']['agent_params']):
             for sensor in robot_params['obs_include']:
                 dim = robot_params['sensor_dims'][sensor]
                 if sensor in robot_params['obs_image_data']:
@@ -247,8 +248,6 @@ class PolicyOptTf(PolicyOpt):
         # Normalize obs.
         try:
             for n in range(N):
-                # import IPython
-                # IPython.embed()
                 if self.policy[robot_number].scale is not None and self.policy[robot_number].bias is not None:
                     obs[n, :, self.x_idx[robot_number]] = (obs[n, :, self.x_idx[robot_number]].T.dot(self.policy[robot_number].scale)
                                              + self.policy[robot_number].bias).T
@@ -256,13 +255,18 @@ class PolicyOptTf(PolicyOpt):
             pass  # TODO: Should prob be called before update?
 
         output = np.zeros((N, T, dU))
-
         for i in range(N):
-            for t in range(T):
-                # Feed in data.
-                feed_dict = {self.obs_tensors[robot_number]: np.expand_dims(obs[i, t], axis=0)}
-                with tf.device(self.device_string):
-                    output[i, t, :] = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
+            feed_dict = {self.obs_tensors[robot_number]: obs[i, :]}
+            with tf.device(self.device_string):
+                output[i, :, :] = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
+        if robot_number>1 and robot_number> self.max_robot_number:
+            self.max_robot_number = robot_number
+            task0 = self.sess.run(self.ls['task_input_'+str(robot_number)], feed_dict)
+            true_task0 = self.sess.run(self.ls['true_task_input_'+str(robot_number)], feed_dict)
+            robot0 = self.sess.run(self.ls['robot_input_'+str(robot_number)], feed_dict)
+            true_robot0 = self.sess.run(self.ls['true_robot_input_'+str(robot_number)], feed_dict)
+            import IPython
+            IPython.embed()
 
         pol_sigma = np.tile(np.diag(self.var[robot_number]), [N, T, 1, 1])
         pol_prec = np.tile(np.diag(1.0 / self.var[robot_number]), [N, T, 1, 1])
