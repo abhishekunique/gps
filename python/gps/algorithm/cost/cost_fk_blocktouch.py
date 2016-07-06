@@ -76,3 +76,5 @@ class CostFKBlock(Cost):
                                  data_types=[JOINT_ANGLES, JOINT_ANGLES])
 
         return l, lx, lu, lxx, luu, lux
+
+

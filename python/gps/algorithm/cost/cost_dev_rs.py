@@ -29,11 +29,11 @@ class CostDevRs(Cost):
         val_vars = pickle.load(open(self._hyperparams['load_file'], 'rb'))
         g = tf.Graph()
         self.graph = g
-        n_layers = 4
+        n_layers = 5
         layer_size = 60
         dim_hidden = (n_layers - 1)*[layer_size]
         feature_layers = []
-        dim_input = 20
+        dim_input = 14
         num_feats = 60
         with g.as_default():
             nn_input = tf.placeholder("float", [None, dim_input], name='nn_input1')
@@ -43,13 +43,16 @@ class CostDevRs(Cost):
             b1 = init_bias((dim_hidden[1],), name='b1_1')
             w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_1')
             b2 = init_bias((dim_hidden[2],), name='b2_1')
-            w_output = init_weights((dim_hidden[2], dim_input), name='w_output1')
+            w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_1')
+            b3 = init_bias((dim_hidden[3],), name='b3_1')
+            w_output = init_weights((dim_hidden[3], dim_input), name='w_output1')
             b_output = init_bias((dim_input,), name = 'b_output1')
             layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
             layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
             layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
             feature_layers = layer2
-            output = tf.matmul(layer2, w_output) + b_output
+            layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
+            output = tf.matmul(layer3, w_output) + b_output
             gradients = tf.gradients(layer2, nn_input)
             init_op = tf.initialize_local_variables()
             self.feature_layers = feature_layers
@@ -92,6 +95,7 @@ class CostDevRs(Cost):
 
         tgt = self._hyperparams['target_feats']
         x = sample.get_obs()
+        x = np.concatenate([x[:, 0:4], x[:, 6:10], x[:, 12:15], x[:, 21:24]], axis=1)
         feed_dict = {self.input: x}
         feat_forward = self.session.run(self.feature_layers, feed_dict=feed_dict)
         num_feats = feat_forward.shape[1]
@@ -101,14 +105,40 @@ class CostDevRs(Cost):
         for j, gv in enumerate(grad_vals):
             gradients_all[:, j, :] = gv
         print("next")
-        size_ls = 20
+        size_ls = 30
         l = np.zeros((T,))
         ls = np.zeros((T,size_ls))
         lss = np.zeros((T, size_ls, size_ls))
         for t in range(T):
             l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(60)/(2.0)).dot(feat_forward[t] - tgt[t])
-            ls[t,:] = (feat_forward[t] - tgt[t]).dot(gradients_all[t])
-            lss[t,:,:] = gradients_all[t].T.dot(gradients_all[t])
+            grad_mult = (feat_forward[t] - tgt[t]).dot(gradients_all[t])
+
+            ls[t, 0:4] = grad_mult[0:4]
+            ls[t, 6:10] = grad_mult[4:8]
+            ls[t, 12:15] = grad_mult[8:11]
+            ls[t, 21:24] = grad_mult[11:14]
+            hess_mult = gradients_all[t].T.dot(gradients_all[t])
+
+            lss[t,0:4,0:4] = hess_mult[0:4, 0:4]
+            lss[t,6:10,0:4] = hess_mult[4:8, 0:4]
+            lss[t,12:15,0:4] = hess_mult[8:11, 0:4]
+            lss[t,21:24,0:4] = hess_mult[11:14, 0:4]
+
+            lss[t,0:4,6:10] = hess_mult[0:4, 4:8]
+            lss[t,6:10,6:10] = hess_mult[4:8, 4:8]
+            lss[t,12:15,6:10] = hess_mult[8:11, 4:8]
+            lss[t,21:24,6:10] = hess_mult[11:14, 4:8]
+
+            lss[t,0:4,12:15] = hess_mult[0:4, 8:11]
+            lss[t,6:10,12:15] = hess_mult[4:8, 8:11]
+            lss[t,12:15,12:15] = hess_mult[8:11, 8:11]
+            lss[t,21:24,12:15] = hess_mult[11:14, 8:11]
+
+            lss[t,0:4,21:24] = hess_mult[0:4, 11:14]
+            lss[t,6:10,21:24] = hess_mult[4:8, 11:14]
+            lss[t,12:15,21:24] = hess_mult[8:11, 11:14]
+            lss[t,21:24,21:24] = hess_mult[11:14, 11:14]
+
         final_l += l
         final_lx += ls
         final_lxx += lss

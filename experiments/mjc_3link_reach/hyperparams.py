@@ -113,33 +113,33 @@ agent = [ {
     }
 ]
 
-algorithm = [{
-    'type': AlgorithmBADMM,
-    'conditions': common['conditions'],
-    'train_conditions': common['train_conditions'],
-    'test_conditions': common['test_conditions'],
-    'num_robots': common['num_robots'],
-    'iterations': 25,
-    'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
-    'policy_dual_rate': 0.2,
-    'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
-    'fixed_lg_step': 3,
-    'kl_step': 5.0,
-    'min_step_mult': 0.01,
-    'max_step_mult': 1.0,
-    'sample_decrease_var': 0.05,
-    'sample_increase_var': 0.1,
-},
-]
-
 # algorithm = [{
-#     'type': AlgorithmTrajOpt,
+#     'type': AlgorithmBADMM,
 #     'conditions': common['conditions'],
 #     'train_conditions': common['train_conditions'],
 #     'test_conditions': common['test_conditions'],
-#     'iterations': 25,
 #     'num_robots': common['num_robots'],
+#     'iterations': 25,
+#     'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
+#     'policy_dual_rate': 0.2,
+#     'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
+#     'fixed_lg_step': 3,
+#     'kl_step': 5.0,
+#     'min_step_mult': 0.01,
+#     'max_step_mult': 1.0,
+#     'sample_decrease_var': 0.05,
+#     'sample_increase_var': 0.1,
 # },
+# ]
+
+algorithm = [{
+    'type': AlgorithmTrajOpt,
+    'conditions': common['conditions'],
+    'train_conditions': common['train_conditions'],
+    'test_conditions': common['test_conditions'],
+    'iterations': 25,
+    'num_robots': common['num_robots'],
+},]
 # {
 #     'type': AlgorithmTrajOpt,
 #     'conditions': common['conditions'],
@@ -164,7 +164,7 @@ algorithm[0]['init_traj_distr'] = {
 
 torque_cost_1 = [{
     'type': CostAction,
-    'wu': 5e-5 / PR2_GAINS[0],
+    'wu': 5e-1 / PR2_GAINS[0],
 } for i in common['train_conditions']]
 
 fk_cost_1 = [{

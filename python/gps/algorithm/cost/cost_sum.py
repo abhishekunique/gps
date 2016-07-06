@@ -27,7 +27,14 @@ class CostSum(Cost):
         l, lx, lu, lxx, luu, lux = self._costs[0].eval(sample)
 
         # Compute weighted sum of each cost value and derivatives.
-        weight = self._weights[0]#/((itr + 1)**(0.3))
+        # weights = copy.copy(self._weights)
+        # if itr<5:
+        #     weights[0] = 0.3
+        #     weights[1] = 1.0
+        # else:
+        #     weights[0] = 1.0
+        #     weights[1] = 1.0/((itr + 1)**(0.3))
+        weight = self._weights[0]
         l = l * weight
         lx = lx * weight
         lu = lu * weight

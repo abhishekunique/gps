@@ -59,7 +59,7 @@ class CostFKDev(Cost):
         #        counting.
         #        (see pts_jacobian_only in matlab costinfos code)
         jx = sample.get(END_EFFECTOR_POINT_JACOBIANS)
-
+        
         # Evaluate penalty term. Use estimated Jacobians and no higher
         # order terms.
         # import IPython
