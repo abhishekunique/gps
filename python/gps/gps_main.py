@@ -247,13 +247,13 @@ class GPSMain(object):
         obs_full = [None]*self.num_robots
         for robot_number in range(self.num_robots):
             if robot_number == 0:
-                obs_sample = self.data_logger.unpickle('/home/abhigupta/gps/experiments/mjc_3link_reach/data_files/traj_sample_itr_08_rn_00.pkl')
+                obs_sample = self.data_logger.unpickle('/home/abhigupta/gps/experiments/blockstrike/data_files/traj_sample_itr_08_rn_00.pkl')
                 for slist in obs_sample:
                     for s in slist._samples:
                         s.agent = self.agent[0]
 
             else:
-                obs_sample = self.data_logger.unpickle('/home/abhigupta/gps/experiments/mjc_4link_reach/data_files/traj_sample_itr_08_rn_00.pkl')
+                obs_sample = self.data_logger.unpickle('/home/abhigupta/gps/experiments/4link_blockstrike/data_files/traj_sample_itr_24_rn_00.pkl')
                 for slist in obs_sample:
                     for s in slist._samples:
                         s.agent = self.agent[1]
@@ -264,9 +264,9 @@ class GPSMain(object):
                 obs_data = np.concatenate((obs_data, samples.get_obs()))
 
             if robot_number == 0:
-                obs_data = np.concatenate([obs_data[:, :, 0:9], obs_data[:, :, 12:15]], axis=2) 
+                obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 4:7], obs_data[:, :, 8:11],  obs_data[:, :, 17:20]], axis=2) 
             else:
-                obs_data = np.concatenate([obs_data[:, :, 0:11], obs_data[:, :, 14:17]], axis=2) 
+                obs_data = np.concatenate([obs_data[:, :, 0:4], obs_data[:, :, 5:9], obs_data[:, :, 10:13], obs_data[:, :, 19:22]], axis=2) 
             obs_full[robot_number] = obs_data
         import IPython
         IPython.embed()
@@ -678,8 +678,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(20)
-        np.random.seed(20)
+        random.seed(6)
+        np.random.seed(6)
 
         gps = GPSMain(hyperparams.config)
         if args.recordfeats:

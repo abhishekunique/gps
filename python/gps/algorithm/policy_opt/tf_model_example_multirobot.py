@@ -855,6 +855,7 @@ def invariant_subspace_test(dim_input=[27, 27], dim_output=[7, 7], batch_size=25
     feature_layers = []
     weight_dict = {}
     for robot_number, robot_params in enumerate(network_config):
+        indiv_losses = []
         nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
         w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
         b_input = init_bias((dim_hidden[0],), name='b_input'+str(robot_number))
@@ -873,11 +874,15 @@ def invariant_subspace_test(dim_input=[27, 27], dim_output=[7, 7], batch_size=25
         layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
         output = tf.matmul(layer3, w_output) + b_output
         loss = tf.nn.l2_loss(nn_input - output) #euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
+        indiv_losses.append(loss)
         if robot_number == 1:
             contrastive = tf.nn.l2_loss(feature_layers[0]-feature_layers[1])
+            scale_factor = 1.0
+            contrastive = contrastive*scale_factor
+            indiv_losses.append(contrastive)
             #might need to scale here
             loss = loss + contrastive
-        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss], layer2))
+        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss], layer2, indiv_losses))
         weight_dict[w_input.name] = w_input
         weight_dict[b_input.name] = b_input
         weight_dict[w1.name] = w1

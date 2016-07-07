@@ -8,6 +8,7 @@ from gps.algorithm.cost.cost import Cost
 from gps.algorithm.cost.cost_utils import get_ramp_multiplier
 from gps.proto.gps_pb2 import JOINT_ANGLES, END_EFFECTOR_POINTS, \
         END_EFFECTOR_POINT_JACOBIANS
+from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
 
 
 class CostFKBlock(Cost):
@@ -54,6 +55,14 @@ class CostFKBlock(Cost):
         dist = pt_ee - pt_block
         # dist = np.concatenate([dist, np.zeros((T,3))], axis=1)
         wp= np.ones((T,3))
+        # wpm = get_ramp_multiplier(
+        #    RAMP_QUADRATIC, T/2,
+        #     wp_final_multiplier=self._hyperparams['wp_final_multiplier']
+        # )
+        # wp[:T/2, :] = wp[:T/2, :]*np.expand_dims(wpm, axis=-1)
+        # wp[T/2:, :] = wp[T/2:, :]*np.expand_dims(wpm[::-1], axis=-1)
+        # import IPython
+        # IPython.embed()
         # import IPython
         # IPython.embed()
         # print(wp)

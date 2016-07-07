@@ -29,6 +29,7 @@ class PolicyOptTf(PolicyOpt):
         if self._hyperparams['use_gpu'] == 1:
             self.gpu_device = self._hyperparams['gpu_id']
             self.device_string = "/gpu:" + str(self.gpu_device)
+        # self._dO = [12, 14]
         self.act_ops = []
         self.loss_scalars = []
         self.obs_tensors = []
@@ -79,8 +80,8 @@ class PolicyOptTf(PolicyOpt):
         if self._hyperparams['load_weights'] and self._hyperparams['run_feats']:
             import pickle
             val_vars = pickle.load(open(self._hyperparams['load_weights'], 'rb'))
-            import IPython
-            IPython.embed()
+            # import IPython
+            # IPython.embed()
             for k,v in self.var_list_feat.items():
                 if k in val_vars:   
                     print(k)         
@@ -99,6 +100,7 @@ class PolicyOptTf(PolicyOpt):
         self.act_ops = []
         self.loss_scalars = []
         self.feature_points= []
+        self.individual_losses = []
         for tf_map in tf_maps:
             self.obs_tensors.append(tf_map.get_input_tensor())
             self.action_tensors.append(tf_map.get_target_output_tensor())
@@ -106,6 +108,7 @@ class PolicyOptTf(PolicyOpt):
             self.act_ops.append(tf_map.get_output_op())
             self.loss_scalars.append(tf_map.get_loss_op())
             self.feature_points.append(tf_map.feature_points)
+            self.individual_losses.append(tf_map.individual_losses)
         self.combined_loss = tf.add_n(self.loss_scalars)
 
     def init_feature_space(self):
@@ -143,12 +146,13 @@ class PolicyOptTf(PolicyOpt):
             dU, dO = self._dU[robot_number], self._dO[robot_number]
             obs = np.reshape(obs, (N*T, dO))
             obs_reshaped.append(obs)
-        import IPython
-        IPython.embed()
         idx = range(N*T)
         np.random.shuffle(idx)
         batches_per_epoch = np.floor(N*T / self.batch_size)
         average_loss = 0
+        average_loss_1 = 0
+        average_loss_2 = 0
+        average_loss_3 = 0
         for i in range(self._hyperparams['iterations']):
             feed_dict = {}
             start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
@@ -156,13 +160,29 @@ class PolicyOptTf(PolicyOpt):
             for robot_number in range(self.num_robots):
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
+            train_loss_1 = self.sess.run(self.individual_losses[0][0], feed_dict)
+            train_loss_2 = self.sess.run(self.individual_losses[1][0], feed_dict)
+            train_loss_3 = self.sess.run(self.individual_losses[1][1], feed_dict)
             average_loss += train_loss
-            if i % 100 == 0 and i != 0:
+            average_loss_1 += train_loss_1
+            average_loss_2 += train_loss_2
+            average_loss_3 += train_loss_3
+            if i % 1000 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_loss / 100)
                 print 'supervised tf loss is '
                 print (average_loss/100)
+                print 'robot1 loss is '
+                print (average_loss_1/100)
+                print 'robot2 loss is '
+                print (average_loss_2/100)
+                print 'contrastive loss is '
+                print (average_loss_3/100)
+                print("--------------------------")
                 average_loss = 0
+                average_loss_1 = 0
+                average_loss_2 = 0
+                average_loss_3 = 0
         print("subspace training")
         import IPython
         IPython.embed()
@@ -261,7 +281,7 @@ class PolicyOptTf(PolicyOpt):
         dO = self._dO[robot_number]
         dU = self._dU[robot_number]
         obs = np.reshape(obs, (N*T, dO))
-        obs = np.concatenate([obs[:, 0:3], obs[:, 5:8], obs[:, 10:13], obs[:, 19:22]], axis = 1)
+        obs = np.concatenate([obs[:, 0:3], obs[:, 4:7], obs[:, 8:11], obs[:, 17:20]], axis = 1)
         feed_dict[self.obs_tensors_feat[robot_number]] = obs
         output = self.sess.run(self.feature_points_feat[robot_number], feed_dict=feed_dict)
         output = np.reshape(output, (N, T, 60))
