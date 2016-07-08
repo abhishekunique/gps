@@ -28,16 +28,10 @@ class GPSMain(object):
     """ Main class to run algorithms and experiments. """
     def __init__(self, config):
         self._hyperparams = config
-        self._conditions = [] #config['common']['conditions']
+        self._conditions = [] 
 
-        self._train_idx = [] #config['common']['train_conditions']
-        self._test_idx = []#config['common']['test_conditions']
-        # else:
-        #     self._train_idx = range(self._conditions)
-        #     config['common']['train_conditions'] = config['common']['conditions']
-        #     self._hyperparams=config
-        #     self._test_idx = self._train_idx
-
+        self._train_idx = []
+        self._test_idx = []
         self._data_files_dir = config['common']['data_files_dir']
         self.num_robots = config['common']['num_robots']
         self.agent = []
@@ -174,66 +168,10 @@ class GPSMain(object):
             for s in slist._samples:
                 obs_data[j] += s.get_obs()
             obs_data[j] = obs_data[j]/float(len(slist._samples))
+        # obs_data = ([obs[:, 0:3], obs[:, 4:7], obs[:, 8:11], obs[:, 17:20]], axis = 1)
+        # obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 3:6], obs_data[:, :, 6:9],  obs_data[:, :, 12:15]], axis=2) 
+        obs_data = obs_data[:, :, self._hyperparams['r0_index_list']]
         return obs_data
-
-    # def run_subspace_learning(self, itr_load=None):
-    #     """
-    #     Run training by iteratively sampling and taking an iteration.
-    #     Args:
-    #         itr_load: If specified, loads algorithm state from that
-    #             iteration, and resumes training at the next iteration.
-    #     Returns: None
-    #     """
-    #     obs_full = [None]*self.num_robots
-    #     tgt_mu_full = [None]*self.num_robots
-    #     tgt_prc_full = [None]*self.num_robots
-    #     tgt_wt_full = [None]*self.num_robots
-    #     itr_full = [None]*self.num_robots
-    #     for robot_number in range(self.num_robots):
-    #         dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
-    #         obs_data, tgt_mu = np.zeros((0, T, dO)), np.zeros((0, T, dU))
-    #         tgt_prc, tgt_wt = np.zeros((0, T, dU, dU)), np.zeros((0, T))
-
-    #         if robot_number == 0:
-    #             cur = self.data_logger.unpickle('/home/abhigupta/gps/experiments/mjc_3link_reach/data_files/algorithm_itr_08_rn_00.pkl')
-    #             traj_samples = self.data_logger.unpickle('/home/abhigupta/gps/experiments/mjc_3link_reach/data_files/traj_sample_itr_08_rn_00.pkl')
-    #         elif robot_number == 1:
-    #             cur = self.data_logger.unpickle('/home/abhigupta/gps/experiments/mjc_4link_reach/data_files/algorithm_itr_08_rn_00.pkl')
-    #             traj_samples = self.data_logger.unpickle('/home/abhigupta/gps/experiments/mjc_4link_reach/data_files/traj_sample_itr_08_rn_00.pkl')
-    #         for m in self._train_idx[robot_number]:
-    #             samples = traj_samples[m]
-    #             X = samples.get_X()
-    #             N = len(samples)
-    #             traj, pol_info = cur[m].traj_distr, cur[m].pol_info
-    #             mu = np.zeros((N, T, dU))
-    #             prc = np.zeros((N, T, dU, dU))
-    #             wt = np.zeros((N, T))
-    #             # Get time-indexed actions.
-    #             for t in range(T):
-    #                 # Compute actions along this trajectory.
-    #                 prc[:, t, :, :] = np.tile(traj.inv_pol_covar[t, :, :],
-    #                                           [N, 1, 1])
-    #                 for i in range(N):
-    #                     mu[i, t, :] = \
-    #                             (traj.K[t, :, :].dot(X[i, t, :]) + traj.k[t, :]) - \
-    #                             np.linalg.solve(
-    #                                 prc[i, t, :, :],  #TODO: Divide by pol_wt[t].
-    #                                 pol_info.lambda_K[t, :, :].dot(X[i, t, :]) + \
-    #                                         pol_info.lambda_k[t, :]
-    #                             )
-    #                 wt[:, t].fill(pol_info.pol_wt[t])
-    #             tgt_mu = np.concatenate((tgt_mu, mu))
-    #             tgt_prc = np.concatenate((tgt_prc, prc))
-    #             tgt_wt = np.concatenate((tgt_wt, wt))
-    #             obs_data = np.concatenate((obs_data, samples.get_obs()))
-    #         obs_full[robot_number] = obs_data
-    #         tgt_mu_full[robot_number] = tgt_mu
-    #         tgt_prc_full[robot_number] = tgt_prc
-    #         tgt_wt_full[robot_number] = tgt_wt
-    #     self.policy_opt.train_invariant(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full)
-    #     print("DONE TRAINING")
-    #     import IPython
-    #     IPython.embed()
 
     def run_subspace_learning(self, itr_load=None):
         """
@@ -247,13 +185,13 @@ class GPSMain(object):
         obs_full = [None]*self.num_robots
         for robot_number in range(self.num_robots):
             if robot_number == 0:
-                obs_sample = self.data_logger.unpickle('/home/abhigupta/gps/experiments/blockstrike/data_files/traj_sample_itr_08_rn_00.pkl')
+                obs_sample = self.data_logger.unpickle(self._hyperparams['robot0_file'])
                 for slist in obs_sample:
                     for s in slist._samples:
                         s.agent = self.agent[0]
 
             else:
-                obs_sample = self.data_logger.unpickle('/home/abhigupta/gps/experiments/4link_blockstrike/data_files/traj_sample_itr_24_rn_00.pkl')
+                obs_sample = self.data_logger.unpickle(self._hyperparams['robot1_file'])
                 for slist in obs_sample:
                     for s in slist._samples:
                         s.agent = self.agent[1]
@@ -264,9 +202,14 @@ class GPSMain(object):
                 obs_data = np.concatenate((obs_data, samples.get_obs()))
 
             if robot_number == 0:
-                obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 4:7], obs_data[:, :, 8:11],  obs_data[:, :, 17:20]], axis=2) 
+                obs_data = obs_data[:, :, self._hyperparams['r0_index_list']]
+                # obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 3:6], obs_data[:, :, 6:9],  obs_data[:, :, 12:15]], axis=2) 
+                # obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 4:7], obs_data[:, :, 8:11],  obs_data[:, :, 17:20]], axis=2) 
+
             else:
-                obs_data = np.concatenate([obs_data[:, :, 0:4], obs_data[:, :, 5:9], obs_data[:, :, 10:13], obs_data[:, :, 19:22]], axis=2) 
+                obs_data = obs_data[:, :, self._hyperparams['r1_index_list']]
+                # obs_data = np.concatenate([obs_data[:, :, 0:4], obs_data[:, :, 4:8], obs_data[:, :, 8:11], obs_data[:, :, 14:17]], axis=2) 
+                # obs_data = np.concatenate([obs_data[:, :, 0:4], obs_data[:, :, 5:9], obs_data[:, :, 10:13], obs_data[:, :, 19:22]], axis=2) 
             obs_full[robot_number] = obs_data
         import IPython
         IPython.embed()
@@ -678,8 +621,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(6)
-        np.random.seed(6)
+        random.seed(5)
+        np.random.seed(5)
 
         gps = GPSMain(hyperparams.config)
         if args.recordfeats:

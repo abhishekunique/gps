@@ -29,7 +29,6 @@ class PolicyOptTf(PolicyOpt):
         if self._hyperparams['use_gpu'] == 1:
             self.gpu_device = self._hyperparams['gpu_id']
             self.device_string = "/gpu:" + str(self.gpu_device)
-        # self._dO = [12, 14]
         self.act_ops = []
         self.loss_scalars = []
         self.obs_tensors = []
@@ -80,19 +79,20 @@ class PolicyOptTf(PolicyOpt):
         if self._hyperparams['load_weights'] and self._hyperparams['run_feats']:
             import pickle
             val_vars = pickle.load(open(self._hyperparams['load_weights'], 'rb'))
-            # import IPython
-            # IPython.embed()
             for k,v in self.var_list_feat.items():
                 if k in val_vars:   
                     print(k)         
                     assign_op = v.assign(val_vars[k])
                     self.sess.run(assign_op)
-        # self.load_featweights()
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        tf_maps, var_list = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
+        if 'invariant_train' in self._hyperparams and self._hyperparams['invariant_train']:
+            dO = [12, 14]
+        else:
+            dO = self._dO
+        tf_maps, var_list = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
@@ -140,12 +140,16 @@ class PolicyOptTf(PolicyOpt):
 
     def train_invariant_autoencoder(self, obs_full):
         obs_reshaped = []
+        
         for robot_number in range(self.num_robots):
             obs = obs_full[robot_number]
             N, T = obs.shape[:2]
-            dU, dO = self._dU[robot_number], self._dO[robot_number]
+            dO = [12, 14][robot_number]
+            dU = self._dU[robot_number]
             obs = np.reshape(obs, (N*T, dO))
             obs_reshaped.append(obs)
+        import IPython
+        IPython.embed()
         idx = range(N*T)
         np.random.shuffle(idx)
         batches_per_epoch = np.floor(N*T / self.batch_size)
@@ -188,136 +192,18 @@ class PolicyOptTf(PolicyOpt):
         IPython.embed()
 
 
-    def train_invariant_actionpredict(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full):
-        N_reshaped = []
-        T_reshaped = []
-        obs_reshaped = []
-        tgt_mu_reshaped = []
-        tgt_prc_reshaped = []
-        tgt_wt_reshaped = []
-        tgt_prc_orig_reshaped = []
-        for robot_number in range(self.num_robots):
-            obs = obs_full[robot_number]
-            tgt_mu = tgt_mu_full[robot_number]
-            tgt_prc = tgt_prc_full[robot_number]
-            tgt_wt = tgt_wt_full[robot_number]
-            N, T = obs.shape[:2]
-            dU, dO = self._dU[robot_number], self._dO[robot_number]
-
-            # TODO - Make sure all weights are nonzero?
-
-            # Save original tgt_prc.
-            tgt_prc_orig = np.reshape(tgt_prc, [N*T, dU, dU])
-
-            # Renormalize weights.
-            tgt_wt *= (float(N * T) / np.sum(tgt_wt))
-            # Allow weights to be at most twice the robust median.
-            mn = np.median(tgt_wt[(tgt_wt > 1e-2).nonzero()])
-            for n in range(N):
-                for t in range(T):
-                    tgt_wt[n, t] = min(tgt_wt[n, t], 2 * mn)
-            # Robust median should be around one.
-            tgt_wt /= mn
-
-            # Reshape inputs.
-            obs = np.reshape(obs, (N*T, dO))
-            tgt_mu = np.reshape(tgt_mu, (N*T, dU))
-            tgt_prc = np.reshape(tgt_prc, (N*T, dU, dU))
-            tgt_wt = np.reshape(tgt_wt, (N*T, 1, 1))
-
-            # Fold weights into tgt_prc.
-            tgt_prc = tgt_wt * tgt_prc
-
-            # TODO: Find entries with very low weights?
-
-            # Normalize obs, but only compute normalzation at the beginning.
-                #TODO: may need to change this
-            self.policy[robot_number].x_idx = self.x_idx[robot_number]
-            self.policy[robot_number].scale = np.eye(np.diag(1.0 / (np.std(obs[:, self.x_idx[robot_number]], axis=0) + 1e-8)).shape[0])
-            self.policy[robot_number].bias = np.zeros((-np.mean(obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)).shape)
-            obs[:, self.x_idx[robot_number]] = obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
-
-            obs_reshaped.append(obs)
-            tgt_mu_reshaped.append(tgt_mu)
-            tgt_prc_reshaped.append(tgt_prc)
-            tgt_wt_reshaped.append(tgt_wt)
-            N_reshaped.append(N)
-            T_reshaped.append(T)
-            tgt_prc_orig_reshaped.append(tgt_prc_orig)
-        idx = range(N*T)
-        np.random.shuffle(idx)
-        # Assuming that N*T >= self.batch_size.
-        batches_per_epoch = np.floor(N*T / self.batch_size)
-        average_loss = 0
-        for i in range(self._hyperparams['iterations']):
-            # Load in data for this batch.
-            feed_dict = {}
-            start_idx = int(i * self.batch_size % (batches_per_epoch * self.batch_size))
-            idx_i = idx[start_idx:start_idx+self.batch_size]
-            for robot_number in range(self.num_robots):
-                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
-                feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
-
-            average_loss += train_loss
-            if i % 100 == 0 and i != 0:
-                LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 100)
-                print 'supervised tf loss is '
-                print (average_loss/100)
-                average_loss = 0
-
-        var = [None]*self.num_robots
-        var[0] = np.array([ 9.38953983,  8.18154963,  4.00789569])
-        var[1] = np.array([ 8.86937556,  8.68436898,  7.03302628,  6.15534851])
-
-        import IPython
-        IPython.embed()
-
     def run_features_forward(self, obs, robot_number):
         feed_dict = {}
         N, T = obs.shape[:2]
-        dO = self._dO[robot_number]
+        dO = [12, 14][robot_number]
         dU = self._dU[robot_number]
         obs = np.reshape(obs, (N*T, dO))
-        obs = np.concatenate([obs[:, 0:3], obs[:, 4:7], obs[:, 8:11], obs[:, 17:20]], axis = 1)
+        # obs = np.concatenate([obs[:, 0:3], obs[:, 4:7], obs[:, 8:11], obs[:, 17:20]], axis = 1)
         feed_dict[self.obs_tensors_feat[robot_number]] = obs
         output = self.sess.run(self.feature_points_feat[robot_number], feed_dict=feed_dict)
         output = np.reshape(output, (N, T, 60))
         return output
 
-    def run_outputs_forward(self, obs_full):
-        outs = []
-        for robot_number in range(self.num_robots):
-            feed_dict = {}
-            obs = obs_full[robot_number]
-            N, T = obs.shape[:2]
-            dU, dO = self._dU[robot_number], self._dO[robot_number]
-            obs = np.reshape(obs, (N*T, dO))
-            feed_dict[self.obs_tensors_feat[robot_number]] = obs
-            outs.append(self.sess.run(self.act_ops_feat[robot_number], feed_dict=feed_dict))
-        return outs
-
-
-    def load_featweights(self):
-        self.weight_dict = {}
-        load_names = [u'w_input0:0',
-                        u'b_input0:0',
-                        u'w1_0:0',
-                        u'b1_0:0',
-                        u'b2_0:0',
-                        u'w2_0:0'
-                        ]
-        val_vars = pickle.load(open(self._hyperparams['load_weights'], 'rb'))
-        for name in load_names:
-            self.weight_dict[name] = val_vars[name]
-
-    def run_numpy_forward(self, nn_input):
-        layer0 = np.maximum(nn_input.dot(self.weight_dict['w_input0:0']) + self.weight_dict['b_input0:0'], 0)
-        layer1 = np.maximum(layer0.dot(self.weight_dict[u'w1_0:0']) + self.weight_dict[u'b1_0:0'], 0)
-        layer2 = np.maximum(layer1.dot(self.weight_dict[u'w2_0:0']) + self.weight_dict[u'b2_0:0'], 0)
-        return layer2
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """

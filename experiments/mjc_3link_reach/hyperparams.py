@@ -40,14 +40,22 @@ PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/mjc_3link_reach/'
 
-all_offsets = [[np.asarray([0., 0., -1.4])],
-               [np.asarray([0.3, 0., 0.])],
-               [np.asarray([0.2, 0.0, 0.4])],
-               [np.asarray([0.4, 0., -0.7])], 
-               [np.asarray([.5, 0.0, 0.3])],
-               [np.asarray([.7, 0.0, -0.3])],
-               [np.array([0., 0., -1.2])],
-               [np.array([0.4, 0., -0.9])]]
+all_offsets = [[np.array([-0.8, 0.0, 0.25])],
+                [np.array([-0.7, 0.0, -1.25])],
+                [np.array([0.0, 0.0, 0.75])],
+                [np.array([0.1, 0.0, -0.75])]]
+
+
+
+                        
+# all_offsets = [[np.asarray([0., 0., -1.4])],
+#                [np.asarray([0.3, 0., 0.])],
+#                [np.asarray([0.2, 0.0, 0.4])],
+#                [np.asarray([0.4, 0., -0.7])], 
+#                [np.asarray([.5, 0.0, 0.3])],
+#                [np.asarray([.7, 0.0, -0.3])],
+#                [np.array([0., 0., -1.2])],
+#                [np.array([0.4, 0., -0.9])]]
 
 common = {
     'experiment_name': 'my_experiment' + '_' + \
@@ -56,9 +64,9 @@ common = {
     'data_files_dir': EXP_DIR + 'data_files/',
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
-    'conditions': 8,
-    'train_conditions': [0,1,2,3,],
-    'test_conditions':[4,5,6,7],
+    'conditions': 4,
+    'train_conditions': [0,1],
+    'test_conditions':[2,3],
     'num_robots':1,
     'policy_opt': {
         'type': PolicyOptTf,
