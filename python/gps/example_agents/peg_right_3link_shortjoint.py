@@ -119,7 +119,7 @@ def peg_right_3link_shortjoint(robot_number, num_robots):
 
     fk_cost_0 = [{
         'type': CostFK,
-        'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent_dict['agent']['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
+        'target_end_effector': np.concatenate([np.array([0., 0.0, 0.])+ agent_dict['agent']['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
         'wp': np.array([1, 1, 1, 0, 0, 0]),
         'l1': 0.1,
         'l2': 10.0,

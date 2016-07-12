@@ -52,7 +52,6 @@ def push_4link(robot_number, num_robots):
         'image_channels': IMAGE_CHANNELS,
         'sensor_dims': SENSOR_DIMS,
         'batch_size': 25,
-        'dim_robot_specific':14,
         'robot_specific_idx': range(4)+range(6,10)+range(12,15)+range(21,24),
         'task_specific_idx': range(4,6)+range(10,12)+range(15,21)+range(24,30),
         'dim_output':4,

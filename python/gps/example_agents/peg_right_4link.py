@@ -64,9 +64,9 @@ def peg_right_4link(robot_number, num_robots):
         'dt': 0.05,
         'substeps': 5,
         # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
-    'pos_body_offset': [[np.array([-.5, 0.0, 1.2])], [np.array([-0.2, 0.0, 1.2])], [np.array([-0.3, 0.0, 1.0])],
-                        [np.array([-0.1, 0.0, 1.5])],[np.array([-0.4, 0.0, 1.1])], [np.array([-.8 , 0.0, 1.1])], 
-                         [np.array([-0.5, 0.0, 1.4])], [np.array([0.1, 0.0, 1.4])],
+        'pos_body_offset': [[np.array([-.5, 0.0, 1.2])], [np.array([-0.2, 0.0, 1.2])], [np.array([-0.3, 0.0, 1.0])],
+                            [np.array([-0.1, 0.0, 1.5])],[np.array([-0.4, 0.0, 1.1])], [np.array([-.8 , 0.0, 1.1])], 
+                            [np.array([-0.5, 0.0, 1.4])], [np.array([0.1, 0.0, 1.4])],
                         ],
         'pos_body_idx': np.array([7]),
         'conditions': 8,
@@ -119,7 +119,7 @@ def peg_right_4link(robot_number, num_robots):
 
     fk_cost_0 = [{
         'type': CostFK,
-        'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent_dict['agent']['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
+        'target_end_effector': np.concatenate([np.array([0.0, 0.0, 0.0])+ agent_dict['agent']['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
         'wp': np.array([1, 1, 1, 0, 0, 0]),
         'l1': 0.1,
         'l2': 10.0,
