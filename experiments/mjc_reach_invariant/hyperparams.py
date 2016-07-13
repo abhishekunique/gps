@@ -47,19 +47,19 @@ PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/mjc_reach_invariant/'
 
-# all_offsets = [[np.asarray([0., 0., -1.4])],
-#                [np.asarray([0.3, 0., 0.])],
-#                [np.asarray([0.2, 0.0, 0.4])],
-#                [np.asarray([0.4, 0., -0.7])], 
-#                [np.asarray([.5, 0.0, 0.3])],
-#                [np.asarray([.7, 0.0, -0.3])],
-#                [np.array([0., 0., -1.2])],
-#                [np.array([0.4, 0., -0.9])]]
+all_offsets = [[np.asarray([-0.3, 0., -1.5])],
+               [np.asarray([0.3, 0., 0.3])],
+               [np.asarray([-0.4, 0.0, 0.6])],
+               [np.asarray([0.3, 0., -1.2])], 
+               [np.asarray([.5, 0.0, 0.3])],
+               [np.asarray([.7, 0.0, -0.3])],
+               [np.array([0., 0., -1.2])],
+               [np.array([0.4, 0., -0.9])]]
 
-all_offsets = [[np.array([-0.8, 0.0, 0.25])],
-                [np.array([-0.7, 0.0, -1.25])],
-                [np.array([0.0, 0.0, 0.75])],
-                [np.array([0.1, 0.0, -0.75])]]
+# all_offsets = [[np.array([-0.8, 0.0, 0.25])],
+#                 [np.array([-0.7, 0.0, -1.25])],
+#                 [np.array([0.0, 0.0, 0.75])],
+#                 [np.array([0.1, 0.0, -0.75])]]
 
 
 common = {
@@ -69,9 +69,9 @@ common = {
     'data_files_dir': EXP_DIR + 'data_files/',
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
-    'conditions': 4,
-    'train_conditions': [0,1],
-    'test_conditions':[2,3],
+    'conditions': 8,
+    'train_conditions': [0,1,2,3],
+    'test_conditions':[4,5,6,7],
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
@@ -79,6 +79,7 @@ common = {
         'network_model_feat': invariant_subspace_test,
         'run_feats': False,
         'load_weights': '/home/abhigupta/gps/subspace_weights.pkl',
+        'invariant_train': True,
         'network_params': [{
             'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
             'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
@@ -103,7 +104,7 @@ common = {
             'batch_size': 25,
             # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
         }],
-        'iterations': 50000,
+        'iterations': 80000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
     }
@@ -350,6 +351,10 @@ config = {
     'test_conditions': common['test_conditions'],
     'inner_iterations': 4,
     'to_log': [],
+    'robot0_file': '/home/abhigupta/gps/experiments/mjc_3link_reach/data_files/traj_sample_itr_16_rn_00.pkl',
+    'robot1_file': '/home/abhigupta/gps/experiments/mjc_4link_reach/data_files/traj_sample_itr_16_rn_00.pkl',
+    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(3,6), np.arange(6,9), np.arange(12,15)]),
+    'r1_index_list': np.concatenate([np.arange(0,4), np.arange(4,8), np.arange(8,11), np.arange(14,17)]),
 }
 
 common['info'] = generate_experiment_info(config)

@@ -96,6 +96,8 @@ class GPSMain(object):
                 for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
                         self._take_sample(itr, cond, i, robot_number=robot_number)
+                    import IPython
+                    IPython.embed()
 
                 traj_sample_lists[robot_number] = [
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
@@ -621,8 +623,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(5)
-        np.random.seed(5)
+        random.seed(15)
+        np.random.seed(15)
 
         gps = GPSMain(hyperparams.config)
         if args.recordfeats:
