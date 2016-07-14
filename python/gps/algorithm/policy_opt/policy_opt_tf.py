@@ -59,7 +59,7 @@ class PolicyOptTf(PolicyOpt):
             self.img_idx.append([])
             i.append(0)
 
-        for robot_number, robot_params in enumerate(self._hyperparams['network_params']):#['agent_params']):
+        for robot_number, robot_params in enumerate(self._hyperparams['network_params']['agent_params']):
             for sensor in robot_params['obs_include']:
                 dim = robot_params['sensor_dims'][sensor]
                 if sensor in robot_params['obs_image_data']:
@@ -75,7 +75,7 @@ class PolicyOptTf(PolicyOpt):
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
         # import pickle
-        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_multitask_no3push_16itr.pkl', 'rb'))
+        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_full_mtmr_no4pegr_sj.pkl', 'rb'))
         # #val_vars = pickle.load(open('/home/coline/Downloads/weights_multitaskmultirobot_1.pkl', 'rb'))
 
         # self.var = pol_var#[pol_var[-2]]
@@ -215,11 +215,11 @@ class PolicyOptTf(PolicyOpt):
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
             average_loss += train_loss
-            if i % 100 == 0 and i != 0:
+            if i % 800 == 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 100)
+                             i, average_loss / 800)
                 print 'supervised tf loss is '
-                print (average_loss/100)
+                print (average_loss/800)
                 average_loss = 0
 
         for robot_number in range(self.num_robots):
@@ -253,7 +253,7 @@ class PolicyOptTf(PolicyOpt):
         except AttributeError:
             pass  # TODO: Should prob be called before update?
 
-        output = np.zeros((N, T, dU))
+        output = np.zeros((N, T, dU)) 
         for i in range(N):
             feed_dict = {self.obs_tensors[robot_number]: obs[i, :]}
             with tf.device(self.device_string):

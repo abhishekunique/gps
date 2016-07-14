@@ -144,14 +144,14 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-        # size = 20
+        # size = 26
         # self.policy_opt.policy[0].scale = np.eye(size)
         # self.policy_opt.policy[0].bias = np.zeros((size,))
         # # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
         # self.policy_opt.policy[0].x_idx = range(size)
 
-        # for r in range(5):
-        #     size = [18, 20, 28, 18, 20][r]
+        # for r in range(19):
+        #     size = [18, 20, 28, 30, 28, 30, 18, 20, 18, 20,18, 20, 28, 30, 28, 30, 18, 20, 18, ][r]
         #     self.policy_opt.policy[r].scale = np.eye(size)
         #     self.policy_opt.policy[r].bias = np.zeros((size,))
         #     # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
@@ -182,17 +182,20 @@ class GPSMain(object):
         # self.algorithm[0].reinitialize_net(2, sl2)
         # self.algorithm[0].reinitialize_net(3, sl3)
         # pool = Pool()
+        traj_distr = self.data_logger.unpickle('traj_distr_mtmr_moreiters.pkl')
+        for ag in range(self.num_robots):
+            name = self.agent[ag]._hyperparams['filename'][0]
+            for cond in  self._train_idx[ag]:
+                print ag, cond
+                self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
 
+        self.check_itr = 2
         for itr in range(itr_start, self._hyperparams['iterations']):
+
             time2 = time.clock()
             traj_sample_lists = {}
             thread_samples_sampling = []
-            # for robot_number in range(self.num_robots):
-            #     thread_samples_sampling.append(threading.Thread(target=self.collect_samples, args=(itr, traj_sample_lists, robot_number)))
-            #     thread_samples_sampling[robot_number].start()
-            # for robot_number in range(self.num_robots):
-
-            #     thread_samples_sampling[robot_number].join()
+            print "itr", itr
             for robot_number in range(self.num_robots):
                 print "sampling robot", robot_number
                 for cond in self._train_idx[robot_number]:
@@ -210,7 +213,7 @@ class GPSMain(object):
 
             for robot_number in range(self.num_robots):
                 # self.policy_opt.prepare_solver(itr_robot_status, self.)
-                print "iter start", robot_number
+                print "iter", itr,"start for rn", robot_number
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
             time4 = time.clock()
             self._take_iteration_shared()
@@ -220,21 +223,30 @@ class GPSMain(object):
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 if self.agent[robot_number].nan_flag:
                     IPython.embed()
-                    self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
+                self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
             time6 = time.clock()
             if self.save_shared:
                 self.policy_opt.save_shared_wts()
             if self.save_wts:
                 self.policy_opt.save_all_wts(itr)
             vars = {}
-            # for k,v in self.policy_opt.av.iteritems():
-            #     vars[k] = self.policy_opt.sess.run(v)
-            # data_dump =[vars, self.policy_opt.var]
-            # with open('weights_multitask.pkl','wb') as f:
+            for k,v in self.policy_opt.av.iteritems():
+                vars[k] = self.policy_opt.sess.run(v)
+            data_dump =[vars, self.policy_opt.var]
+            # with open('weights_full_mtmr_no4pegr_sj_itr'+str(itr)+'.pkl','wb') as f:
             #     pickle.dump(data_dump, f)
-            if itr % 8 == 0 and itr > 0:
+            if itr % self.check_itr == 0 and itr >0:
                 import IPython
                 IPython.embed()
+
+            # for ag in range(self.num_robots):
+            #     name = self.agent[ag]._hyperparams['filename'][0]
+            #     print name
+            #     traj_distr[name] = []
+            #     for cond in  self._train_idx[ag]:
+            #         print ag, cond
+            #         traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
+            # self.data_logger.pickle("traj_distr_mtmr_moreiters.pkl", traj_distr)
 
         self._end()
 
@@ -451,8 +463,6 @@ class GPSMain(object):
             N = self._hyperparams['verbose_policy_trials']
         if self.gui:
             self.gui[robot_number].set_status_text('Taking policy samples.')
-        import IPython
-        IPython.embed()
         pol_samples = [[None for _ in range(N)] for _ in range(self._conditions[robot_number])]
         for cond in range(self._conditions[robot_number]):
             for i in range(N):
