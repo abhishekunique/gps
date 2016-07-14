@@ -2,7 +2,8 @@
 import numpy as np
 
 from gps.algorithm.cost.cost_utils import RAMP_CONSTANT, evallogl2term
-
+from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
+        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
 
 # CostFK
 COST_FK = {
@@ -26,7 +27,7 @@ COST_STATE = {
     'alpha': 1e-2,
     'wp_final_multiplier': 1.0,  # Weight multiplier on final time step.
     'data_types': {
-        'JointAngle': {
+        JOINT_ANGLES: {
             'target_state': None,  # Target state - must be set.
             'wp': None,  # State weights - must be set.
         },
