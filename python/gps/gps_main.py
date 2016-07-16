@@ -182,12 +182,15 @@ class GPSMain(object):
         # self.algorithm[0].reinitialize_net(2, sl2)
         # self.algorithm[0].reinitialize_net(3, sl3)
         # pool = Pool()
-        traj_distr = self.data_logger.unpickle('traj_distr_mtmr_moreiters.pkl')
-        for ag in range(self.num_robots):
-            name = self.agent[ag]._hyperparams['filename'][0]
-            for cond in  self._train_idx[ag]:
-                print ag, cond
-                self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+        # traj_distr = self.data_logger.unpickle('traj_distr_mtmr_moreiters.pkl')
+        # # abh_traj_distr = self.data_logger.unpickle('abh_traj_distr_mtmr_moreiters.pkl')
+        # for ag in range(self.num_robots):
+        #     name = self.agent[ag]._hyperparams['filename'][0]
+        #     # IPython.embed()
+        #     # if 'reach' in name:
+        #     for cond in  self._train_idx[ag]:
+        #         print ag, cond
+        #         self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
 
         self.check_itr = 2
         for itr in range(itr_start, self._hyperparams['iterations']):
@@ -597,8 +600,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(45)
-        np.random.seed(45)
+        random.seed(40)
+        np.random.seed(40)
         data_files_dir = exp_dir + 'data_files/'
         data_filenames = os.listdir(data_files_dir)
         algorithm_prefix = 'algorithm_itr_'
@@ -623,8 +626,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(10)
-        np.random.seed(10)
+        random.seed(40)
+        np.random.seed(40)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:
