@@ -65,8 +65,8 @@ def peg_right_4link(robot_number, num_robots):
         'substeps': 5,
         # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
         'pos_body_offset': [[np.array([-.5, 0.0, 1.2])], [np.array([-0.2, 0.0, 1.2])], [np.array([-0.3, 0.0, 1.0])],
-                            [np.array([-0.1, 0.0, 1.5])],[np.array([-0.4, 0.0, 1.1])], [np.array([-.8 , 0.0, 1.1])], 
-                            [np.array([-0.5, 0.0, 1.4])], [np.array([0.1, 0.0, 1.4])],
+                            [np.array([-0.4, 0.0, 1.3])],[np.array([-0.4, 0.0, 1.1])], [np.array([-.8 , 0.0, 1.1])], 
+                            [np.array([-0.5, 0.0, 1.4])], [np.array([-0.3, 0.0, 1.3])],
                         ],
         'pos_body_idx': np.array([7]),
         'conditions': 8,
@@ -102,6 +102,14 @@ def peg_right_4link(robot_number, num_robots):
         'sample_increase_var': 0.1,
         'init_pol_wt': 0.005,
     }
+    # agent_dict['algorithm'] = {
+    #     'type': AlgorithmTrajOpt,
+    #     'conditions': agent_dict['agent']['conditions'],
+    #     'train_conditions': agent_dict['agent']['train_conditions'],
+    #     'test_conditions': agent_dict['agent']['test_conditions'],
+    #     'iterations': 25,
+    #     'num_robots': 1,
+    # }
 
     agent_dict['algorithm']['init_traj_distr'] = {
         'type': init_pd,
