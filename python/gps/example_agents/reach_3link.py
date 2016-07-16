@@ -33,14 +33,23 @@ from gps.gui.config import generate_experiment_info
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 
 def reach_3link(robot_number, num_robots):
-    all_offsets = [[np.asarray([0., 0., -1.4])],
-                   [np.asarray([0.3, 0., 0.])],
-                   [np.asarray([0.2, 0.0, 0.4])],
-                   [np.asarray([0.4, 0., -0.7])], 
-                   [np.asarray([.5, 0.0, 0.3])],
-                   [np.asarray([.7, 0.0, -0.3])],
-                   [np.array([0., 0., -1.2])],
-                   [np.array([0.4, 0., -0.9])]]
+    # all_offsets = [[np.asarray([0., 0., -1.4])],
+    #                [np.asarray([0.3, 0., 0.])],
+    #                [np.asarray([0.2, 0.0, 0.4])],
+    #                [np.asarray([0.4, 0., -0.7])], 
+    #                [np.asarray([.5, 0.0, 0.3])],
+    #                [np.asarray([.7, 0.0, -0.3])],
+    #                [np.array([0., 0., -1.2])],
+    #                [np.array([0.4, 0., -0.9])]]
+    all_offsets = [[np.asarray([-0.3, 0., -1.65])],
+                   [np.asarray([0.45, 0., 0.45])],
+                   [np.asarray([-0.4, 0.0, 0.7])],
+                   [np.asarray([0.4, 0., -1.3])], 
+                   [np.asarray([-0.2, 0., -1.75])],
+                   [np.asarray([0.65, 0., 0.35])],
+                   [np.asarray([-0.6, 0.0, 0.9])],
+                   [np.asarray([0.45, 0., -1.4])]]
+
     SENSOR_DIMS = {
         JOINT_ANGLES: 3,
         JOINT_VELOCITIES: 3,
@@ -119,7 +128,7 @@ def reach_3link(robot_number, num_robots):
 
     torque_cost_0 = [{
         'type': CostAction,
-        'wu': 5e-5 / PR2_GAINS[0],
+        'wu': 1e-1 / PR2_GAINS[0],
     } for i in agent_dict['agent']['train_conditions']]
 
     fk_cost_0 = [{

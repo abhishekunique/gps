@@ -192,7 +192,7 @@ class GPSMain(object):
         #         print ag, cond
         #         self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
 
-        self.check_itr = 2
+        self.check_itr = 10
         for itr in range(itr_start, self._hyperparams['iterations']):
 
             time2 = time.clock()

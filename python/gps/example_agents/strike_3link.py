@@ -32,30 +32,15 @@ from gps.gui.config import generate_experiment_info
 
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 
-def reach_4link_shortjoint(robot_number, num_robots):
-    # all_offsets = [[np.asarray([0., 0., -1.4])],
-    #                [np.asarray([0.3, 0., 0.])],
-    #                [np.asarray([0.2, 0.0, 0.4])],
-    #                [np.asarray([0.4, 0., -0.7])], 
-    #                [np.asarray([.5, 0.0, 0.3])],
-    #                [np.asarray([.7, 0.0, -0.3])],
-    #                [np.array([0., 0., -1.2])],
-    #                [np.array([0.4, 0., -0.9])]]
-    all_offsets = [[np.asarray([-0.3, 0., -1.65])],
-               [np.asarray([0.45, 0., 0.45])],
-               [np.asarray([-0.4, 0.0, 0.7])],
-               [np.asarray([0.4, 0., -1.3])], 
-               [np.asarray([-0.2, 0., -1.75])],
-               [np.asarray([0.65, 0., 0.35])],
-               [np.asarray([-0.6, 0.0, 0.9])],
-               [np.asarray([0.45, 0., -1.4])]]
-
+def strike_3link(robot_number, num_robots):
     SENSOR_DIMS = {
         JOINT_ANGLES: 4,
         JOINT_VELOCITIES: 4,
-        END_EFFECTOR_POINTS: 6,
-        END_EFFECTOR_POINT_VELOCITIES: 6,
-        ACTION: 4,
+        END_EFFECTOR_POINTS: 9,
+        END_EFFECTOR_POINT_VELOCITIES: 9,
+        ACTION: 3,
+        RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
+        RGB_IMAGE_SIZE: 3,
     }
     agent_dict= {}
     agent_dict['network_params']= {
@@ -69,22 +54,32 @@ def reach_4link_shortjoint(robot_number, num_robots):
         'image_channels': IMAGE_CHANNELS,
         'sensor_dims': SENSOR_DIMS,
         'batch_size': 25,
-        'robot_specific_idx': range(11)+range(14,17),
-        'task_specific_idx': range(11,14)+range(17,20),
-        'dim_output':4,
+        'robot_specific_idx': range(3)+range(4,7)+range(8,11)+range(17,20),
+        'task_specific_idx': range(3,4)+range(7,8)+range(11,17)+range(20,26),
+        'dim_output':3,
         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
     }
     agent_dict['agent'] = {
         'type': AgentMuJoCo,
-        'filename': './mjc_models/arm_4link_reach_shortjoint.xml',
+        'filename': './mjc_models/3link_gripper_strike.xml',
         'x0': np.zeros(8),
         'dt': 0.05,
         'substeps': 5,
-        'pos_body_offset': all_offsets,
-        'pos_body_idx': np.array([7]),
+        # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
+        'pos_body_offset': [
+            [np.array([-0.8, 0.0, 0.75]),np.array([0.0, 0.0, 0.75])],
+            [np.array([-0.8, 0.0, -0.8]),np.array([0.0, 0.0, -0.8])],
+            [np.array([-0.9, 0.0, 0.7]),np.array([0.5, 0.0, 1.3])],
+            [np.array([-0.7, 0.0, -0.6]),np.array([0.8, 0.0, -1.2])],
+            [np.array([-0.9, 0.0, 1.]),np.array([0.9, 0.0, 0.7])],
+            [np.array([-0.4, 0.0, -1.1]),np.array([1.3, 0.0, -0.7])],
+            [np.array([-0.7, 0.0, 0.6]),np.array([0.3, 0.0, 1.2])],
+            [np.array([-0.7, 0.0, -0.8]),np.array([0.8, 0.0, -1.3])],
+        ],
+        'pos_body_idx': np.array([6,8]),
         'conditions': 8,
-        'train_conditions': range(4),
-        'test_conditions': range(4,8),
+        'train_conditions': [0,1,2 ,3 ],
+        'test_conditions': [4,5,6,7],
         'image_width': IMAGE_WIDTH,
         'image_height': IMAGE_HEIGHT,
         'image_channels': IMAGE_CHANNELS,
@@ -93,8 +88,7 @@ def reach_4link_shortjoint(robot_number, num_robots):
         'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
                           END_EFFECTOR_POINT_VELOCITIES],
         #include the camera images appropriately here
-        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
-                        END_EFFECTOR_POINT_VELOCITIES],
+        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
         'meta_include': [],
         'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
     }
@@ -125,16 +119,21 @@ def reach_4link_shortjoint(robot_number, num_robots):
         'T':  agent_dict['agent']['T'],
     }
 
-
-    torque_cost_0 = [{
-        'type': CostAction,
-        'wu': 1e-1 / PR2_GAINS[1],
-    } for i in agent_dict['agent']['train_conditions']]
-
     fk_cost_0 = [{
         'type': CostFK,
-        'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent_dict['agent']['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
-        'wp': np.array([1, 1, 1, 0, 0, 0]),
+        'target_end_effector': np.concatenate([np.array([0,0,0]), 
+                                               np.array([0.05, 0.05, 0.05]) + agent_dict['agent']['pos_body_offset'][i][1],
+                                               np.array([0,0,0])]),
+        'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+        'l1': 0.1,
+        'l2': 10.0,
+        'alpha': 1e-5,
+        'ramp_option': RAMP_QUADRATIC
+    } for i in agent_dict['agent']['train_conditions']]
+
+    fk_cost_blocktouch = [{
+        'type': CostFKBlock,
+        'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
         'l1': 0.1,
         'l2': 10.0,
         'alpha': 1e-5,
@@ -142,8 +141,9 @@ def reach_4link_shortjoint(robot_number, num_robots):
 
     agent_dict['algorithm']['cost'] = [{
         'type': CostSum,
-        'costs': [torque_cost_0[i], fk_cost_0[i]],
+        'costs': [fk_cost_0[i], fk_cost_blocktouch[i]],
         'weights': [1.0, 1.0],
+        'ramp_option': RAMP_QUADRATIC
     } for i in agent_dict['agent']['train_conditions']]
 
     agent_dict['algorithm']['dynamics'] = {
@@ -170,3 +170,4 @@ def reach_4link_shortjoint(robot_number, num_robots):
         'robot_number': robot_number
     }
     return agent_dict
+ 
