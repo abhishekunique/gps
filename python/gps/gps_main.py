@@ -104,7 +104,8 @@ class GPSMain(object):
         """
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
-
+        import IPython
+        IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             for robot_number in range(self.num_robots):
@@ -191,8 +192,8 @@ class GPSMain(object):
         #     for cond in  self._train_idx[ag]:
         #         print ag, cond
         #         self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
-
-        self.check_itr = 10
+        IPython.embed()
+        self.check_itr = 2
         for itr in range(itr_start, self._hyperparams['iterations']):
 
             time2 = time.clock()
