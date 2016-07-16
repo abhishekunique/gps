@@ -182,14 +182,14 @@ class GPSMain(object):
         # self.algorithm[0].reinitialize_net(2, sl2)
         # self.algorithm[0].reinitialize_net(3, sl3)
         # pool = Pool()
-        traj_distr = self.data_logger.unpickle('traj_distr_mtmr_moreiters.pkl')
-        for ag in range(self.num_robots):
-            name = self.agent[ag]._hyperparams['filename'][0]
-            for cond in  self._train_idx[ag]:
-                print ag, cond
-                self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+        # traj_distr = self.data_logger.unpickle('traj_distr_mtmr_moreiters.pkl')
+        # for ag in range(self.num_robots):
+        #     name = self.agent[ag]._hyperparams['filename'][0]
+        #     for cond in  self._train_idx[ag]:
+        #         print ag, cond
+        #         self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
 
-        self.check_itr = 2
+        self.check_itr = 10
         for itr in range(itr_start, self._hyperparams['iterations']):
 
             time2 = time.clock()
