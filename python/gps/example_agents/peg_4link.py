@@ -64,13 +64,15 @@ def peg_4link(robot_number, num_robots):
         'dt': 0.05,
         'substeps': 5,
         # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
-        'pos_body_offset': [[np.array([1.3, 0.0, 0.4])], [np.array([1.2, 0.0, 0.7])], [np.array([1.4, 0.0, 0.6])],
-                            [np.array([0.8, 0.0, 1.0])], [np.array([0.6, 0.0, 1.4])], [np.array([1.4 , 0.0, 0.4])], 
-                            [np.array([1.1, 0.0, 0.7])], [np.array([1.3, 0.0, 0.6])]
+        # good: 0, 2, 1, 3, 4,6,
+        # bad: 2,5?, ,7
+        'pos_body_offset': [[np.array([1.3, 0.0, 0.4])], [np.array([1., 0.0, 0.8])], [np.array([1.2, 0.0, 0.6])],
+                            [np.array([0.8, 0.0, 1.0])], [np.array([0.6, 0.0, 1.1])], [np.array([1.2 , 0.0, 0.6])], 
+                            [np.array([1.1, 0.0, 0.6])], [np.array([1., 0.0, 0.8])]
                         ],
         'pos_body_idx': np.array([7]),
         'conditions': 8,
-        'train_conditions': [0,1,2,3],
+        'train_conditions': [0,1,2,3,4,5,6,7],
         'test_conditions': [4,5,6,7],
         'image_width': IMAGE_WIDTH,
         'image_height': IMAGE_HEIGHT,
@@ -84,23 +86,31 @@ def peg_4link(robot_number, num_robots):
         'meta_include': [],
         'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
     }
+    # agent_dict['algorithm'] = {
+    #     'type': AlgorithmBADMM,
+    #     'conditions': agent_dict['agent']['conditions'],
+    #     'train_conditions': agent_dict['agent']['train_conditions'],
+    #     'test_conditions': agent_dict['agent']['test_conditions'],
+    #     'num_robots': num_robots,
+    #     'iterations': 25,
+    #     'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
+    #     'policy_dual_rate': 0.2,
+    #     'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
+    #     'fixed_lg_step': 3,
+    #     'kl_step': 5.0,
+    #     'min_step_mult': 0.01,
+    #     'max_step_mult': 1.0,
+    #     'sample_decrease_var': 0.05,
+    #     'sample_increase_var': 0.1,
+    #     'init_pol_wt': 0.005,
+    # }
     agent_dict['algorithm'] = {
-        'type': AlgorithmBADMM,
+        'type': AlgorithmTrajOpt,
         'conditions': agent_dict['agent']['conditions'],
         'train_conditions': agent_dict['agent']['train_conditions'],
         'test_conditions': agent_dict['agent']['test_conditions'],
-        'num_robots': num_robots,
         'iterations': 25,
-        'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
-        'policy_dual_rate': 0.2,
-        'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
-        'fixed_lg_step': 3,
-        'kl_step': 5.0,
-        'min_step_mult': 0.01,
-        'max_step_mult': 1.0,
-        'sample_decrease_var': 0.05,
-        'sample_increase_var': 0.1,
-        'init_pol_wt': 0.005,
+        'num_robots': 1,
     }
 
     agent_dict['algorithm']['init_traj_distr'] = {
