@@ -192,7 +192,6 @@ class GPSMain(object):
         #     for cond in  self._train_idx[ag]:
         #         print ag, cond
         #         self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
-        IPython.embed()
         self.check_itr = 2
         for itr in range(itr_start, self._hyperparams['iterations']):
 
