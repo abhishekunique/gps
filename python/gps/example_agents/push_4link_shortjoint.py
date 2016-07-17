@@ -52,7 +52,6 @@ def push_4link_shortjoint(robot_number, num_robots):
         'image_channels': IMAGE_CHANNELS,
         'sensor_dims': SENSOR_DIMS,
         'batch_size': 25,
-        'dim_robot_specific':14,
         'robot_specific_idx': range(4)+range(6,10)+range(12,15)+range(21,24),
         'task_specific_idx': range(4,6)+range(10,12)+range(15,21)+range(24,30),
         'dim_output':4,
@@ -71,7 +70,7 @@ def push_4link_shortjoint(robot_number, num_robots):
             [np.array([0.0, 0.0, 0.0]),np.array([0.2, 0.0, 0.95])],
             [np.array([0.0, 0.0, 0]),np.array([0.6, 0.0, -0.85])],
 
-                        [np.array([0.0, 0.0, 0.0]),np.array([0.3, 0.0, 0.75])],
+            [np.array([0.0, 0.0, 0.0]),np.array([0.3, 0.0, 0.75])],
             [np.array([0.0, 0.0, 0]),np.array([0.5, 0.0, -0.75])],
             [np.array([0.0, 0.0, 0]),np.array([0.5, 0.0, 0.8])],
             [np.array([0.0, 0.0, 0.0]),np.array([0.45, 0.0, -0.95])],
@@ -118,7 +117,6 @@ def push_4link_shortjoint(robot_number, num_robots):
         'dt':  agent_dict['agent']['dt'],
         'T':  agent_dict['agent']['T'],
     }
-
 
     torque_cost_0 = [{
         'type': CostAction,
