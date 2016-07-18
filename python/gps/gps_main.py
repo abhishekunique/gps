@@ -183,15 +183,15 @@ class GPSMain(object):
         # self.algorithm[0].reinitialize_net(2, sl2)
         # self.algorithm[0].reinitialize_net(3, sl3)
         # pool = Pool()
-        # traj_distr = self.data_logger.unpickle('traj_distr_mtmr_moreiters.pkl')
-        # # abh_traj_distr = self.data_logger.unpickle('abh_traj_distr_mtmr_moreiters.pkl')
-        # for ag in range(self.num_robots):
-        #     name = self.agent[ag]._hyperparams['filename'][0]
-        #     # IPython.embed()
-        #     # if 'reach' in name:
-        #     for cond in  self._train_idx[ag]:
-        #         print ag, cond
-        #         self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+        traj_distr = self.data_logger.unpickle('traj_distr_newest.pkl')
+        # abh_traj_distr = self.data_logger.unpickle('abh_traj_distr_mtmr_moreiters.pkl')
+        for ag in range(self.num_robots):
+            name = self.agent[ag]._hyperparams['filename'][0]
+            # IPython.embed()
+            # if 'reach' in name:
+            for cond in  self._train_idx[ag]:
+                print ag, cond
+                self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
         self.check_itr = 2
         for itr in range(itr_start, self._hyperparams['iterations']):
 
@@ -249,7 +249,7 @@ class GPSMain(object):
             #     for cond in  self._train_idx[ag]:
             #         print ag, cond
             #         traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
-            # self.data_logger.pickle("traj_distr_mtmr_moreiters.pkl", traj_distr)
+            # self.data_logger.pickle("traj_distr_newest.pkl", traj_distr)
 
         self._end()
 

@@ -59,13 +59,13 @@ from gps.example_agents.push_out_4link_shortjoint import push_out_4link_shortjoi
 # from gps.example_agents.reach_avoid_3link import reach_avoid_3link
 # from gps.example_agents.reach_avoid_4link import reach_avoid_4linkp
 
-agent_funs =[ reach_3link, reach_4link, push_3link, push_4link, push_out_3link, push_out_4link, peg_3link, peg_4link, peg_right_3link, peg_right_4link,
-              reach_3link_shortjoint, reach_4link_shortjoint, push_3link_shortjoint, push_4link_shortjoint, push_out_3link_shortjoint,
-              push_out_4link_shortjoint, peg_3link_shortjoint, peg_4link_shortjoint, peg_right_3link_shortjoint]# peg_right_4link_shortjoint,]
-task_values = [0,0,1,1,2,2,3,3,4,4,
-               0,0,1,1,2,2,3,3,4,]#,4]
-robot_values = [0,1,0,1,0,1,0,1,0,1,
-                2,3,2,3,2,3,2,3,2]#,3]
+agent_funs =[ reach_3link, reach_4link, push_3link, push_4link, peg_3link, peg_4link, peg_right_3link, peg_right_4link,
+              reach_3link_shortjoint, reach_4link_shortjoint, push_3link_shortjoint, push_4link_shortjoint, 
+              peg_3link_shortjoint, peg_4link_shortjoint, peg_right_3link_shortjoint]# peg_right_4link_shortjoint,]
+task_values = [0,0,1,1,2,2,3,3,
+               0,0,1,1,2,2,3,]#,4]
+robot_values = [0,1,0,1,0,1,0,1,
+                2,3,2,3,2,3,2]#,3]
 
 agents = []
 num_agents = len(agent_funs)
@@ -95,7 +95,7 @@ common = {
             'robot_list': robot_values,
             'agent_params':[a['network_params'] for a in agents],
         },
-        'iterations': 4000,
+        'iterations': 10000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
