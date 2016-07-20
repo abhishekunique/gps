@@ -962,9 +962,12 @@ def invariant_subspace_test_dc(dim_input=[27, 27], dim_output=[7, 7], batch_size
     dc_weight = 1.0
     other = {}
     dc_loss = []
+    cost_weightings = []
     for robot_number, robot_params in enumerate(network_config):
         indiv_losses = []
         nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
+        cost_weighting = tf.placeholder("float", [None, 1], name='nn_input' + str(robot_number))
+        cost_weightings.append(cost_weighting)
         w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
         b_input = init_bias((dim_hidden[0],), name='b_input'+str(robot_number))
         w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_' + str(robot_number))
@@ -981,15 +984,12 @@ def invariant_subspace_test_dc(dim_input=[27, 27], dim_output=[7, 7], batch_size
         feature_layers.append(layer2)
         layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
         output = tf.matmul(layer3, w_output) + b_output
-        loss = tf.nn.l2_loss(nn_input - output) #euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)      
-
-        dc_output = tf.matmul(layer2, dc_w) + dc_b
-        dc_softmax = tf.log(tf.nn.softmax(dc_output))
-        dc_entropy = -1.0/num_robots*tf.reduce_sum(dc_softmax)
-        #maybe this also needs to be weighted?
+        loss = tf.nn.l2_loss(nn_input - output) 
+        dc_output = tf.matmul(tf.nn.relu(tf.matmul(layer2, dc_w1) + dc_b1), dc_w2) + dc_b2
+        dc_softmax = tf.matmul(tf.transpose(cost_weighting), tf.log(tf.nn.softmax(dc_output)))
+        dc_entropy = -1.0/num_robots*tf.reduce_sum(dc_softmax) 
         dc_loss.append(-tf.reduce_sum(dc_softmax[:,robot_number]))
         loss = loss + dc_weight* dc_entropy
-
         other['dc_output'+str(robot_number)] = dc_output
         other['dc_softmax'+str(robot_number)] = dc_softmax
         other['dc_entropy'+str(robot_number)] = dc_entropy
@@ -1005,98 +1005,8 @@ def invariant_subspace_test_dc(dim_input=[27, 27], dim_output=[7, 7], batch_size
         weight_dict[b3.name] = b3
         weight_dict[w_output.name] = w_output
         weight_dict[b_output.name] = b_output
-    other.update({'dc_loss': tf.add_n(dc_loss)})
+    other.update({'dc_loss': tf.add_n(dc_loss), 'cost_weightings': cost_weightings})
     return nnets, weight_dict, other
-
-
-def double_contrastive_invariance(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
-    num_robots = len(dim_input)
-    nnets = []
-    n_layers = 7
-    layer_size = 60
-    dim_hidden = (n_layers - 1)*[layer_size]
-    dim_hidden[2] = 100
-    feature_layers_cl1 = []
-    feature_layers_cl2 = []
-    weight_dict = {}
-    dim_input_robotspecific = [12, 14]
-    dim_input_taskspecific = [6, 6]
-    for robot_number, robot_params in enumerate(network_config):
-        nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
-        if robot_number == 0:
-            robotspecific_input = tf.concat(1, [nn_input[:, 0:9], nn_input[:, 12:15]])
-            taskspecific_input = tf.concat(1, [nn_input[:, 9:12], nn_input[:, 15:18]])  
-        elif robot_number == 1:
-            robotspecific_input = tf.concat(1, [nn_input[:, 0:11], nn_input[:, 14:17]])
-            taskspecific_input = tf.concat(1, [nn_input[:, 11:14], nn_input[:, 17:20]])  
-
-        w0 = init_weights((dim_input_robotspecific[robot_number], dim_hidden[0]), name='w0_rn_' + str(robot_number))
-        b0 = init_bias((dim_hidden[0],), name='b0_rn_'+str(robot_number))
-        # weight_dict[w0.name] = w0
-        # weight_dict[b0.name] = b0
-
-        w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_rn_' + str(robot_number))
-        b1 = init_bias((dim_hidden[1],), name='b1_rn_' + str(robot_number))
-        # weight_dict[w1.name] = w1
-        # weight_dict[b1.name] = b1
-
-        w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_rn_' + str(robot_number))
-        b2 = init_bias((dim_hidden[2],), name='b2_rn_' + str(robot_number))
-        # weight_dict[w2.name] = w2
-        # weight_dict[b2.name] = b2
-
-        w3 = init_weights((dim_hidden[2] + dim_input_taskspecific[robot_number], dim_hidden[3]), name='w3_rn_' + str(robot_number))
-        b3 = init_bias((dim_hidden[3],), name='b3_rn_' + str(robot_number))
-        # weight_dict[w3.name] = w3
-        # weight_dict[b3.name] = b3
-
-        w4 = init_weights((dim_hidden[3], dim_hidden[4]), name='w4_rn_' + str(robot_number))
-        b4 = init_bias((dim_hidden[4],), name='b4_rn_' + str(robot_number))
-        # weight_dict[w4.name] = w4
-        # weight_dict[b4.name] = b4
-
-        w5 = init_weights((dim_hidden[4], dim_hidden[5]), name='w5_rn_' + str(robot_number))
-        b5 = init_bias((dim_hidden[5],), name='b5_rn_' + str(robot_number))
-        # w5 = init_weights((dim_hidden[4], dim_output[robot_number]), name='w5_rn_' + str(robot_number))
-        # b5 = init_bias((dim_output[robot_number],), name='b5_rn_' + str(robot_number))
-        # weight_dict[w5.name] = w5
-        # weight_dict[b5.name] = b5
-
-        w6 = init_weights((dim_hidden[5], dim_output[robot_number]), name='w6_' + str(robot_number))
-        b6 = init_bias((dim_output[robot_number],), name='b6_' + str(robot_number))
-        # weight_dict[w6.name] = w6
-        # weight_dict[b6.name] = b6
-
-        # w7 = init_weights((dim_hidden[6], dim_output[robot_number]), name='w7_'+str(robot_number))
-        # b7 = init_bias((dim_output[robot_number],), name = 'b7_'+str(robot_number))
-        # weight_dict[w7.name] = w7
-        # weight_dict[b7.name] = b7
-
-        layer0 = tf.nn.relu(tf.matmul(robotspecific_input, w0) + b0)
-        layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
-        layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
-        feature_layers_cl1.append(layer2)
-        layer2 = tf.concat(1, [layer2, taskspecific_input])
-        layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
-        layer4 = tf.nn.relu(tf.matmul(layer3, w4) + b4)
-        # layer4 = tf.nn.relu(tf.matmul(layer3, w4) + b4)
-        layer5 = tf.nn.relu(tf.matmul(layer4, w5) + b5)
-        # feature_layers_cl2.append(layer5)
-        # layer6 = tf.nn.relu(tf.matmul(layer5, w6) + b6)
-        output = tf.matmul(layer5, w6) + b6
-        loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
-        if robot_number == 1:
-            contrastive_1 = tf.nn.l2_loss(feature_layers_cl1[0] - feature_layers_cl1[1])
-            # contrastive_2 = tf.nn.l2_loss(feature_layers_cl2[0] - feature_layers_cl2[1])
-            #might need to scale here
-            weight_cl1 = 1.0
-            # weight_cl2 = 1.0
-            loss = loss + weight_cl1*contrastive_1 #+ weight_cl2*contrastive_2
-        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
-    return nnets, None
-
-
-
 
 def conv2d(img, w, b):
     #print img.get_shape().dims[3].value

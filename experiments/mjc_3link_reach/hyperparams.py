@@ -17,7 +17,7 @@ from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
 from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, invariant_subspace_test_dc
 
 
 IMAGE_WIDTH = 80
@@ -25,7 +25,7 @@ IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
 
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
-        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
+        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, ACTION
 from gps.gui.config import generate_experiment_info
 
 SENSOR_DIMS = [{
@@ -69,9 +69,10 @@ common = {
     'num_robots':1,
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': example_tf_network_multi,
+        'network_model': invariant_subspace_test_dc,
         'run_feats': False,
         'load_weights': False,
+        'dc_mode':True,
         'network_params': [{
             'dim_hidden': [10],
             'num_filters': [10, 20],
@@ -189,7 +190,6 @@ algorithm[0]['cost'] = [{
     'costs': [fk_cost_1[i]],
     'weights': [1.0],
 } for i in common['train_conditions']]
-
 
 
 algorithm[0]['dynamics'] = {

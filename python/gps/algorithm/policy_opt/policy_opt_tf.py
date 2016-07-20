@@ -106,6 +106,7 @@ class PolicyOptTf(PolicyOpt):
             self.dc_vars = other['dc_vars']
             self.dc_loss= other['dc_loss']
             self.other = other
+            self.cost_weightings = other['cost_weightings']
         for tf_map in tf_maps:
             self.obs_tensors.append(tf_map.get_input_tensor())
             self.action_tensors.append(tf_map.get_target_output_tensor())
@@ -151,17 +152,20 @@ class PolicyOptTf(PolicyOpt):
                                       weight_decay=self._hyperparams['weight_decay'],
                                       vars_to_opt=self.dc_vars)
 
-    def train_invariant_autoencoder(self, obs_full):
+    def train_invariant_autoencoder(self, obs_full, cost_weightings):
         obs_reshaped = []
-        
+        cw_reshaped = []
         for robot_number in range(self.num_robots):
             obs = obs_full[robot_number]
-            N, T = obs.shape[:2]
+            cond_num, N, T = obs.shape[:3]
             dO = [12, 14][robot_number]
             dU = self._dU[robot_number]
-            obs = np.reshape(obs, (N*T, dO))
+            #evaluate all the costs here, so as to weight the domain confusion
+            cw = np.reshape(cost_weightings, (cond_num*N*T, 1))
+            obs = np.reshape(obs, (cond_num*N*T, dO))
+            cw_reshaped.append(cw)
             obs_reshaped.append(obs)
-            batches_per_epoch = np.floor(N*T / self.batch_size)
+            batches_per_epoch = np.floor(cond_num*N*T / self.batch_size)
             idx = range(N*T)
             np.random.shuffle(idx) 
             idx_reshaped.append(idx)
@@ -176,6 +180,7 @@ class PolicyOptTf(PolicyOpt):
                 (batches_per_epoch_reshaped[robot_number] * self.batch_size))
                 idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                feed_dict[self.cost_weightings[robot_number]] = cw_reshaped[robot_number][idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
             average_loss += train_loss
             if i % 1000 == 0 and i != 0:
@@ -188,6 +193,7 @@ class PolicyOptTf(PolicyOpt):
                                 (batches_per_epoch_reshaped[robot_number] * self.batch_size))
                 idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                 dc_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                dc_dict[self.cost_weightings[robot_number]] = cw_reshaped[robot_number][idx_i]
             dc_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
             average_dc_loss += dc_loss
             if i % 1000 == 0 and i != 0:

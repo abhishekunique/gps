@@ -161,61 +161,16 @@ class GPSMain(object):
 
         self._end()
 
-    def _extract_features(self, pol_sample_lists, robot_number):
-        dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
-        obs_data = np.zeros((len(pol_sample_lists), T, dO))
+    def _extract_features(self, pol_sample_lists, robot_number, itr):
+        dU, dO, T, N = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T, self._hyperparams['num_samples']
+        obs_data = np.zeros((len(pol_sample_lists), N, T, dO))
+        cost_weightings = np.zeros((len(pol_sample_lists), N, T, 1))
         for j, slist in enumerate(pol_sample_lists):
-            for s in slist._samples:
-                obs_data[j] += s.get_obs()
-            obs_data[j] = obs_data[j]/float(len(slist._samples))
-        # obs_data = ([obs[:, 0:3], obs[:, 4:7], obs[:, 8:11], obs[:, 17:20]], axis = 1)
-        # obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 3:6], obs_data[:, :, 6:9],  obs_data[:, :, 12:15]], axis=2) 
-        obs_data = obs_data[:, :, self._hyperparams['r0_index_list']]
-        return obs_data
-
-    def run_subspace_learning(self, itr_load=None):
-        """
-        Run training by iteratively sampling and taking an iteration.
-        Args:
-            itr_load: If specified, loads algorithm state from that
-                iteration, and resumes training at the next iteration.
-        Returns: None
-        """
-        # self.collect_img_dataset(1)
-        obs_full = [None]*self.num_robots
-        for robot_number in range(self.num_robots):
-            if robot_number == 0:
-                obs_sample = self.data_logger.unpickle(self._hyperparams['robot0_file'])
-                for slist in obs_sample:
-                    for s in slist._samples:
-                        s.agent = self.agent[0]
-
-            else:
-                obs_sample = self.data_logger.unpickle(self._hyperparams['robot1_file'])
-                for slist in obs_sample:
-                    for s in slist._samples:
-                        s.agent = self.agent[1]
-        
-            dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
-            obs_data = np.zeros((0, T, dO))
-            for samples in obs_sample:
-                obs_data = np.concatenate((obs_data, samples.get_obs()))
-
-            if robot_number == 0:
-                obs_data = obs_data[:, :, self._hyperparams['r0_index_list']]
-                # obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 3:6], obs_data[:, :, 6:9],  obs_data[:, :, 12:15]], axis=2) 
-                # obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 4:7], obs_data[:, :, 8:11],  obs_data[:, :, 17:20]], axis=2) 
-
-            else:
-                obs_data = obs_data[:, :, self._hyperparams['r1_index_list']]
-                # obs_data = np.concatenate([obs_data[:, :, 0:4], obs_data[:, :, 4:8], obs_data[:, :, 8:11], obs_data[:, :, 14:17]], axis=2) 
-                # obs_data = np.concatenate([obs_data[:, :, 0:4], obs_data[:, :, 5:9], obs_data[:, :, 10:13], obs_data[:, :, 19:22]], axis=2) 
-            obs_full[robot_number] = obs_data
-        import IPython
-        IPython.embed()
-        self.policy_opt.train_invariant_autoencoder(obs_full)
-
-
+            for i, s in enumerate(slist._samples):
+                obs_data[j, i] = s.get_obs()
+                cost_weightings[j, i] = self.algorithm[robot_number].cost[j].eval(s, itr)
+        obs_data = obs_data[:, :, :, self._hyperparams['r0_index_list']]
+        return obs_data, cost_weightings
 
     def run_wdc(self, itr_load=None, rf=False):
         """
@@ -231,6 +186,7 @@ class GPSMain(object):
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             feature_lists = []
+            cost_weightings = []
             for robot_number in range(self.num_robots):
                 for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
@@ -240,11 +196,18 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
-            import IPython
-            IPython.embed()
-            self.policy_opt.train_invariant_autoencoder(obs_full)
-            feature_lists.append(self.policy_opt.run_features_forward(self._extract_features(traj_sample_lists[robot_number], robot_number), robot_number))
+            cw_full = []
+            obs_full = []
+            obs_full_mean = []
+            for robot_number in range(self.num_robots):
+                obs, cw = self._extract_features(traj_sample_lists[robot_number], robot_number, itr)
+                cw_full.append(cw)
+                obs_full.append(obs)
+                obs_full_mean.append(np.mean(obs, axis=1))
+            self.policy_opt.train_invariant_autoencoder(obs_full, cw_full)
+            feature_lists.append(self.policy_opt.run_features_forward(obs_full_mean[0], 0))
             np.save(self._data_files_dir + 'fps_current.pkl', copy.copy(np.asarray(feature_lists)))
+            #need to change the cost functino to read this
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
