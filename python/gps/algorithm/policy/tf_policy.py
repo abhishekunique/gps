@@ -84,7 +84,6 @@ class TfPolicy(Policy):
                        'checkpoint_path_tf': checkpoint_path + '_tf_data', 'scale': self.scale, 'bias': self.bias,
                        'device_string': self.device_string, 'goal_state': goal_state, 'x_idx': self.x_idx}
         pickle.dump(pickled_pol, open(checkpoint_path+ "_itr"+str(itr), "wb"))
-        print "variables are", var_dict
         saver = tf.train.Saver(var_list=var_dict)
         path = saver.save(self.sess, checkpoint_path + "_itr"+str(itr)+'.ckpt')
         return path
