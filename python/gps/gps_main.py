@@ -215,6 +215,50 @@ class GPSMain(object):
         IPython.embed()
         self.policy_opt.train_invariant_autoencoder(obs_full)
 
+
+
+    def run_wdc(self, itr_load=None, rf=False):
+        """
+        Run training by iteratively sampling and taking an iteration.
+        Args:
+            itr_load: If specified, loads algorithm state from that
+                iteration, and resumes training at the next iteration.
+        Returns: None
+        """
+        for robot_number in range(self.num_robots):
+            itr_start = self._initialize(itr_load, robot_number=robot_number)
+
+        for itr in range(itr_start, self._hyperparams['iterations']):
+            traj_sample_lists = {}
+            feature_lists = []
+            for robot_number in range(self.num_robots):
+                for cond in self._train_idx[robot_number]:
+                    for i in range(self._hyperparams['num_samples']):
+                        self._take_sample(itr, cond, i, robot_number=robot_number)
+
+                traj_sample_lists[robot_number] = [
+                    self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
+                    for cond_1 in self._train_idx[robot_number]
+                ]
+            import IPython
+            IPython.embed()
+            self.policy_opt.train_invariant_autoencoder(obs_full)
+            feature_lists.append(self.policy_opt.run_features_forward(self._extract_features(traj_sample_lists[robot_number], robot_number), robot_number))
+            np.save(self._data_files_dir + 'fps_current.pkl', copy.copy(np.asarray(feature_lists)))
+            for robot_number in range(self.num_robots):
+                self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+
+            for robot_number in range(self.num_robots):
+                pol_sample_lists = None #self._take_policy_samples(robot_number=robot_number)
+                self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
+                
+            if itr % 8 == 0 and itr > 0:
+                import IPython
+                IPython.embed()
+
+
+        self._end()
+
        
     def _take_iteration_start(self, itr, sample_lists, robot_number=0):
         """
