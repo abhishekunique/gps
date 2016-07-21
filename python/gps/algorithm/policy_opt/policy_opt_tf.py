@@ -11,7 +11,7 @@ from gps.algorithm.policy_opt.policy_opt import PolicyOpt
 from gps.algorithm.policy_opt.config import POLICY_OPT_TF
 from gps.algorithm.policy_opt.tf_utils import TfSolver
 LOGGER = logging.getLogger(__name__)
-
+import pickle 
 
 class PolicyOptTf(PolicyOpt):
     """ Policy optimization using tensor flow for DAG computations/nonlinear function approximation. """
@@ -201,6 +201,10 @@ class PolicyOptTf(PolicyOpt):
                 print (average_dc_loss/1000)
                 average_dc_loss = 0
         print("subspace training")
+        var_dict = {}
+        for v in self.tf_vars:
+            var_dict[v.name] = self.sess.run(v)
+        pickle.dump(var_dict, open( "subspace_dc.pkl", "wb" ))
         import IPython
         IPython.embed()
 

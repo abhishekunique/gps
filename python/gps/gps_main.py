@@ -206,7 +206,7 @@ class GPSMain(object):
                 obs_full_mean.append(np.mean(obs, axis=1))
             self.policy_opt.train_invariant_autoencoder(obs_full, cw_full)
             feature_lists.append(self.policy_opt.run_features_forward(obs_full_mean[0], 0))
-            np.save(self._data_files_dir + 'fps_current.pkl', copy.copy(np.asarray(feature_lists)))
+            np.save('fps_current.pkl', copy.copy(np.asarray(feature_lists)))
             #need to change the cost functino to read this
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
@@ -600,16 +600,16 @@ def main():
         if hyperparams.config['gui_on']:
             if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
                 run_gps = threading.Thread(
-                    target=lambda: gps.run_subspace_learning(itr_load=resume_training_itr)
+                    target=lambda: gps.run_wdc(itr_load=resume_training_itr)
                 )
             else:
                 if args.multithread:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_subspace_learning(itr_load=resume_training_itr)
+                        target=lambda: gps.run_wdc(itr_load=resume_training_itr)
                     )
                 else:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_subspace_learning(itr_load=resume_training_itr)
+                        target=lambda: gps.run_wdc(itr_load=resume_training_itr)
                     )
             run_gps.daemon = True
             run_gps.start()
