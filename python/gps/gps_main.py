@@ -21,7 +21,7 @@ from gps.utility.data_logger import DataLogger
 from gps.sample.sample_list import SampleList
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
-from gps.proto.gps_pb2 import ACTION, RGB_IMAGE
+from gps.proto.gps_pb2 import ACTION, RGB_IMAGE, END_EFFECTOR_POINTS
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 ###from queue import Queue
@@ -104,8 +104,6 @@ class GPSMain(object):
         """
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
-        import IPython
-        IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             for robot_number in range(self.num_robots):
@@ -145,14 +143,14 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-        # size = 26
-        # self.policy_opt.policy[0].scale = np.eye(size)
-        # self.policy_opt.policy[0].bias = np.zeros((size,))
-        # # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
-        # self.policy_opt.policy[0].x_idx = range(size)
+        size = 18
+        self.policy_opt.policy[0].scale = np.eye(size)
+        self.policy_opt.policy[0].bias = np.zeros((size,))
+        # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
+        self.policy_opt.policy[0].x_idx = range(size)
 
-        # for r in range(19):
-        #     size = [18, 20, 28, 30, 28, 30, 18, 20, 18, 20,18, 20, 28, 30, 28, 30, 18, 20, 18, ][r]
+        # for r in range(16):
+        #     size = [18, 20, 28, 30, 18, 20, 18, 20,18, 20, 28, 30, 18, 20, 18, 20][r]
         #     self.policy_opt.policy[r].scale = np.eye(size)
         #     self.policy_opt.policy[r].bias = np.zeros((size,))
         #     # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
@@ -182,8 +180,8 @@ class GPSMain(object):
         # self.algorithm[0].reinitialize_net(1, sl1)
         # self.algorithm[0].reinitialize_net(2, sl2)
         # self.algorithm[0].reinitialize_net(3, sl3)
-        # pool = Pool()
-        traj_distr = self.data_logger.unpickle('traj_distr_newest.pkl')
+        IPython.embed()
+        traj_distr = self.data_logger.unpickle('/home/coline/Downloads/traj_distr_newest.pkl')
         # abh_traj_distr = self.data_logger.unpickle('abh_traj_distr_mtmr_moreiters.pkl')
         for ag in range(self.num_robots):
             name = self.agent[ag]._hyperparams['filename'][0]
@@ -192,7 +190,7 @@ class GPSMain(object):
             for cond in  self._train_idx[ag]:
                 print ag, cond
                 self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
-        self.check_itr = 2
+        self.check_itr = 6
         for itr in range(itr_start, self._hyperparams['iterations']):
 
             time2 = time.clock()
@@ -236,8 +234,8 @@ class GPSMain(object):
             for k,v in self.policy_opt.av.iteritems():
                 vars[k] = self.policy_opt.sess.run(v)
             data_dump =[vars, self.policy_opt.var]
-            # with open('weights_full_mtmr_no4pegr_sj_itr'+str(itr)+'.pkl','wb') as f:
-            #     pickle.dump(data_dump, f)
+            with open('weights_multitask'+str(itr)+'.pkl','wb') as f:
+                pickle.dump(data_dump, f)
             if itr % self.check_itr == 0 and itr >0:
                 import IPython
                 IPython.embed()
@@ -291,20 +289,30 @@ class GPSMain(object):
             tgt_prc_full = [None]*self.num_robots
             tgt_wt_full = [None]*self.num_robots
             itr_full = [None]*self.num_robots
+            next_ee_full = [None]*self.num_robots
             for robot_number in range(self.num_robots):
+                ee_data = np.zeros((0, 100, 3))
                 if self.algorithm[robot_number].iteration_count > 0 or inner_itr > 0:
                     print "update pol lists", robot_number
                     obs, tgt_mu, tgt_prc, tgt_wt = self.algorithm[robot_number]._update_policy_lists(self.algorithm[robot_number].iteration_count, inner_itr)
                     obs_full[robot_number] = obs
+                    import IPython
+                    IPython.embed()
                     tgt_mu_full[robot_number] = tgt_mu
                     tgt_prc_full[robot_number] = tgt_prc
                     tgt_wt_full[robot_number] = tgt_wt
                     itr_full[robot_number] = self.algorithm[robot_number].iteration_count
-
-            #May want to make this shared across robots
+                    for m in range(self.algorithm[robot_number].M):
+                        samples = self.algorithm[robot_number].cur[m].sample_list
+                        ee = samples.get(END_EFFECTOR_POINTS)
+                        next_ee = np.concatenate((ee[:,1:,:3], ee[:, -1:, :3]), axis=1)
+                        ee_data= np.concatenate((ee_data, next_ee))
+                    next_ee_full[robot_number] = ee_data
+                #May want to make this shared across robots
             if self.algorithm[0].iteration_count > 0 or inner_itr > 0:
                 print "policy opt update"
-                self.policy_opt.update(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr)
+                self.policy_opt.update_next_ee(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, 
+                                       inner_itr, next_ee_full = next_ee_full)
             for robot_number in range(self.num_robots):
                 print "update pol fit", robot_number
                 for m in self._train_idx[robot_number]:
