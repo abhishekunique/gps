@@ -74,18 +74,18 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = self._hyperparams['ent_reg']
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
-        import pickle
-        # val_vars, pol_var = pickle.load(open('/home/coline/Downloads/weights_full_mtmr_no4pegr_sj_itr4.pkl', 'rb'))
-        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_full_mtmr_smallnet_no4pegr_sj_itr6.pkl', 'rb'))
+        # import pickle
+        # # val_vars, pol_var = pickle.load(open('/home/coline/Downloads/weights_full_mtmr_no4pegr_sj_itr4.pkl', 'rb'))
+        # # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_full_mtmr_smallnet_no4pegr_sj_itr6.pkl', 'rb'))
 
-        val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/full_largenet_dropout.pkl', 'rb'))
-        #val_vars = pickle.load(open('/home/coline/Downloads/weights_multitaskmultirobot_1.pkl', 'rb'))
-        self.var = [pol_var[-2]] 
-        for k,v in self.av.items():
-            if k in val_vars:
-                print v.name
-                assign_op = v.assign(val_vars[k])
-                self.sess.run(assign_op)
+        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/full_largenet_dropout.pkl', 'rb'))
+        # #val_vars = pickle.load(open('/home/coline/Downloads/weights_multitaskmultirobot_1.pkl', 'rb'))
+        # self.var = [pol_var[-2]] 
+        # for k,v in self.av.items():
+        #     if k in val_vars:
+        #         print v.name
+        #         assign_op = v.assign(val_vars[k])
+        #         self.sess.run(assign_op)
  
     def init_network(self):
         """ Helper method to initialize the tf networks used """
@@ -110,7 +110,7 @@ class PolicyOptTf(PolicyOpt):
             self.feature_points.append(tf_map.feature_points)
         self.combined_loss = tf.add_n(self.loss_scalars)
         self.av = av
-        self.tensors = ls
+        self.ls = ls
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
@@ -409,6 +409,7 @@ class PolicyOptTf(PolicyOpt):
             next_ee_reshaped.append(next_ee)
 
         average_loss = 0
+        avg_ee_loss = 0
         for i in range(self._hyperparams['iterations']):
             # Load in data for this batch.
             feed_dict = {}
@@ -420,13 +421,16 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
                 feed_dict[self.ls['next_ee']] = next_ee_reshaped[robot_number][idx_i]
-            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
+            train_loss, ee_loss = self.solver(feed_dict, self.sess, device_string=self.device_string,
+                                              extra_output=self.ls['ee_loss'])
             average_loss += train_loss
+            avg_ee_loss += ee_loss
             if i % 800 == 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_loss / 800)
-                print 'supervised tf loss is '
-                print (average_loss/800)
+                print 'supervised tf loss is ', (average_loss/800)
+                print 'ee loss is ', (avg_ee_loss/800)
+                avg_ee_loss = 0
                 average_loss = 0
 
         for robot_number in range(self.num_robots):
