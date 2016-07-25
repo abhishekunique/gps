@@ -420,9 +420,9 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                 feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-                feed_dict[self.ls['next_ee']] = next_ee_reshaped[robot_number][idx_i]
+                feed_dict[self.ls['next_ee_input'][robot_number]] = next_ee_reshaped[robot_number][idx_i]
             train_loss, ee_loss = self.solver(feed_dict, self.sess, device_string=self.device_string,
-                                              extra_output=self.ls['ee_loss'])
+                                              extra_output=self.ls['ee_loss_total'])
             average_loss += train_loss
             avg_ee_loss += ee_loss
             if i % 800 == 0:

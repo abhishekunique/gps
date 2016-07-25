@@ -1297,12 +1297,17 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
         # shared_weights['w3_tn_' + str(task_number)] = init_weights((dim_hidden[1], dim_hidden[2]), name='w3_tn_' + str(task_number))
         # shared_weights['b3_tn_' + str(task_number)] = init_bias((dim_hidden[2],), name='b3_tn_' + str(task_number))
 
+    tensors = {
+        'task_output' : [],
+        'ee_loss': [],
+        'next_ee_input': [],
+    }
     for agent_number, agent_params in enumerate(network_config['agent_params']):
         robot_index = robot_list[agent_number]
         task_index = task_list[agent_number]
-
+        rs= str(agent_number)
         nn_input, action, precision = get_input_layer(dim_input[agent_number], dim_output[agent_number], agent_number)
-        next_ee = tf.placeholder('float', [None, 3], name='next_ee' + str(robot_number))
+        next_ee = tf.placeholder('float', [None, 3], name='next_ee' + rs)
         robot_idx = tf.constant(agent_params['robot_specific_idx'])
         task_idx = tf.constant(agent_params['task_specific_idx'])
         nn_input_t = tf.transpose(nn_input, perm=[1,0])
@@ -1320,5 +1325,11 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
         output = tf.matmul(layer4, shared_weights['wout_rn_' + str(robot_index)]) + shared_weights['bout_rn_' + str(robot_index)]
         ee_loss = tf.nn.l2_loss(layer2-next_ee)
         loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
+
+        tensors['task_output'].append(layer2)
+        tensors['ee_loss'].append(ee_loss)
+        tensors['next_ee_input'].append(next_ee)
         nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss+ee_loss]))
-    return nnets, None, None, shared_weights, {'task_output': layer2, 'ee_loss': ee_loss, 'loss': loss, 'next_ee': next_ee}
+    ee_loss_total = tf.add_n(tensors['ee_loss'])
+    tensors['ee_loss_total'] = ee_loss_total
+    return nnets, None, None, shared_weights, tensors
