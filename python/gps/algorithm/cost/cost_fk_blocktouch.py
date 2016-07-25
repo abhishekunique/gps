@@ -34,11 +34,11 @@ class CostFKBlock(Cost):
         dX = sample.dX
         dU = sample.dU
 
-        wpm = get_ramp_multiplier(
-            self._hyperparams['ramp_option'], T,
-            wp_final_multiplier=self._hyperparams['wp_final_multiplier']
-        )
-        wp = self._hyperparams['wp'] * np.expand_dims(wpm, axis=-1)
+        # wpm = get_ramp_multiplier(
+        #     self._hyperparams['ramp_option'], T,
+        #     wp_final_multiplier=self._hyperparams['wp_final_multiplier']
+        # )
+        # wp = self._hyperparams['wp'] * np.expand_dims(wpm, axis=-1)
 
         # Initialize terms.
         l = np.zeros(T)
@@ -50,9 +50,11 @@ class CostFKBlock(Cost):
 
         # Choose target.
         pt = sample.get(END_EFFECTOR_POINTS)
-        pt_ee = pt[:, 0:3]
-        pt_block = pt[:, 3:6]
-        dist = pt_ee - pt_block
+        pt_ee1 = pt[:, 0:3]
+        pt_ee2 = pt[:, 3:6]
+        pt_block1 = pt[:, 6:9]
+        pt_block2 = pt[:, 9:12]
+        dist = (pt_ee1 - pt_block1) + (pt_ee2 - pt_block2)
         # dist = np.concatenate([dist, np.zeros((T,3))], axis=1)
         wp= np.ones((T,3))
         # wpm = get_ramp_multiplier(
@@ -70,7 +72,7 @@ class CostFKBlock(Cost):
         #        counting.
         #        (see pts_jacobian_only in matlab costinfos code)
         jx = sample.get(END_EFFECTOR_POINT_JACOBIANS)
-        jx_1 = jx[:, 0:3, :] - jx[:, 3:6, :]
+        jx_1 = jx[:, 0:3, :]  - jx[:, 6:9, :] + jx[:, 3:6, :] - jx[:, 9:12, :]
         # Evaluate penalty term. Use estimated Jacobians and no higher
         # order terms.
         jxx_zeros = np.zeros((T, dist.shape[1], jx.shape[2], jx.shape[2]))

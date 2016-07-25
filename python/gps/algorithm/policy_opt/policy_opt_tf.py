@@ -43,8 +43,9 @@ class PolicyOptTf(PolicyOpt):
             self.precision_tensors.append(None)
             self.action_tensors.append(None)
             self.var.append(self._hyperparams['init_var'] * np.ones(dU_ind))
-        self.init_network()
-        self.init_solver()
+        if not self._hyperparams['run_feats']:
+            self.init_network()
+            self.init_solver()
         self.tf_vars = tf.trainable_variables()
         if self._hyperparams['run_feats']:
             self.init_feature_space()
@@ -60,7 +61,6 @@ class PolicyOptTf(PolicyOpt):
             self.x_idx.append([])
             self.img_idx.append([])
             i.append(0)
-
         for robot_number, robot_params in enumerate(self._hyperparams['network_params']):
             for sensor in robot_params['obs_include']:
                 dim = robot_params['sensor_dims'][sensor]
@@ -81,7 +81,7 @@ class PolicyOptTf(PolicyOpt):
             val_vars = pickle.load(open(self._hyperparams['load_weights'], 'rb'))
             for k,v in self.var_list_feat.items():
                 if k in val_vars:   
-                    print(k)         
+                    print(k)        
                     assign_op = v.assign(val_vars[k])
                     self.sess.run(assign_op)
 
@@ -89,7 +89,7 @@ class PolicyOptTf(PolicyOpt):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
         if 'invariant_train' in self._hyperparams and self._hyperparams['invariant_train']:
-            dO = [12, 14]
+            dO = [20, 22]
         else:
             dO = self._dO
         tf_maps, var_list = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
@@ -114,7 +114,7 @@ class PolicyOptTf(PolicyOpt):
     def init_feature_space(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model_feat']
-        dO = [12, 14]
+        dO = [20, 22]
         tf_maps, var_list = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params'])
         self.obs_tensors_feat = []
@@ -144,7 +144,7 @@ class PolicyOptTf(PolicyOpt):
         for robot_number in range(self.num_robots):
             obs = obs_full[robot_number]
             N, T = obs.shape[:2]
-            dO = [12, 14][robot_number]
+            dO = [20, 22][robot_number]
             dU = self._dU[robot_number]
             obs = np.reshape(obs, (N*T, dO))
             obs_reshaped.append(obs)
@@ -195,7 +195,7 @@ class PolicyOptTf(PolicyOpt):
     def run_features_forward(self, obs, robot_number):
         feed_dict = {}
         N, T = obs.shape[:2]
-        dO = [12, 14][robot_number]
+        dO = [20, 22][robot_number]
         dU = self._dU[robot_number]
         obs = np.reshape(obs, (N*T, dO))
         # obs = np.concatenate([obs[:, 0:3], obs[:, 4:7], obs[:, 8:11], obs[:, 17:20]], axis = 1)

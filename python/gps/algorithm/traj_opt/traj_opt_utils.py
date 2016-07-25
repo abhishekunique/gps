@@ -208,11 +208,13 @@ class LineSearch(object):
             # instead. Use ratio of gradients. Solve in the original if
             # the ratio of gradients is very high in log space (with 50
             # percent probability).
-            if (abs(np.log(abs(lc1 / lc2))) > 2 * abs(np.log(abs(c1 / c2))) and
-                    c1 * c2 < 0 and np.random.rand() < 0.5):
-                solve_orig = 1
-            else:
-                solve_orig = 0
+            # if (abs(np.log(abs(lc1 / lc2))) > 2 * abs(np.log(abs(c1 / c2))) and
+            #         c1 * c2 < 0 and np.random.rand() < 0.5):
+            #     solve_orig = 1
+            # else:
+            #     solve_orig = 0
+            # Just solve in normal space for now
+            solve_orig = 1
 
             # Compute minimium.
             if a < 0 and not solve_orig:  # Concave, good to go.

@@ -197,9 +197,10 @@ class GPSMain(object):
                         s.agent = self.agent[1]
         
             dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
+            dO = self.algorithm[robot_number].dX
             obs_data = np.zeros((0, T, dO))
             for samples in obs_sample:
-                obs_data = np.concatenate((obs_data, samples.get_obs()))
+                obs_data = np.concatenate((obs_data, samples.get_X()))
 
             if robot_number == 0:
                 obs_data = obs_data[:, :, self._hyperparams['r0_index_list']]
@@ -211,6 +212,22 @@ class GPSMain(object):
                 # obs_data = np.concatenate([obs_data[:, :, 0:4], obs_data[:, :, 4:8], obs_data[:, :, 8:11], obs_data[:, :, 14:17]], axis=2) 
                 # obs_data = np.concatenate([obs_data[:, :, 0:4], obs_data[:, :, 5:9], obs_data[:, :, 10:13], obs_data[:, :, 19:22]], axis=2) 
             obs_full[robot_number] = obs_data
+
+
+        # import matplotlib.pyplot as plt
+        # from mpl_toolkits.mplot3d import Axes3D
+
+        # fig = plt.figure()
+        # ax = fig.add_subplot(111, projection='3d')
+        # for c in range(3,4):
+        #     for s in range(10):
+        #         # ax.scatter(obs_full[0][c*10 + s][:,8],  obs_full[0][0][:,9], obs_full[0][0][:,10])
+        #         # ax.scatter(obs_full[1][c*10 + s][:,10], obs_full[1][0][:,11], obs_full[1][0][:,12], marker='x')
+
+        #         ax.scatter(obs_full[0][c*10 + s][:,11],  obs_full[0][0][:,12], obs_full[0][0][:,13])
+        #         ax.scatter(obs_full[1][c*10 + s][:,13], obs_full[1][0][:,14], obs_full[1][0][:,15], marker='x')
+        # plt.show()
+
         import IPython
         IPython.embed()
         self.policy_opt.train_invariant_autoencoder(obs_full)
@@ -611,9 +628,9 @@ def main():
             plt.show()
         else:
             if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
-                gps.run(itr_load=resume_training_itr)
+                gps.run_subspace_learning(itr_load=resume_training_itr)
             else:
-                gps.run_badmm(itr_load=resume_training_itr)
+                gps.run_subspace_learning(itr_load=resume_training_itr)
 
 
     else:
