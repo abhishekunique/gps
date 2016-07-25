@@ -1247,8 +1247,8 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     robot_list = network_config['robot_list']
     num_robots = max(robot_list)+1
     num_tasks = max(task_list)+1
-    # tasks = [3]
-    # robots= [0]
+    tasks = [3]
+    robots= [3]
     tasks= range(num_tasks)
     robots=range(num_robots)
     nnets = []
@@ -1261,6 +1261,7 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     dim_robot_specific_list = [None for r in range(num_robots)]
     dim_task_specific_list = [None for t in range(num_tasks)]
     dim_robot_output_list = [None for r in range(num_robots)]
+    robot_variables = []
     for  agent_number, agent_params in enumerate(network_config['agent_params']):
         print "agent", agent_number
         robot_number = robot_list[agent_number]; task_number = task_list[agent_number]
@@ -1287,6 +1288,10 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
         # shared_weights['b5_rn_' + str(robot_number)] = init_bias((dim_hidden[4],), name='b5_rn_' + str(robot_number))
         shared_weights['wout_rn_' + str(robot_number)] = init_weights((dim_hidden[3], dim_robot_output), name='wout_rn_' + str(robot_number))
         shared_weights['bout_rn_' + str(robot_number)] = init_bias((dim_robot_output,), name='bout_rn_' + str(robot_number))
+        robot_variables+= [shared_weights['w4_rn_' + str(robot_number)], 
+                           shared_weights['b4_rn_' + str(robot_number)],
+                           shared_weights['wout_rn_' + str(robot_number)],
+                           shared_weights['bout_rn_' + str(robot_number)]]
 
     for task_number in tasks:
         dim_task_input = dim_task_specific_list[task_number]
@@ -1329,7 +1334,8 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
         tensors['task_output'].append(layer2)
         tensors['ee_loss'].append(ee_loss)
         tensors['next_ee_input'].append(next_ee)
-        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss+ee_loss]))
+        tensors['task_weights'] = shared_weights['w2_tn_0']
+        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
     ee_loss_total = tf.add_n(tensors['ee_loss'])
     tensors['ee_loss_total'] = ee_loss_total
-    return nnets, None, None, shared_weights, tensors
+    return nnets, robot_variables, None, shared_weights, tensors

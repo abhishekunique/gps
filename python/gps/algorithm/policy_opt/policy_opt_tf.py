@@ -11,7 +11,7 @@ from gps.algorithm.policy_opt.policy_opt import PolicyOpt
 from gps.algorithm.policy_opt.config import POLICY_OPT_TF
 from gps.algorithm.policy_opt.tf_utils import TfSolver
 LOGGER = logging.getLogger(__name__)
-
+import IPython
 
 class PolicyOptTf(PolicyOpt):
     """ Policy optimization using tensor flow for DAG computations/nonlinear function approximation. """
@@ -78,7 +78,7 @@ class PolicyOptTf(PolicyOpt):
         # # val_vars, pol_var = pickle.load(open('/home/coline/Downloads/weights_full_mtmr_no4pegr_sj_itr4.pkl', 'rb'))
         # # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_full_mtmr_smallnet_no4pegr_sj_itr6.pkl', 'rb'))
 
-        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/full_largenet_dropout.pkl', 'rb'))
+        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_supervised_full3.pkl', 'rb'))
         # #val_vars = pickle.load(open('/home/coline/Downloads/weights_multitaskmultirobot_1.pkl', 'rb'))
         # self.var = [pol_var[-2]] 
         # for k,v in self.av.items():
@@ -90,7 +90,7 @@ class PolicyOptTf(PolicyOpt):
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        tf_maps, fc_vars, last_conv_vars, av, ls = (
+        tf_maps, robot_vars, last_conv_vars, av, ls = (
             tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params']))
         self.obs_tensors = []
@@ -98,7 +98,7 @@ class PolicyOptTf(PolicyOpt):
         self.precision_tensors = []
         self.act_ops = []
         self.loss_scalars = []
-        self.fc_vars = fc_vars
+        self.robot_vars = robot_vars
         self.last_conv_vars = last_conv_vars
         self.feature_points= []
         for tf_map in tf_maps:
@@ -111,6 +111,7 @@ class PolicyOptTf(PolicyOpt):
         self.combined_loss = tf.add_n(self.loss_scalars)
         self.av = av
         self.ls = ls
+        self.task_loss = self.ls['ee_loss_total']
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
@@ -119,7 +120,10 @@ class PolicyOptTf(PolicyOpt):
                               base_lr=self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
                               momentum=self._hyperparams['momentum'],
-                              weight_decay=self._hyperparams['weight_decay'])
+                              weight_decay=self._hyperparams['weight_decay'],
+                              robot_vars= self.robot_vars,
+                              task_loss = self.task_loss,
+        )
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr, next_ee_full=None):
         """
@@ -421,15 +425,19 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
                 feed_dict[self.ls['next_ee_input'][robot_number]] = next_ee_reshaped[robot_number][idx_i]
-            train_loss, ee_loss = self.solver(feed_dict, self.sess, device_string=self.device_string,
-                                              extra_output=self.ls['ee_loss_total'])
+                #feed_dict[self.ls['next_ee_input'][robot_number]] = np.zeros((next_ee_reshaped[robot_number][idx_i].shape))
+
+            ee_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
+            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_robot_solver=True)
             average_loss += train_loss
             avg_ee_loss += ee_loss
-            if i % 800 == 0:
+            if i % 100 == 0:
+                div  = 100
+                if i == 0: div = 1
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 800)
-                print 'supervised tf loss is ', (average_loss/800)
-                print 'ee loss is ', (avg_ee_loss/800)
+                             i, average_loss / div)
+                print 'supervised tf loss is ', (average_loss/div)
+                print 'ee loss is ', (avg_ee_loss/div)
                 avg_ee_loss = 0
                 average_loss = 0
 
