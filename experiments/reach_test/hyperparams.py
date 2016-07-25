@@ -20,7 +20,7 @@ from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd, init_from_fil
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, multitask_multirobot_fc
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, multitask_multirobot_fc, multitask_multirobot_fc_dropout
 from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
 
 IMAGE_WIDTH = 80
@@ -65,9 +65,9 @@ agent_funs =[ push_3link,  push_3link_shortjoint, push_4link_shortjoint,
 ]
 task_values = [0,0,0,1,1,1,1,2,2,2,2]
 robot_values = [0,2,3,0,1,2,3,0,1,2,3]
-# agent_funs = [reach_4link_shortjoint]
-# task_values= [1]
-# robot_values= [3]
+agent_funs = [peg_3link]
+task_values= [2]
+robot_values= [0]
 agents = []
 num_agents = len(agent_funs)
 for i in range(num_agents):
@@ -90,7 +90,7 @@ common = {
     'num_robots':len(agents),
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': multitask_multirobot_fc,
+        'network_model': multitask_multirobot_fc_dropout,
         'network_params': {
             'task_list': task_values,
             'robot_list': robot_values,
