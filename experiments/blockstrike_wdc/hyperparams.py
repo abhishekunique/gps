@@ -57,7 +57,7 @@ SENSOR_DIMS = [{
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
-EXP_DIR = BASE_DIR + '/../experiments/4link_blockstrike/'
+EXP_DIR = BASE_DIR + '/../experiments/blockstrike_wdc/'
 INIT_POLICY_DIR = '/home/abhigupta/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
@@ -79,6 +79,7 @@ common = {
         'network_model_feat': invariant_subspace_test_dc,
         'run_feats': False,
         'load_weights': False,
+        'dc_mode': True,
         'network_params': [{
             'dim_hidden': [10],
             'num_filters': [10, 20],
@@ -287,13 +288,14 @@ test_cost = [{
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
-    'load_file': '/home/abhigupta/gps/subspace_dc.pkl'
+    'load_file': '/home/abhigupta/gps/subspace_dc.pkl',
+    'cond':i
 } for i in agent[1]['train_conditions']]
 
 
 algorithm[1]['cost'] = [{
     'type': CostSumDecrease,
-    'costs': [fk_cost_1[i], test_cost],
+    'costs': [fk_cost_1[i], test_cost[i]],
     'weights': [1.0, 0.5],
 } for i in agent[1]['train_conditions']]
 
@@ -361,8 +363,8 @@ algorithm[1]['policy_prior'] = {
 config = {
     'iterations': 25,
     'num_samples': 10,
-    'verbose_trials': 10,
-    'verbose_policy_trials': 5,
+    'verbose_trials': 1,
+    'verbose_policy_trials': 1,
     'save_wts': True,
     'common': common,
     'agent': agent,
@@ -374,6 +376,8 @@ config = {
     'inner_iterations': 4,
     'to_log': [],
     'robot_iters': [range(25), range(0,25,2)],
+    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
+    'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
 }
 
 common['info'] = generate_experiment_info(config)

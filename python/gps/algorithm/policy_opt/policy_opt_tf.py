@@ -107,6 +107,9 @@ class PolicyOptTf(PolicyOpt):
             self.dc_loss= other['dc_loss']
             self.other = other
             self.cost_weightings = other['cost_weightings']
+            self.dc_entropy0 = other['dc_entropy0']
+            self.dc_entropy1 = other['dc_entropy1']
+            self.all_vars = other['all_vars']
         for tf_map in tf_maps:
             self.obs_tensors.append(tf_map.get_input_tensor())
             self.action_tensors.append(tf_map.get_target_output_tensor())
@@ -142,7 +145,8 @@ class PolicyOptTf(PolicyOpt):
                               base_lr=self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
                               momentum=self._hyperparams['momentum'],
-                              weight_decay=self._hyperparams['weight_decay'])
+                              weight_decay=self._hyperparams['weight_decay'],
+                              vars_to_opt=self.all_vars)
         if self.dc_mode:
             self.dc_solver = TfSolver(loss_scalar= self.dc_loss,
                                       solver_name=self._hyperparams['solver_type'],
@@ -155,18 +159,21 @@ class PolicyOptTf(PolicyOpt):
     def train_invariant_autoencoder(self, obs_full, cost_weightings):
         obs_reshaped = []
         cw_reshaped = []
+        idx_reshaped = []
+        batches_per_epoch_reshaped = []
         for robot_number in range(self.num_robots):
             obs = obs_full[robot_number]
+            cost_weighting = cost_weightings[robot_number]
             cond_num, N, T = obs.shape[:3]
             dO = [12, 14][robot_number]
             dU = self._dU[robot_number]
             #evaluate all the costs here, so as to weight the domain confusion
-            cw = np.reshape(cost_weightings, (cond_num*N*T, 1))
+            cw = np.reshape(cost_weighting, (cond_num*N*T, 1))
             obs = np.reshape(obs, (cond_num*N*T, dO))
             cw_reshaped.append(cw)
             obs_reshaped.append(obs)
             batches_per_epoch = np.floor(cond_num*N*T / self.batch_size)
-            idx = range(N*T)
+            idx = range(cond_num*N*T)
             np.random.shuffle(idx) 
             idx_reshaped.append(idx)
             batches_per_epoch_reshaped.append(batches_per_epoch)
@@ -200,13 +207,12 @@ class PolicyOptTf(PolicyOpt):
                 print '\nsupervised dc loss is '
                 print (average_dc_loss/1000)
                 average_dc_loss = 0
+           
         print("subspace training")
         var_dict = {}
         for v in self.tf_vars:
             var_dict[v.name] = self.sess.run(v)
         pickle.dump(var_dict, open( "subspace_dc.pkl", "wb" ))
-        import IPython
-        IPython.embed()
 
 
     def run_features_forward(self, obs, robot_number):

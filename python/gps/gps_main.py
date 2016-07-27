@@ -164,12 +164,12 @@ class GPSMain(object):
     def _extract_features(self, pol_sample_lists, robot_number, itr):
         dU, dO, T, N = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T, self._hyperparams['num_samples']
         obs_data = np.zeros((len(pol_sample_lists), N, T, dO))
-        cost_weightings = np.zeros((len(pol_sample_lists), N, T, 1))
+        cost_weightings = np.zeros((len(pol_sample_lists), N, T))
         for j, slist in enumerate(pol_sample_lists):
             for i, s in enumerate(slist._samples):
                 obs_data[j, i] = s.get_obs()
-                cost_weightings[j, i] = self.algorithm[robot_number].cost[j].eval(s, itr)
-        obs_data = obs_data[:, :, :, self._hyperparams['r0_index_list']]
+                cost_weightings[j, i] = self.algorithm[robot_number].cost[j]._costs[0].eval(s)[0]
+        obs_data = obs_data[:, :, :, self._hyperparams['r' + str(robot_number) + '_index_list']]
         return obs_data, cost_weightings
 
     def run_wdc(self, itr_load=None, rf=False):

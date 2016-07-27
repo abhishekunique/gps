@@ -963,10 +963,11 @@ def invariant_subspace_test_dc(dim_input=[27, 27], dim_output=[7, 7], batch_size
     other = {}
     dc_loss = []
     cost_weightings = []
+    all_vars = []
     for robot_number, robot_params in enumerate(network_config):
         indiv_losses = []
         nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
-        cost_weighting = tf.placeholder("float", [None, 1], name='nn_input' + str(robot_number))
+        cost_weighting = tf.placeholder("float", [None, 1], name='cw' + str(robot_number))
         cost_weightings.append(cost_weighting)
         w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
         b_input = init_bias((dim_hidden[0],), name='b_input'+str(robot_number))
@@ -986,10 +987,10 @@ def invariant_subspace_test_dc(dim_input=[27, 27], dim_output=[7, 7], batch_size
         output = tf.matmul(layer3, w_output) + b_output
         loss = tf.nn.l2_loss(nn_input - output) 
         dc_output = tf.matmul(tf.nn.relu(tf.matmul(layer2, dc_w1) + dc_b1), dc_w2) + dc_b2
-        dc_softmax = tf.matmul(tf.transpose(cost_weighting), tf.log(tf.nn.softmax(dc_output)))
+        dc_softmax = tf.mul(cost_weighting, tf.log(tf.nn.softmax(dc_output)))
         dc_entropy = -1.0/num_robots*tf.reduce_sum(dc_softmax) 
         dc_loss.append(-tf.reduce_sum(dc_softmax[:,robot_number]))
-        loss = loss + dc_weight* dc_entropy
+        loss = loss + dc_weight*dc_entropy
         other['dc_output'+str(robot_number)] = dc_output
         other['dc_softmax'+str(robot_number)] = dc_softmax
         other['dc_entropy'+str(robot_number)] = dc_entropy
@@ -1005,7 +1006,8 @@ def invariant_subspace_test_dc(dim_input=[27, 27], dim_output=[7, 7], batch_size
         weight_dict[b3.name] = b3
         weight_dict[w_output.name] = w_output
         weight_dict[b_output.name] = b_output
-    other.update({'dc_loss': tf.add_n(dc_loss), 'cost_weightings': cost_weightings})
+        all_vars += [w_input, b_input, w1, b1, w2, b2, w3, b3, w_output, b_output]
+    other.update({'dc_loss': tf.add_n(dc_loss), 'dc_vars': dc_vars, 'cost_weightings': cost_weightings, 'all_vars': all_vars})
     return nnets, weight_dict, other
 
 def conv2d(img, w, b):

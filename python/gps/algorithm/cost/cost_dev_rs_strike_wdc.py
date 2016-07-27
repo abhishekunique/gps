@@ -1,6 +1,6 @@
 """ This file defines the state target cost. """
 import copy
-
+import time
 import numpy as np
 
 from gps.algorithm.cost.config import COST_STATE
@@ -22,8 +22,9 @@ class CostDevRsWDC(Cost):
         config = copy.deepcopy(COST_STATE)
         config.update(hyperparams)
         Cost.__init__(self, config)
-        self.init_feature_space()
+        # self.init_feature_space()
         self.cond = self._hyperparams['cond']
+        self.init_feature_space_flag = False
 
     def init_feature_space(self):
         """ Helper method to initialize the tf networks used """
@@ -77,6 +78,7 @@ class CostDevRsWDC(Cost):
                     print(k)         
                     assign_op = v.assign(val_vars[k])
                     self.session.run(assign_op)
+        self.graph = g
 
     def eval(self, sample):
         """
@@ -84,8 +86,11 @@ class CostDevRsWDC(Cost):
         Args:
             sample:  A single sample
         """
+        if self.init_feature_space_flag == False:
+            self.init_feature_space()
+            self.init_feature_space_flag = True
         val_vars = pickle.load(open(self._hyperparams['load_file'], 'rb'))
-        with g.as_default():
+        with self.graph.as_default():
             for k,v in self.var_list_feat.items():
                 if k in val_vars:   
                     print("COST LOAD")
@@ -103,7 +108,7 @@ class CostDevRsWDC(Cost):
         final_lxx = np.zeros((T, Dx, Dx))
         final_lux = np.zeros((T, Du, Dx))
 
-        tgt = np.load('fps_current.pkl')[self.cond]
+        tgt = np.load('fps_current.pkl.npy')[0, self.cond]
         x = sample.get_obs()
         x = np.concatenate([x[:, 0:4], x[:, 5:9], x[:, 10:13], x[:, 19:22]], axis=1)
         feed_dict = {self.input: x}
@@ -119,6 +124,8 @@ class CostDevRsWDC(Cost):
         l = np.zeros((T,))
         ls = np.zeros((T,size_ls))
         lss = np.zeros((T, size_ls, size_ls))
+
+        time.sleep(0.01)
         for t in range(T):
             l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(60)/(2.0)).dot(feat_forward[t] - tgt[t])
             grad_mult = (feat_forward[t] - tgt[t]).dot(gradients_all[t])
@@ -149,6 +156,9 @@ class CostDevRsWDC(Cost):
             lss[t,10:13,19:22] = hess_mult[8:11, 11:14]
             lss[t,19:22,19:22] = hess_mult[11:14, 11:14]
 
+        if np.any(np.isnan(l)) or np.any(np.isnan(ls)) or np.any(np.isnan(lss)):
+            import IPython
+            IPython.embed()
         final_l += l
         final_lx += ls
         final_lxx += lss

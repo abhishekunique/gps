@@ -89,7 +89,10 @@ class TfSolver:
             self.fc_vars = fc_vars
             self.last_conv_vars = last_conv_vars
             self.fc_solver_op = self.get_solver_op(var_list=fc_vars)
-        self.trainable_variables = tf.trainable_variables()
+        if vars_to_opt is None:
+            self.trainable_variables = tf.trainable_variables()
+        else:
+            self.trainable_variables = vars_to_opt
 
     def get_solver_op(self, var_list=None, loss=None):
         solver_string = self.solver_name.lower()
