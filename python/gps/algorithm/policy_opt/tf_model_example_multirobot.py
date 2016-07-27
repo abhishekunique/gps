@@ -987,7 +987,7 @@ def invariant_subspace_test_dc(dim_input=[27, 27], dim_output=[7, 7], batch_size
         output = tf.matmul(layer3, w_output) + b_output
         loss = tf.nn.l2_loss(nn_input - output) 
         dc_output = tf.matmul(tf.nn.relu(tf.matmul(layer2, dc_w1) + dc_b1), dc_w2) + dc_b2
-        dc_softmax = tf.mul(cost_weighting, tf.log(tf.nn.softmax(dc_output)))
+        dc_softmax = tf.mul(tf.exp(-cost_weighting), tf.log(tf.nn.softmax(dc_output)))
         dc_entropy = -1.0/num_robots*tf.reduce_sum(dc_softmax) 
         dc_loss.append(-tf.reduce_sum(dc_softmax[:,robot_number]))
         loss = loss + dc_weight*dc_entropy

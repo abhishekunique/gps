@@ -179,6 +179,7 @@ class PolicyOptTf(PolicyOpt):
             batches_per_epoch_reshaped.append(batches_per_epoch)
         average_loss = 0
         average_dc_loss = 0
+        print("training")
         for i in range(self._hyperparams['iterations']):
             feed_dict = {}
             for robot_number in range(self.num_robots):
@@ -188,7 +189,15 @@ class PolicyOptTf(PolicyOpt):
                 idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                 feed_dict[self.cost_weightings[robot_number]] = cw_reshaped[robot_number][idx_i]
+            # if np.any(self.sess.run(tf.nn.softmax(self.other['dc_output0']), feed_dict) == 0.0) or np.any(self.sess.run(tf.nn.softmax(self.other['dc_output1']), feed_dict) == 0.0):
+            #     print("0")
+            #     import IPython
+            #     IPython.embed()
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
+            # if np.any(self.sess.run(tf.nn.softmax(self.other['dc_output0']), feed_dict) == 0.0) or np.any(self.sess.run(tf.nn.softmax(self.other['dc_output1']), feed_dict) == 0.0):
+            #     print("1")
+            #     import IPython
+            #     IPython.embed()
             average_loss += train_loss
             if i % 1000 == 0 and i != 0:
                 print 'supervised tf loss is '
@@ -201,7 +210,16 @@ class PolicyOptTf(PolicyOpt):
                 idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                 dc_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                 dc_dict[self.cost_weightings[robot_number]] = cw_reshaped[robot_number][idx_i]
+            
+            # if np.any(self.sess.run(tf.nn.softmax(self.other['dc_output0']), feed_dict) == 0.0) or np.any(self.sess.run(tf.nn.softmax(self.other['dc_output1']), feed_dict) == 0.0):
+            #     print("2")
+            #     import IPython
+            #     IPython.embed()
             dc_loss = self.dc_solver(dc_dict, self.sess, device_string=self.device_string)
+            # if np.any(self.sess.run(tf.nn.softmax(self.other['dc_output0']), feed_dict) == 0.0) or np.any(self.sess.run(tf.nn.softmax(self.other['dc_output1']), feed_dict) == 0.0):
+            #     print("3")
+            #     import IPython
+            #     IPython.embed()
             average_dc_loss += dc_loss
             if i % 1000 == 0 and i != 0:
                 print '\nsupervised dc loss is '
