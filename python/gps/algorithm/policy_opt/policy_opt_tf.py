@@ -93,8 +93,12 @@ class PolicyOptTf(PolicyOpt):
             dO = [12, 14]
         else:
             dO = self._dO
-        tf_maps, var_list, other = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
-                             network_config=self._hyperparams['network_params'])
+        if self.dc_mode:
+            tf_maps, var_list, other = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
+                                 network_config=self._hyperparams['network_params'])
+        else:
+            tf_maps, var_list = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
+                                 network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
         self.precision_tensors = []

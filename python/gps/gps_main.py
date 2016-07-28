@@ -204,6 +204,8 @@ class GPSMain(object):
                 cw_full.append(cw)
                 obs_full.append(obs)
                 obs_full_mean.append(np.mean(obs, axis=1))
+            import IPython
+            IPython.embed()
             self.policy_opt.train_invariant_autoencoder(obs_full, cw_full)
             feature_lists.append(self.policy_opt.run_features_forward(obs_full_mean[0], 0))
             np.save('fps_current.pkl', copy.copy(np.asarray(feature_lists)))

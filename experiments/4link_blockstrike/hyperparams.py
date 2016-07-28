@@ -64,30 +64,30 @@ common = {
     'train_conditions': [0,1],
     'test_conditions': [2,3],
     'num_robots':1,
-    'policy_opt': {
-        'type': PolicyOptTf,
-        'network_model': example_tf_network_multi,
-        'network_model_feat': invariant_subspace_test,
-        'run_feats': False,
-        'load_weights': '/home/abhigupta/gps/subspace_multipositionreachweights.pkl',
-        'network_params': [{
-            'dim_hidden': [10],
-            'num_filters': [10, 20],
-            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_image_data':[],
-            'image_width': IMAGE_WIDTH,
-            'image_height': IMAGE_HEIGHT,
-            'image_channels': IMAGE_CHANNELS,
-            'sensor_dims': SENSOR_DIMS[0],
-            'batch_size': 25,
-            # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
-        }],
-        'iterations': 4000,
-        'fc_only_iterations': 5000,
-        'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-        # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
-    }
+    # 'policy_opt': {
+    #     'type': PolicyOptTf,
+    #     'network_model': example_tf_network_multi,
+    #     'network_model_feat': invariant_subspace_test,
+    #     'run_feats': False,
+    #     'load_weights': '/home/abhigupta/gps/subspace_multipositionreachweights.pkl',
+    #     'network_params': [{
+    #         'dim_hidden': [10],
+    #         'num_filters': [10, 20],
+    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_image_data':[],
+    #         'image_width': IMAGE_WIDTH,
+    #         'image_height': IMAGE_HEIGHT,
+    #         'image_channels': IMAGE_CHANNELS,
+    #         'sensor_dims': SENSOR_DIMS[0],
+    #         'batch_size': 25,
+    #         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
+    #     }],
+    #     'iterations': 4000,
+    #     'fc_only_iterations': 5000,
+    #     'checkpoint_prefix': EXP_DIR + 'data_files/policy',
+    #     # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
+    # }
 }
 
 if not os.path.exists(common['data_files_dir']):
@@ -221,23 +221,23 @@ fk_cost_blocktouch = [{
 # } for i in common['train_conditions']]
 
 
-load_trajs = np.load('/home/abhigupta/gps/experiments/blockstrike/data_files/fps_16_rn_00.pkl.npy')
-# import IPython
-# IPython.embed()
-test_cost = [{
-    'type': CostDevRs,
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'target_feats': load_trajs[0][i],
-    'load_file': '/home/abhigupta/gps/subspace_multipositionreachweights.pkl'
-} for i in agent[0]['train_conditions']]
+# load_trajs = np.load('/home/abhigupta/gps/experiments/blockstrike/data_files/fps_16_rn_00.pkl.npy')
+# # import IPython
+# # IPython.embed()
+# test_cost = [{
+#     'type': CostDevRs,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'target_feats': load_trajs[0][i],
+#     'load_file': '/home/abhigupta/gps/subspace_multipositionreachweights.pkl'
+# } for i in agent[0]['train_conditions']]
 
 
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i]],
-    'weights': [1.0],
+    'costs': [fk_cost_1[i], fk_cost_blocktouch[i]],
+    'weights': [5.0, 1.0],
 } for i in agent[0]['train_conditions']]
 
 
@@ -272,7 +272,7 @@ algorithm[0]['policy_prior'] = {
 config = {
     'iterations': 25,
     'num_samples': 10,
-    'verbose_trials': 10,
+    'verbose_trials': 1,
     'verbose_policy_trials': 5,
     'save_wts': True,
     'common': common,
