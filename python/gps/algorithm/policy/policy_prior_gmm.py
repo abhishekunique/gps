@@ -38,6 +38,7 @@ class PolicyPriorGMM(object):
         self._hyperparams = config
         self.X = None
         self.obs = None
+        self.ee = None
         self.gmm = GMM()
         self._min_samp = self._hyperparams['min_samples_per_cluster']
         self._max_samples = self._hyperparams['max_samples']
@@ -50,6 +51,7 @@ class PolicyPriorGMM(object):
         all_X, all_obs = all_samples.get_X(), all_samples.get_obs()
         U = all_samples.get_U()
         dO, T = all_X.shape[2] + U.shape[2], all_X.shape[1]
+        ee = samples.get(3)
         if self._hyperparams['keep_samples']:
             # Append data to dataset.
             if self.X is None:
@@ -60,18 +62,26 @@ class PolicyPriorGMM(object):
                 self.obs = obs
             elif obs.size > 0:
                 self.obs = np.concatenate([self.obs, obs], axis=0)
+            if self.ee is None:
+                next_ee = np.concatenate((ee[:,1:,:3], ee[:, -1:, :3]), axis=1)
+                self.ee = next_ee
+            elif ee.size > 0:
+                next_ee = np.concatenate((ee[:,1:,:3], ee[:, -1:, :3]), axis=1)
+                self.ee = np.concatenate([self.ee, next_ee], axis= 0)
+
             # Remove excess samples from dataset.
             start = max(0, self.X.shape[0] - self._max_samples + 1)
             self.X = self.X[start:, :, :]
             self.obs = self.obs[start:, :, :]
+            self.ee = self.ee[start:, :, :]
             # Evaluate policy at samples to get mean policy action.
-            Upol = policy_opt.prob(self.obs.copy(), robot_number=robot_number)[0]
+            Upol = policy_opt.prob(self.obs.copy(),self.ee.copy(), robot_number=robot_number)[0]
             # Create dataset.
             N = self.X.shape[0]
             XU = np.reshape(np.concatenate([self.X, Upol], axis=2), [T * N, dO])
         else:
             # Simply use the dataset that is already there.
-            all_U = policy_opt.prob(all_obs.copy(), robot_number=robot_number)[0]
+            all_U = policy_opt.prob(all_obs.copy(), self.ee.copy(), robot_number=robot_number)[0]
             N = all_X.shape[0]
             XU = np.reshape(np.concatenate([all_X, all_U], axis=2), [T * N, dO])
         # Choose number of clusters.
