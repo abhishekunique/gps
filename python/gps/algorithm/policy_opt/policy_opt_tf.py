@@ -78,7 +78,7 @@ class PolicyOptTf(PolicyOpt):
         # val_vars, pol_var = pickle.load(open('/home/coline/Downloads/weights_full_mtmr_no4pegr_sj_itr4.pkl', 'rb'))
         # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/full_supsep.pkl', 'rb'))
 
-        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_supervised_test0.pkl', 'rb'))
+        # val_vars, pol_var = pickle.load(open('/home/abhigupta/gps/weights_supervised_test0.pkl', 'rb'))
         # #val_vars = pickle.load(open('/home/coline/Downloads/weights_multitaskmultirobot_1.pkl', 'rb'))
         # # self.var = [pol_var[-2]] 
         # self.var=pol_var
@@ -91,7 +91,7 @@ class PolicyOptTf(PolicyOpt):
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        tf_maps, robot_vars, last_conv_vars, av, ls = (
+        tf_maps, robot_vars, task_vars, av, ls = (
             tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params']))
         self.obs_tensors = []
@@ -100,7 +100,8 @@ class PolicyOptTf(PolicyOpt):
         self.act_ops = []
         self.loss_scalars = []
         self.robot_vars = robot_vars
-        self.last_conv_vars = last_conv_vars
+        self.task_vars = task_vars
+        # self.last_conv_vars = last_conv_vars
         self.feature_points= []
         for tf_map in tf_maps:
             self.obs_tensors.append(tf_map.get_input_tensor())
@@ -116,14 +117,22 @@ class PolicyOptTf(PolicyOpt):
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver =TfSolver(loss_scalar=self.combined_loss,
+        print("init solver")
+        self.robot_solver =TfSolver(loss_scalar=self.loss_scalars[0],
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
                               momentum=self._hyperparams['momentum'],
                               weight_decay=self._hyperparams['weight_decay'],
-                              robot_vars= self.robot_vars,
-                              task_loss = self.task_loss,
+                              vars_to_opt=self.robot_vars
+        )
+        self.task_solver =TfSolver(loss_scalar=self.task_loss,
+                              solver_name=self._hyperparams['solver_type'],
+                              base_lr=self._hyperparams['lr'],
+                              lr_policy=self._hyperparams['lr_policy'],
+                              momentum=self._hyperparams['momentum'],
+                              weight_decay=self._hyperparams['weight_decay'],
+                              vars_to_opt=self.task_vars
         )
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr, next_ee_full=None):
@@ -419,18 +428,21 @@ class PolicyOptTf(PolicyOpt):
         for i in range(self._hyperparams['iterations']):
             # Load in data for this batch.
             feed_dict = {}
+            robot_dict = {}
             for robot_number in range(self.num_robots):
                 start_idx = int(i * self.batch_size %
                                 (batches_per_epoch_reshaped[robot_number] * self.batch_size))
                 idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
-                feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
                 feed_dict[self.ls['next_ee_input'][robot_number]] = next_ee_reshaped[robot_number][idx_i]
-                #feed_dict[self.ls['next_ee_input'][robot_number]] = np.zeros((next_ee_reshaped[robot_number][idx_i].shape))
-
-            ee_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
-            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_robot_solver=True)
+                robot_dict[self.ls['next_ee_input'][robot_number]] = next_ee_reshaped[robot_number][idx_i]
+                robot_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+                robot_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                robot_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+            # import IPython
+            # IPython.embed()
+            ee_loss = self.task_solver(feed_dict, self.sess, device_string=self.device_string)
+            train_loss = self.robot_solver(robot_dict, self.sess, device_string=self.device_string)
             average_loss += train_loss
             avg_ee_loss += ee_loss
             if i % 1000 == 0:

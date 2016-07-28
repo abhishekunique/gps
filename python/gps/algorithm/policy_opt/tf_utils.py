@@ -73,27 +73,30 @@ class TfSolver:
             raise NotImplementedError('learning rate policies other than fixed are not implemented')
 
         self.weight_decay = weight_decay
-        if weight_decay is not None:
-            if vars_to_opt is None:
-                trainable_vars = tf.trainable_variables()
-            else:
-                trainable_vars = vars_to_opt
-            loss_with_reg = self.loss_scalar
-            task_loss_reg = task_loss
-            for var in trainable_vars:
-                if (robot_vars is None) or (var in robot_vars):
-                    loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
-                if (task_loss_reg is not None) and (var not in robot_vars):
-                    task_loss_reg+= self.weight_decay*tf.nn.l2_loss(var)
-            self.loss_scalar = loss_with_reg
-            self.task_loss = task_loss_reg
+        # if weight_decay is not None:
+        #     if vars_to_opt is None:
+        #         trainable_vars = tf.trainable_variables()
+        #     else:
+        #         trainable_vars = vars_to_opt
+        #     loss_with_reg = self.loss_scalar
+        #     task_loss_reg = task_loss
+        #     for var in trainable_vars:
+        #         if (robot_vars is None) or (var in robot_vars):
+        #             loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
+        #         if (task_loss_reg is not None) and (var not in robot_vars):
+        #             task_loss_reg+= self.weight_decay*tf.nn.l2_loss(var)
+        #     self.loss_scalar = loss_with_reg
+        #     self.task_loss = task_loss_reg
 
-        self.solver_op = self.get_solver_op(var_list=vars_to_opt, loss= self.task_loss)
-        if robot_vars is not None:
-            self.robot_vars = robot_vars
-            # self.last_conv_vars = last_conv_vars
-            self.robot_solver_op = self.get_solver_op(var_list=robot_vars)
-        self.trainable_variables = tf.trainable_variables()
+        self.solver_op = self.get_solver_op(var_list=vars_to_opt, loss= self.loss_scalar)
+        # if robot_vars is not None:
+        #     self.robot_vars = robot_vars
+        #     # self.last_conv_vars = last_conv_vars
+        #     self.robot_solver_op = self.get_solver_op(var_list=robot_vars)
+        if vars_to_opt is None:
+            self.trainable_variables = tf.trainable_variables()
+        else:
+            self.trainable_variables = vars_to_opt
 
     def get_solver_op(self, var_list=None, loss=None):
         solver_string = self.solver_name.lower()
@@ -118,29 +121,10 @@ class TfSolver:
         else:
             raise NotImplementedError("Please select a valid optimizer.")
 
-    def get_last_conv_values(self, sess, feed_dict, num_values, batch_size):
-        i = 0
-        values = []
-        while i < num_values:
-            batch_dict = {}
-            start = i
-            end = min(i+batch_size, num_values)
-            for k,v in feed_dict.iteritems():
-                batch_dict[k] = v[start:end]
-            batch_vals = sess.run(self.last_conv_vars, batch_dict)
-            values.append(batch_vals)
-            i = end
-        final_values = [None for v in self.last_conv_vars]
-        i = 0
-
-        for v in range(len(self.last_conv_vars)):
-            final_values[v] = np.concatenate([values[i][v] for i in range(len(values))])
-        return final_values
-
-    def __call__(self, feed_dict, sess, device_string="/cpu:0", use_robot_solver=False):
+    def __call__(self, feed_dict, sess, device_string="/cpu:0"):
         with tf.device(device_string):
-            if use_robot_solver:
-                loss = sess.run([self.loss_scalar, self.robot_solver_op], feed_dict)
-            else:
-                loss = sess.run([self.task_loss, self.solver_op], feed_dict)
+            # if use_robot_solver:
+            #     loss = sess.run([self.loss_scalar, self.robot_solver_op], feed_dict)
+            # else:
+            loss = sess.run([self.loss_scalar, self.solver_op], feed_dict)
             return loss[0]

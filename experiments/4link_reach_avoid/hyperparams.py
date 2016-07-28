@@ -62,21 +62,21 @@ from gps.example_agents.peg_right_4link_shortjoint import peg_right_4link_shortj
 from gps.example_agents.push_out_3link_shortjoint import push_out_3link_shortjoint
 from gps.example_agents.push_out_4link_shortjoint import push_out_4link_shortjoint
 
-from gps.example_agents.reach_paddle import reach_paddle
+# from gps.example_agents.reach_paddle import reach_paddle
 
 agent_funs =[ reach_3link, reach_4link, push_3link, push_4link, push_out_3link, push_out_4link, peg_3link, peg_4link, peg_right_3link, peg_right_4link,
               reach_3link_shortjoint, reach_4link_shortjoint, push_3link_shortjoint, push_4link_shortjoint, push_out_3link_shortjoint,
               push_out_4link_shortjoint, peg_3link_shortjoint, peg_4link_shortjoint, peg_right_3link_shortjoint]# peg_right_4link_shortjoint,]
 # task_values = [0,0,1,1,2]
 # robot_values = [0,1,0,1,0]
-agent_funs = [peg_3link, peg_4link, push_3link]
+# agent_funs = [peg_3link, peg_4link, push_3link]
 # number 4 ( push_out_3link) doesn't work
 # number 5 ( push_out_4link) doesn't work
 # number 8 (peg right 3link) doesn't work on condition 1
 task_values = [0,1,2]
 robot_values = [0,1,2]
 
-agent_funs= [peg_4link]
+agent_funs= [reach_3link]
 task_values= [0]
 robot_values = [0]
 agents = []
@@ -107,7 +107,7 @@ common = {
             'robot_list': robot_values,
             'agent_params':[a['network_params'] for a in agents],
         },
-        'iterations': 4000,
+        'iterations': 80000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
@@ -123,8 +123,8 @@ algorithm = [a['algorithm'] for a in agents]
 
 config = {
     'iterations': 25,
-    'num_samples': 100,
-    'verbose_trials': 1,
+    'num_samples': 10,
+    'verbose_trials': 10,
     'verbose_policy_trials': 0,
     'save_wts': True,
     'common': common,

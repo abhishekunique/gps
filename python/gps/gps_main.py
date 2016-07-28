@@ -157,10 +157,10 @@ class GPSMain(object):
         #     self.policy_opt.policy[r].x_idx = range(size)
 
 
-        # self.policy_opt.policy[0].scale = np.eye(20)
-        # self.policy_opt.policy[0].bias = np.zeros((20,))
-        # self.policy_opt.var = [np.load('/home/abhigupta/gps/pol_var_1.npy')[-2]]
-        # self.policy_opt.policy[0].x_idx = range(20)
+        # self.policy_opt.policy[0].scale = np.eye(18)
+        # self.policy_opt.policy[0].bias = np.zeros((18,))
+        # # self.policy_opt.var = [np.load('/home/abhigupta/gps/pol_var_1.npy')[-2]]
+        # self.policy_opt.policy[0].x_idx = range(18)
 
         # for cond in range(4):
         #     samples = [self.agent[0].sample(self.algorithm[0].policy_opt.policy[0], cond,
@@ -180,7 +180,7 @@ class GPSMain(object):
         # self.algorithm[0].reinitialize_net(1, sl1)
         # self.algorithm[0].reinitialize_net(2, sl2)
         # self.algorithm[0].reinitialize_net(3, sl3)
-        traj_distr = self.data_logger.unpickle('/home/coline/Downloads/traj_distr_newest.pkl')
+        traj_distr = self.data_logger.unpickle('/home/abhigupta/gps/traj_distr_newest.pkl')
         # abh_traj_distr = self.data_logger.unpickle('abh_traj_distr_mtmr_moreiters.pkl')
         for ag in range(self.num_robots):
             name = self.agent[ag]._hyperparams['filename'][0]
@@ -226,10 +226,10 @@ class GPSMain(object):
                     IPython.embed()
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
             time6 = time.clock()
-            if self.save_shared:
-                self.policy_opt.save_shared_wts()
-            if self.save_wts:
-                self.policy_opt.save_all_wts(itr)
+            # if self.save_shared:
+            #     self.policy_opt.save_shared_wts()
+            # if self.save_wts:
+            #     self.policy_opt.save_all_wts(itr)
             vars = {}
             for k,v in self.policy_opt.av.iteritems():
                 vars[k] = self.policy_opt.sess.run(v)
