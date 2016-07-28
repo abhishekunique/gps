@@ -288,3 +288,56 @@ class AgentMuJoCo(Agent):
         img = img.reshape((image_channels, image_width, image_height))
         img = np.transpose(img, [1, 2, 0])
         return img
+
+    def sample_ee(self, policy, condition,  traj_sample, ee_tensor, verbose=True, save=True,):
+        """
+        Runs a trial and constructs a new sample containing information
+        about the trial.
+        Args:
+            policy: Policy to to used in the trial.
+            condition: Which condition setup to run.
+            verbose: Whether or not to plot the trial.
+            save: Whether or not to store the trial into the samples.
+        """
+        # Create new sample, populate first time step.
+        # act = np.load('/home/coline/abhishek_gps/gps/actions.npy')
+        new_sample = self._init_sample(condition)
+        mj_X = self._hyperparams['x0'][condition]
+        U = np.zeros([self.T, self.dU])
+        ee = traj_sample.get(3)
+        next_ee = np.concatenate((ee[1:,:3], ee[ -1:, :3]), axis=0)
+        noise = generate_noise(self.T, self.dU, self._hyperparams)
+        if np.any(self._hyperparams['x0var'][condition] > 0):
+            x0n = self._hyperparams['x0var'] * \
+                    np.random.randn(self._hyperparams['x0var'].shape)
+            mj_X += x0n
+        noisy_body_idx = self._hyperparams['noisy_body_idx'][condition]
+        if noisy_body_idx.size > 0:
+            for i in range(len(noisy_body_idx)):
+                idx = noisy_body_idx[i]
+                var = self._hyperparams['noisy_body_var'][condition][i]
+                self._model[condition]['body_pos'][idx, :] += \
+                        var * np.random.randn(1, 3)
+        self._world[condition].set_model(self._model[condition])
+        for t in range(self.T):
+            X_t = new_sample.get_X(t=t)
+            obs_t = new_sample.get_obs(t=t)
+            nee= next_ee[t, :]
+            mj_U = policy.act_ee(X_t, obs_t, t, noise[t, :], nee, ee_tensor)
+            if np.any(np.isnan(X_t)) or np.any(np.isnan(obs_t))  or np.any(np.isnan(mj_U)) :
+                self.nan_flag = True
+                self.nan_info.append({'t':t, 'cond': condition, 'X_t': X_t,
+                                      'obs_t':obs_t, 'mj_U':mj_U})
+            U[t, :] = mj_U
+            if verbose:
+                self._world[condition].plot(mj_X)
+            if (t + 1) < self.T:
+                for _ in range(self._hyperparams['substeps']):
+                    mj_X, _ = self._world[condition].step(mj_X, mj_U)
+                #TODO: Some hidden state stuff will go here.
+                self._data = self._world[condition].get_data()
+                self._set_sample(new_sample, mj_X, t, condition)
+        new_sample.set(ACTION, U)
+        if save:
+            self._samples[condition].append(new_sample)
+        return new_sample

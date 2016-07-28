@@ -212,7 +212,12 @@ class AlgorithmBADMM(Algorithm):
         N = len(samples)
         pol_info = self.cur[m].pol_info
         X = samples.get_X()
-        pol_mu, pol_sig = self.policy_opt.prob(samples.get_obs().copy(), robot_number=self.robot_number)[:2]
+        ee = samples.get(3)
+        next_ee = np.concatenate((ee[:,1:,:3], ee[:, -1:, :3]), axis=1)
+        shape = next_ee.shape
+        #next_ee = next_ee.reshape((shape[0]*shape[1], shape[2]))
+
+        pol_mu, pol_sig = self.policy_opt.prob(samples.get_obs().copy(), next_ee, robot_number=self.robot_number)[:2]
         pol_info.pol_mu, pol_info.pol_sig = pol_mu, pol_sig
         # Update policy prior.
         if init:
@@ -266,7 +271,11 @@ class AlgorithmBADMM(Algorithm):
 
         pol_info = self.cur[m].pol_info #JUST INITIALIZE AS whatever it is.
         X = samples.get_X()
-        pol_mu, pol_sig = self.policy_opt.prob(samples.get_obs().copy())[:2]
+        ee = samples.get(3)
+        next_ee = np.concatenate((ee[:,1:,:3], ee[:, -1:, :3]), axis=1)
+        # shape = next_ee.shape
+        # next_ee = next_ee.reshape((shape[0]*shape[1], shape[2]))
+        pol_mu, pol_sig = self.policy_opt.prob(samples.get_obs().copy(), next_ee)[:2]
         pol_sig = np.mean(pol_sig, axis=0)
         self.cur[m].pol_info.policy_prior.update(
             samples, self.policy_opt,
@@ -494,7 +503,10 @@ class AlgorithmBADMM(Algorithm):
         kl, kl_m = np.zeros((N, T)), np.zeros(T)
         kl_l, kl_lm = np.zeros((N, T)), np.zeros(T)
         # Compute policy mean and covariance at each sample.
-        pol_mu, _, pol_prec, pol_det_sigma = self.policy_opt.prob(obs.copy(), robot_number=self.robot_number)
+        ee = samples.get(3)
+        next_ee = np.concatenate((ee[:,1:,:3], ee[:, -1:, :3]), axis=1)
+
+        pol_mu, _, pol_prec, pol_det_sigma = self.policy_opt.prob(obs.copy(), next_ee, robot_number=self.robot_number)
         # Compute KL divergence.
         for t in range(T):
             # Compute trajectory action at sample.

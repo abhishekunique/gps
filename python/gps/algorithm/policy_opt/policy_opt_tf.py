@@ -74,13 +74,14 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = self._hyperparams['ent_reg']
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
-        # import pickle
-        # # val_vars, pol_var = pickle.load(open('/home/coline/Downloads/weights_full_mtmr_no4pegr_sj_itr4.pkl', 'rb'))
-        # # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_full_mtmr_smallnet_no4pegr_sj_itr6.pkl', 'rb'))
+        import pickle
+        # val_vars, pol_var = pickle.load(open('/home/coline/Downloads/weights_full_mtmr_no4pegr_sj_itr4.pkl', 'rb'))
+        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/full_supsep.pkl', 'rb'))
 
-        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_supervised_full3.pkl', 'rb'))
+        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_supervised_test0.pkl', 'rb'))
         # #val_vars = pickle.load(open('/home/coline/Downloads/weights_multitaskmultirobot_1.pkl', 'rb'))
-        # self.var = [pol_var[-2]] 
+        # # self.var = [pol_var[-2]] 
+        # self.var=pol_var
         # for k,v in self.av.items():
         #     if k in val_vars:
         #         print v.name
@@ -240,7 +241,7 @@ class PolicyOptTf(PolicyOpt):
             self.var[robot_number] = 1 / np.diag(A)
         return self.policy
 
-    def prob(self, obs, robot_number=0):
+    def prob(self, obs, next_ee, robot_number=0):
         """
         Run policy forward.
         Args:
@@ -261,6 +262,7 @@ class PolicyOptTf(PolicyOpt):
         output = np.zeros((N, T, dU)) 
         for i in range(N):
             feed_dict = {self.obs_tensors[robot_number]: obs[i, :]}
+            feed_dict[self.ls['next_ee_input'][robot_number]] = next_ee[i, :]
             with tf.device(self.device_string):
                 output[i, :, :] = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
 
@@ -431,8 +433,8 @@ class PolicyOptTf(PolicyOpt):
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_robot_solver=True)
             average_loss += train_loss
             avg_ee_loss += ee_loss
-            if i % 100 == 0:
-                div  = 100
+            if i % 1000 == 0:
+                div  = 1000
                 if i == 0: div = 1
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_loss / div)

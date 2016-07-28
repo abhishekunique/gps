@@ -54,6 +54,32 @@ class TfPolicy(Policy):
             u = action_mean + self.chol_pol_covar.T.dot(noise)
         return u[0]  # the DAG computations are batched by default, but we use batch size 1.
 
+    def act_ee(self, x, obs, t, noise, ee, ee_tensor):
+        """
+        Return an action for a state.
+        Args:
+            x: State vector.
+            obs: Observation vector.
+            t: Time step.
+            noise: Action noise. This will be scaled by the variance.
+        """
+
+        # Normalize obs.
+        if len(obs.shape) == 1:
+            obs = np.expand_dims(obs, axis=0)
+        if len(ee.shape) == 1:
+            ee = np.expand_dims(ee, axis=0)
+        obs[:, self.x_idx] = obs[:, self.x_idx].dot(self.scale) + self.bias
+        with tf.device(self.device_string):
+            action_mean = self.sess.run(self.act_op, feed_dict={self.obs_tensor: obs,
+                                                                ee_tensor: ee})
+        if noise is None:
+            u = action_mean
+        else:
+            u = action_mean + self.chol_pol_covar.T.dot(noise)
+        return u[0]  # the DAG computations are batched by default, but we use batch size 1.
+
+
     def act_return_tensors(self, x, obs, t, noise, tensors):
         if len(obs.shape) == 1:
             obs = np.expand_dims(obs, axis=0)

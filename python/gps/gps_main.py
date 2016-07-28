@@ -143,13 +143,13 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-        # size = 18
+        # size = 20
         # self.policy_opt.policy[0].scale = np.eye(size)
         # self.policy_opt.policy[0].bias = np.zeros((size,))
         # # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
         # self.policy_opt.policy[0].x_idx = range(size)
 
-        # for r in range(16):
+        # for r in range(3):
         #     size = [18, 20, 28, 30, 18, 20, 18, 20,18, 20, 28, 30, 18, 20, 18, 20][r]
         #     self.policy_opt.policy[r].scale = np.eye(size)
         #     self.policy_opt.policy[r].bias = np.zeros((size,))
@@ -180,16 +180,17 @@ class GPSMain(object):
         # self.algorithm[0].reinitialize_net(1, sl1)
         # self.algorithm[0].reinitialize_net(2, sl2)
         # self.algorithm[0].reinitialize_net(3, sl3)
-        # traj_distr = self.data_logger.unpickle('/home/coline/Downloads/traj_distr_newest.pkl')
-        # # abh_traj_distr = self.data_logger.unpickle('abh_traj_distr_mtmr_moreiters.pkl')
-        # for ag in range(self.num_robots):
-        #     name = self.agent[ag]._hyperparams['filename'][0]
-        #     # IPython.embed()
-        #     # if 'reach' in name:
-        #     for cond in  self._train_idx[ag]:
-        #         print ag, cond
-        #         self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
-        self.check_itr = 6
+        traj_distr = self.data_logger.unpickle('/home/coline/Downloads/traj_distr_newest.pkl')
+        # abh_traj_distr = self.data_logger.unpickle('abh_traj_distr_mtmr_moreiters.pkl')
+        for ag in range(self.num_robots):
+            name = self.agent[ag]._hyperparams['filename'][0]
+            # IPython.embed()
+            # if 'reach' in name:
+            for cond in  self._train_idx[ag]:
+                print ag, cond
+                self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+        self.check_itr = 1
+        IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
 
             time2 = time.clock()
@@ -233,10 +234,9 @@ class GPSMain(object):
             for k,v in self.policy_opt.av.iteritems():
                 vars[k] = self.policy_opt.sess.run(v)
             data_dump =[vars, self.policy_opt.var]
-            with open('weights_reach'+str(itr)+'.pkl','wb') as f:
+            with open('weights_supervised_test'+str(itr)+'.pkl','wb') as f:
                 pickle.dump(data_dump, f)
-            if itr % self.check_itr == 0 and itr >0:
-                import IPython
+            if itr % self.check_itr == 0: #and itr >0:
                 IPython.embed()
 
             # for ag in range(self.num_robots):
@@ -306,7 +306,7 @@ class GPSMain(object):
                         ee_data= np.concatenate((ee_data, next_ee))
                     next_ee_full[robot_number] = ee_data
                 #May want to make this shared across robots
-            if self.algorithm[0].iteration_count > 0 or inner_itr > 0:
+            if self.algorithm[0].iteration_count > 0 or inner_itr > 0: 
                 print "policy opt update"
                 self.policy_opt.update_next_ee(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, 
                                        inner_itr, next_ee_full = next_ee_full)

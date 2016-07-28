@@ -788,9 +788,9 @@ def multitask_multirobot_fc(dim_input=[27, 27], dim_output=[7, 7], batch_size=25
     #need to create taskrobot_mapping
     task_list = network_config['task_list']
     robot_list = network_config['robot_list']
-    num_robots =2# max(robot_list)+1
-    num_tasks = 4#max(task_list)+1
-    tasks = [2]
+    num_robots =max(robot_list)+1
+    num_tasks = max(task_list)+1
+    tasks = [1]
     robots= [1]
     # tasks= range(num_tasks)
     # robots=range(num_robots)
@@ -1247,15 +1247,15 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     robot_list = network_config['robot_list']
     num_robots = max(robot_list)+1
     num_tasks = max(task_list)+1
-    tasks = [3]
-    robots= [3]
+    print num_tasks, num_robots
+    tasks = [1]
+    robots=[0]
     tasks= range(num_tasks)
     robots=range(num_robots)
     nnets = []
     n_layers = 6
-    layer_size = 40
+    layer_size = 80
     dim_hidden = (n_layers - 1)*[layer_size]
-    dim_hidden[1] = 3
     shared_weights = {}
     dim_diff = 20
     dim_robot_specific_list = [None for r in range(num_robots)]
@@ -1280,13 +1280,13 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
         #special case possible
         dim_robot_output = dim_robot_output_list[robot_number]
         dim_robot_specific = dim_robot_specific_list[robot_number]
-        shared_weights['w4_rn_' + str(robot_number)] = init_weights((dim_hidden[1] + dim_robot_specific, dim_hidden[3]), name='w4_rn_' + str(robot_number))
+        shared_weights['w4_rn_' + str(robot_number)] = init_weights((3 + dim_robot_specific, dim_hidden[3]), name='w4_rn_' + str(robot_number))
         shared_weights['b4_rn_' + str(robot_number)] = init_bias((dim_hidden[3],), name='b4_rn_' + str(robot_number))
         # shared_weights['wdiff_rn_' + str(robot_number)] = init_weights((dim_robot_specific, dim_diff), name='wdiff_rn_' + str(robot_number))
         # shared_weights['bdiff_rn_' + str(robot_number)] = init_bias((dim_diff,), name='bdiff_rn_' + str(robot_number))
-        # shared_weights['w5_rn_' + str(robot_number)] = init_weights((dim_hidden[3], dim_hidden[4]), name='w5_rn_' + str(robot_number))
-        # shared_weights['b5_rn_' + str(robot_number)] = init_bias((dim_hidden[4],), name='b5_rn_' + str(robot_number))
-        shared_weights['wout_rn_' + str(robot_number)] = init_weights((dim_hidden[3], dim_robot_output), name='wout_rn_' + str(robot_number))
+        shared_weights['w5_rn_' + str(robot_number)] = init_weights((dim_hidden[3], dim_hidden[4]), name='w5_rn_' + str(robot_number))
+        shared_weights['b5_rn_' + str(robot_number)] = init_bias((dim_hidden[4],), name='b5_rn_' + str(robot_number))
+        shared_weights['wout_rn_' + str(robot_number)] = init_weights((dim_hidden[4], dim_robot_output), name='wout_rn_' + str(robot_number))
         shared_weights['bout_rn_' + str(robot_number)] = init_bias((dim_robot_output,), name='bout_rn_' + str(robot_number))
         robot_variables+= [shared_weights['w4_rn_' + str(robot_number)], 
                            shared_weights['b4_rn_' + str(robot_number)],
@@ -1299,8 +1299,10 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
         shared_weights['b1_tn_' + str(task_number)] = init_bias((dim_hidden[0],), name='b1_tn_' + str(task_number))
         shared_weights['w2_tn_' + str(task_number)] = init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
         shared_weights['b2_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
-        # shared_weights['w3_tn_' + str(task_number)] = init_weights((dim_hidden[1], dim_hidden[2]), name='w3_tn_' + str(task_number))
-        # shared_weights['b3_tn_' + str(task_number)] = init_bias((dim_hidden[2],), name='b3_tn_' + str(task_number))
+        shared_weights['w3_tn_' + str(task_number)] = init_weights((dim_hidden[1], dim_hidden[2]), name='w3_tn_' + str(task_number))
+        shared_weights['b3_tn_' + str(task_number)] = init_bias((dim_hidden[2],), name='b3_tn_' + str(task_number))
+        shared_weights['eeout_tn_' + str(task_number)] = init_weights((dim_hidden[2], 3), name='w3_tn_' + str(task_number))
+        shared_weights['beeout_tn_' + str(task_number)] = init_bias((3,), name='b3_tn_' + str(task_number))
 
     tensors = {
         'task_output' : [],
@@ -1322,19 +1324,23 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
         print "task", task_index, "robot", robot_index
         layer1 = tf.nn.relu(tf.matmul(task_input, shared_weights['w1_tn_' + str(task_index)]) + shared_weights['b1_tn_' + str(task_index)])
         layer2 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2_tn_' + str(task_index)]) + shared_weights['b2_tn_' + str(task_index)])
-        # layer3 = tf.nn.relu(tf.matmul(layer2, shared_weights['w3_tn_' + str(task_index)]) + shared_weights['b3_tn_' + str(task_index)])
-        # layer_diff = tf.nn.relu(tf.matmul(robot_input, shared_weights['wdiff_rn_' + str(robot_index)]) + shared_weights['bdiff_rn_' + str(robot_index)])
-        lastlayer_input = tf.concat(concat_dim=1, values=[layer2, robot_input])
+        layer3 = tf.nn.relu(tf.matmul(layer2, shared_weights['w3_tn_' + str(task_index)]) + shared_weights['b3_tn_' + str(task_index)])
+        ee_out = tf.nn.relu(tf.matmul(layer3, shared_weights['eeout_tn_' + str(task_index)]) + shared_weights['beeout_tn_' + str(task_index)])
+        #layer_diff = tf.nn.relu(tf.matmul(robot_input, shared_weights['wdiff_rn_' + str(robot_index)]) + shared_weights['bdiff_rn_' + str(robot_index)])
+
+        lastlayer_input = tf.concat(concat_dim=1, values=[ee_out, robot_input])
+        lastlayer_input = tf.concat(concat_dim=1, values=[next_ee, robot_input])
+
         layer4 = tf.nn.relu(tf.matmul(lastlayer_input, shared_weights['w4_rn_' + str(robot_index)]) + shared_weights['b4_rn_' + str(robot_index)])
-        # layer5 = tf.nn.relu(tf.matmul(layer4, shared_weights['w5_rn_' + str(robot_index)]) + shared_weights['b5_rn_' + str(robot_index)])
-        output = tf.matmul(layer4, shared_weights['wout_rn_' + str(robot_index)]) + shared_weights['bout_rn_' + str(robot_index)]
-        ee_loss = tf.nn.l2_loss(layer2-next_ee)
+        layer5 = tf.nn.relu(tf.matmul(layer4, shared_weights['w5_rn_' + str(robot_index)]) + shared_weights['b5_rn_' + str(robot_index)])
+        output = tf.matmul(layer5, shared_weights['wout_rn_' + str(robot_index)]) + shared_weights['bout_rn_' + str(robot_index)]
+        ee_loss = tf.nn.l2_loss(ee_out-next_ee)
         loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
 
-        tensors['task_output'].append(layer2)
+        tensors['task_output'].append(ee_out)
         tensors['ee_loss'].append(ee_loss)
         tensors['next_ee_input'].append(next_ee)
-        tensors['task_weights'] = shared_weights['w2_tn_0']
+        ###tensors['task_weights'] = shared_weights['w2_tn_0']
         nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
     ee_loss_total = tf.add_n(tensors['ee_loss'])
     tensors['ee_loss_total'] = ee_loss_total
