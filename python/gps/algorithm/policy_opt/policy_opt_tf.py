@@ -88,7 +88,7 @@ class PolicyOptTf(PolicyOpt):
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        tf_maps, fc_vars, last_conv_vars, av, ls = (
+        tf_maps, robot_vars, task_vars, av, ls = (
             tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params']))
         self.obs_tensors = []
@@ -96,8 +96,8 @@ class PolicyOptTf(PolicyOpt):
         self.precision_tensors = []
         self.act_ops = []
         self.loss_scalars = []
-        self.fc_vars = fc_vars
-        self.last_conv_vars = last_conv_vars
+        self.robot_vars = robot_vars
+        self.task_vars = task_vars
         self.feature_points= []
         for tf_map in tf_maps:
             self.obs_tensors.append(tf_map.get_input_tensor())
@@ -112,12 +112,22 @@ class PolicyOptTf(PolicyOpt):
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver =TfSolver(loss_scalar=self.combined_loss,
-                              solver_name=self._hyperparams['solver_type'],
-                              base_lr=self._hyperparams['lr'],
-                              lr_policy=self._hyperparams['lr_policy'],
-                              momentum=self._hyperparams['momentum'],
-                              weight_decay=self._hyperparams['weight_decay'])
+        self.robot_solver =TfSolver(loss_scalar=self.combined_loss,
+                                    solver_name=self._hyperparams['solver_type'],
+                                    base_lr=self._hyperparams['lr'],
+                                    lr_policy=self._hyperparams['lr_policy'],
+                                    momentum=self._hyperparams['momentum'],
+                                    weight_decay=self._hyperparams['weight_decay'],
+                                    vars_to_opt = self.robot_vars)
+        task_loss = tf.add_n(self.ls['task_loss'])
+        self.task_solver =TfSolver(loss_scalar=task_loss,
+                                   solver_name=self._hyperparams['solver_type'],
+                                   base_lr=self._hyperparams['lr'],
+                                   lr_policy=self._hyperparams['lr_policy'],
+                                   momentum=self._hyperparams['momentum'],
+                                   weight_decay=self._hyperparams['weight_decay'],
+                                   vars_to_opt = self.task_vars)
+
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
@@ -320,3 +330,129 @@ class PolicyOptTf(PolicyOpt):
         # saver = tf.train.Saver()
         # check_file = self.checkpoint_file
         # saver.restore(self.sess, check_file)
+    def update_ee(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full,ee_full, itr_full, inner_itr):
+        """
+        Update policy.
+        Args:
+            obs: Numpy array of observations, N x T x dO.
+            tgt_mu: Numpy array of mean controller outputs, N x T x dU.
+            tgt_prc: Numpy array of precision matrices, N x T x dU x dU.
+            tgt_wt: Numpy array of weights, N x T.
+        Returns:
+            A tensorflow object with updated weights.
+        """
+        N_reshaped = []
+        T_reshaped = []
+        obs_reshaped = []
+        tgt_mu_reshaped = []
+        tgt_prc_reshaped = []
+        tgt_wt_reshaped = []
+        ee_reshaped = []
+        itr_reshaped = []
+        idx_reshaped = []
+        batches_per_epoch_reshaped = []
+        tgt_prc_orig_reshaped = []
+        for robot_number in range(self.num_robots):
+            obs = obs_full[robot_number]
+            tgt_mu = tgt_mu_full[robot_number]
+            tgt_prc = tgt_prc_full[robot_number]
+            tgt_wt = tgt_wt_full[robot_number]
+            itr = itr_full[robot_number]
+            ee = ee_full[robot_number]
+            N, T = obs.shape[:2]
+            dU, dO = self._dU[robot_number], self._dO[robot_number]
+
+            # TODO - Make sure all weights are nonzero?
+
+            # Save original tgt_prc.
+            tgt_prc_orig = np.reshape(tgt_prc, [N*T, dU, dU])
+
+            # Renormalize weights.
+            tgt_wt *= (float(N * T) / np.sum(tgt_wt))
+            # Allow weights to be at most twice the robust median.
+            mn = np.median(tgt_wt[(tgt_wt > 1e-2).nonzero()])
+            for n in range(N):
+                for t in range(T):
+                    tgt_wt[n, t] = min(tgt_wt[n, t], 2 * mn)
+            # Robust median should be around one.
+            tgt_wt /= mn
+
+            # Reshape inputs.
+            obs = np.reshape(obs, (N*T, dO))
+            tgt_mu = np.reshape(tgt_mu, (N*T, dU))
+            tgt_prc = np.reshape(tgt_prc, (N*T, dU, dU))
+            tgt_wt = np.reshape(tgt_wt, (N*T, 1, 1))
+            ee = np.reshape(ee, (N*T,ee.shape[-1]))
+            # Fold weights into tgt_prc.
+            tgt_prc = tgt_wt * tgt_prc
+
+            # TODO: Find entries with very low weights?
+
+            # Normalize obs, but only compute normalzation at the beginning.
+            if itr == 0 and inner_itr == 1:
+                #TODO: may need to change this
+                self.policy[robot_number].x_idx = self.x_idx[robot_number]
+                self.policy[robot_number].scale = np.eye(np.diag(1.0 / (np.std(obs[:, self.x_idx[robot_number]], axis=0) + 1e-8)).shape[0])
+                self.policy[robot_number].bias = np.zeros((-np.mean(obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)).shape)
+                print("FIND")
+
+            obs[:, self.x_idx[robot_number]] = obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
+
+            # Assuming that N*T >= self.batch_size.
+            batches_per_epoch = np.floor(N*T / self.batch_size)
+            idx = range(N*T)
+            
+            np.random.shuffle(idx)
+            obs_reshaped.append(obs)
+            tgt_mu_reshaped.append(tgt_mu)
+            tgt_prc_reshaped.append(tgt_prc)
+            tgt_wt_reshaped.append(tgt_wt)
+            ee_reshaped.append(ee)
+            N_reshaped.append(N)
+            T_reshaped.append(T)
+            itr_reshaped.append(itr)
+            idx_reshaped.append(idx)
+            batches_per_epoch_reshaped.append(batches_per_epoch)
+            tgt_prc_orig_reshaped.append(tgt_prc_orig)
+
+        average_loss = 0
+        avg_taskloss = 0
+        for i in range(self._hyperparams['iterations']):
+            # Load in data for this batch.
+            feed_dict = {}
+            robot_dict = {}
+            for robot_number in range(self.num_robots):
+                start_idx = int(i * self.batch_size %
+                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+                feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+                feed_dict[self.ls['ee_input'][robot_number]] = ee_reshaped[robot_number][idx_i]
+                robot_dict.update(feed_dict)
+                robot_dict[self.ls['task_output'][robot_number]] = ee_reshaped[robot_number][idx_i]               
+
+            task_loss = self.task_solver(feed_dict, self.sess, device_string=self.device_string)
+            train_loss = self.robot_solver(robot_dict, self.sess, device_string=self.device_string)
+
+            average_loss += train_loss
+            avg_taskloss += task_loss
+            if i % 800 == 0:
+                LOGGER.debug('tensorflow iteration %d, average loss %f',
+                             i, average_loss / 800)
+                print 'robot loss is ', (average_loss/800)
+                print 'task loss is ', (avg_taskloss/800)
+                average_loss = 0
+                avg_taskloss = 0
+        for robot_number in range(self.num_robots):
+            # Keep track of tensorflow iterations for loading solver states.
+            self.tf_iter[robot_number] += self._hyperparams['iterations']
+
+            # Optimize variance.
+            A = np.sum(tgt_prc_orig_reshaped[robot_number], 0) + 2 * N_reshaped[robot_number] * T_reshaped[robot_number] * \
+                                          self.ent_reg[robot_number] * np.ones((self._dU[robot_number], self._dU[robot_number]))
+            A = A / np.sum(tgt_wt_reshaped[robot_number])
+
+            # TODO - Use dense covariance?
+            self.var[robot_number] = 1 / np.diag(A)
+        return self.policy

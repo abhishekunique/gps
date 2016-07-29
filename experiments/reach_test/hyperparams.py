@@ -20,7 +20,7 @@ from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd, init_from_fil
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, multitask_multirobot_fc
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, multitask_multirobot_fc_supervised
 from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
 
 IMAGE_WIDTH = 80
@@ -65,9 +65,9 @@ agent_funs =[ push_3link,  push_3link_shortjoint, push_4link_shortjoint,
 ]
 task_values = [0,0,0,1,1,1,1,2,2,2,2]
 robot_values = [0,2,3,0,1,2,3,0,1,2,3]
-# agent_funs = [reach_4link_shortjoint]
-# task_values= [1]
-# robot_values= [3]
+agent_funs = [reach_3link, reach_4link]#, peg_3link, peg_4link]
+task_values= [0,0]#,1,1]
+robot_values= [0,1]#,0,1]
 agents = []
 num_agents = len(agent_funs)
 for i in range(num_agents):
@@ -90,13 +90,13 @@ common = {
     'num_robots':len(agents),
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': multitask_multirobot_fc,
+        'network_model': multitask_multirobot_fc_supervised,
         'network_params': {
             'task_list': task_values,
             'robot_list': robot_values,
             'agent_params':[a['network_params'] for a in agents],
         },
-        'iterations': 5000,
+        'iterations': 10000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
@@ -118,12 +118,12 @@ config = {
     'save_wts': True,
     'common': common,
     'agent': agent,
-    'gui_on': False,
+    'gui_on': True,
     'algorithm': algorithm,
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
-    'inner_iterations': 4,
+    'inner_iterations': 3,
     'robot_iters': [range(25), range(0,25,2)],
     'to_log': [END_EFFECTOR_POINTS, JOINT_ANGLES, ACTION],
 }
