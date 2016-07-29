@@ -53,7 +53,7 @@ def push_3link(robot_number, num_robots):
         'sensor_dims': SENSOR_DIMS,
         'batch_size': 25,
         'robot_specific_idx': range(3)+range(5,8)+range(10,13)+range(19,22),
-        'task_specific_idx': range(3,5)+range(8,10)+range(13,19)+range(22,28),
+        'task_specific_idx': range(3,5)+range(8,10)+range(10,13)+range(13,19)+range(19,22)+range(22,28),
         'dim_output':3,
         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
     }
@@ -177,3 +177,4 @@ def push_3link(robot_number, num_robots):
         'robot_number': robot_number
     }
     return agent_dict
+ 

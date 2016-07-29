@@ -54,7 +54,7 @@ def peg_4link(robot_number, num_robots):
         'batch_size': 25,
         'dim_output':4,
         'robot_specific_idx': range(11)+range(14,17),
-        'task_specific_idx': range(11,14)+range(17,20),
+        'task_specific_idx': range(8,11)+range(11,14)+range(14,17)+range(17,20),
         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
     }
     agent_dict['agent'] = {
