@@ -84,11 +84,11 @@ class TfSolver:
             self.loss_scalar = loss_with_reg
 
         self.solver_op = self.get_solver_op(var_list=vars_to_opt)
-        if fc_vars is not None:
-            self.fc_vars = fc_vars
-            self.last_conv_vars = last_conv_vars
-            self.fc_solver_op = self.get_solver_op(var_list=fc_vars)
-        self.trainable_variables = tf.trainable_variables()
+        # if fc_vars is not None:
+        #     self.fc_vars = fc_vars
+        #     self.last_conv_vars = last_conv_vars
+        #     self.fc_solver_op = self.get_solver_op(var_list=fc_vars)
+        #self.trainable_variables = tf.trainable_variables()
 
     def get_solver_op(self, var_list=None, loss=None):
         solver_string = self.solver_name.lower()

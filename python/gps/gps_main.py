@@ -145,11 +145,14 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-        # size = 26
-        # self.policy_opt.policy[0].scale = np.eye(size)
-        # self.policy_opt.policy[0].bias = np.zeros((size,))
-        # # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
-        # self.policy_opt.policy[0].x_idx = range(size)
+        self.policy_opt.validation_samples = self.data_logger.unpickle('4peg_val.pkl')
+
+
+        size = 20
+        self.policy_opt.policy[0].scale = np.eye(size)
+        self.policy_opt.policy[0].bias = np.zeros((size,))
+        # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
+        self.policy_opt.policy[0].x_idx = range(size)
 
         # for r in range(19):
         #     size = [18, 20, 28, 30, 28, 30, 18, 20, 18, 20,18, 20, 28, 30, 28, 30, 18, 20, 18, ][r]
@@ -164,6 +167,15 @@ class GPSMain(object):
         # self.policy_opt.var = [np.load('/home/abhigupta/gps/pol_var_1.npy')[-2]]
         # self.policy_opt.policy[0].x_idx = range(20)
 
+        import pickle
+        val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_bottleneck_itr0.pkl', 'rb'))
+        self.policy_opt.var = pol_var#[pol_var[-2]]
+        for k,v in self.policy_opt.av.items():
+            if k in val_vars:
+                assign_op = v.assign(val_vars[k])
+                self.policy_opt.sess.run(assign_op)
+
+ 
         # for cond in range(4):
         #     samples = [self.agent[0].sample(self.algorithm[0].policy_opt.policy[0], cond,
         #                                     verbose=True, save=False) for j in range(5)]
@@ -193,6 +205,7 @@ class GPSMain(object):
                 print ag, cond
                 self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
         self.check_itr = 1
+        IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
 
             time2 = time.clock()
@@ -236,7 +249,7 @@ class GPSMain(object):
             for k,v in self.policy_opt.av.iteritems():
                 vars[k] = self.policy_opt.sess.run(v)
             data_dump =[vars, self.policy_opt.var]
-            with open('weights_ee_itr'+str(itr)+'.pkl','wb') as f:
+            with open('weights_bottleneck_itr'+str(itr)+'.pkl','wb') as f:
                 pickle.dump(data_dump, f)
             if itr % self.check_itr == 0:# and itr >0:
                 import IPython
@@ -254,7 +267,7 @@ class GPSMain(object):
         self._end()
 
     def collect_samples(self, itr, traj_sample_lists, robot_number):
-        for cond in self._train_idx[robot_number]:
+        for cond in self._train_id [robot_number]:
             for i in range(self._hyperparams['num_samples']):
                 self._take_sample(itr, cond, i, robot_number=robot_number)
 

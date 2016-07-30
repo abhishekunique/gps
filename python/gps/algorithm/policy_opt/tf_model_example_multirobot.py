@@ -1247,10 +1247,10 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     robot_list = network_config['robot_list']
     num_robots = max(robot_list)+1
     num_tasks = max(task_list)+1
-    # tasks = [2]
-    # robots= [1]
-    tasks= range(num_tasks)
-    robots=range(num_robots)
+    tasks = [0]
+    robots= [1]
+    # tasks= range(num_tasks)
+    # robots=range(num_robots)
     nnets = []
     n_layers = 6
     layer_size = 60
@@ -1258,7 +1258,7 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     robot_weights = {}
     task_weights = {}
     dim_diff = 20
-    task_out_size = 6
+    task_out_size = 24
     dim_robot_specific_list = [None for r in range(num_robots)]
     dim_task_specific_list = [None for t in range(num_tasks)]
     dim_robot_output_list = [None for r in range(num_robots)]
@@ -1270,6 +1270,8 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
                     dim_robot_output_list[robot_number] == agent_params['dim_output']), \
                 "Robot dimentions is not consistent between agent %d and the previous ones"%agent_number
         if dim_task_specific_list[task_number] is not None:
+            print dim_task_specific_list
+            print  len(agent_params['task_specific_idx'])
             assert dim_task_specific_list[task_number] == len(agent_params['task_specific_idx']), \
                 "Task dimentions is not consistent between agent %d and the previous ones"%agent_number
         dim_robot_specific_list[robot_number] =  len(agent_params['robot_specific_idx'])
@@ -1317,23 +1319,23 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
 
         print "task", task_index, "robot", robot_index
         layer1 = tf.nn.relu(tf.matmul(task_input, task_weights['w1_tn_' + str(task_index)]) + task_weights['b1_tn_' + str(task_index)])
-        # layer2 = tf.nn.relu(tf.matmul(layer1, task_weights['w2_tn_' + str(task_index)]) + task_weights['b2_tn_' + str(task_index)])
-        # layer3 = tf.nn.relu(tf.matmul(layer2, task_weights['w3_tn_' + str(task_index)]) + task_weights['b3_tn_' + str(task_index)])
-        taskout = tf.matmul(layer1, task_weights['taskout_tn_'+str(task_index)]) + task_weights['taskout_b_tn_'+str(task_index)]
+        layer2 = tf.nn.relu(tf.matmul(layer1, task_weights['w2_tn_' + str(task_index)]) + task_weights['b2_tn_' + str(task_index)])
+        layer3 = tf.nn.relu(tf.matmul(layer2, task_weights['w3_tn_' + str(task_index)]) + task_weights['b3_tn_' + str(task_index)])
+        taskout = tf.matmul(layer3, task_weights['taskout_tn_'+str(task_index)]) + task_weights['taskout_b_tn_'+str(task_index)]
         # taskout_pos = taskout[:,:3]
         # taskout_vel = taskou
         # weights = tf.sqrt(tf.reduce_sum(tf.square(ee_input[:,:3]), reduction_indices=1, keep_dims=True))
         # ee_loss =tf.reduce_sum(tf.sqrt(tf.reduce_sum(tf.square(ee_pos-taskout), reduction_indices=1, keep_dims=True))*weights)
-        ee_loss = tf.nn.l2_loss(ee_input-taskout)
+        #ee_loss = tf.nn.l2_loss(ee_input-taskout)
         lastlayer_input = tf.concat(concat_dim=1, values=[taskout, robot_input])
         #lastlayer_input = tf.concat(concat_dim=1, values=[ee_input, robot_input])
 
         layer4 = tf.nn.relu(tf.matmul(lastlayer_input, robot_weights['w4_rn_' + str(robot_index)]) + robot_weights['b4_rn_' + str(robot_index)])
-        # layer5 = tf.nn.relu(tf.matmul(layer4, robot_weights['w5_rn_' + str(robot_index)]) + robot_weights['b5_rn_' + str(robot_index)])
-        output = tf.matmul(layer4, robot_weights['wout_rn_' + str(robot_index)]) + robot_weights['bout_rn_' + str(robot_index)]
+        layer5 = tf.nn.relu(tf.matmul(layer4, robot_weights['w5_rn_' + str(robot_index)]) + robot_weights['b5_rn_' + str(robot_index)])
+        output = tf.matmul(layer5, robot_weights['wout_rn_' + str(robot_index)]) + robot_weights['bout_rn_' + str(robot_index)]
         loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
         nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
-        tensors['task_loss'].append(ee_loss)
+       # tensors['task_loss'].append(ee_loss)
         tensors['ee_input'].append(ee_input)
         tensors['task_output'].append(taskout)
 

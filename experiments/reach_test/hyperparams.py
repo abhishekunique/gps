@@ -65,8 +65,8 @@ agent_funs =[ push_3link,  push_3link_shortjoint, push_4link_shortjoint,
 ]
 task_values = [0,0,0,1,1,1,1,2,2,2,2]
 robot_values = [0,2,3,0,1,2,3,0,1,2,3]
-agent_funs = [reach_3link, reach_4link]#, peg_3link, peg_4link]
-task_values= [0,0]#,1,1]
+agent_funs = [push_3link, push_4link]#, peg_3link, peg_4link]
+task_values= [0,1]#,1,1]
 robot_values= [0,1]#,0,1]
 agents = []
 num_agents = len(agent_funs)

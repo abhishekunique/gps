@@ -70,7 +70,7 @@ def reach_4link_shortjoint(robot_number, num_robots):
         'sensor_dims': SENSOR_DIMS,
         'batch_size': 25,
         'robot_specific_idx': range(11)+range(14,17),
-        'task_specific_idx': range(11,14)+range(17,20),
+        'task_specific_idx': range(8,20), #range(11,14)+range(17,20),
         'dim_output':4,
         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
     }

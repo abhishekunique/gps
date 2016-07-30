@@ -75,7 +75,7 @@ class PolicyOptTf(PolicyOpt):
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
         # import pickle
-        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_full_mtmr_no4pegr_sj.pkl', 'rb'))
+        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_bottleneck_itr0.pkl', 'rb'))
         # #val_vars = pickle.load(open('/home/coline/Downloads/weights_multitaskmultirobot_1.pkl', 'rb'))
 
         # self.var = pol_var#[pol_var[-2]]
@@ -118,15 +118,16 @@ class PolicyOptTf(PolicyOpt):
                                     lr_policy=self._hyperparams['lr_policy'],
                                     momentum=self._hyperparams['momentum'],
                                     weight_decay=self._hyperparams['weight_decay'],
-                                    vars_to_opt = self.robot_vars)
-        task_loss = tf.add_n(self.ls['task_loss'])
-        self.task_solver =TfSolver(loss_scalar=task_loss,
-                                   solver_name=self._hyperparams['solver_type'],
-                                   base_lr=self._hyperparams['lr'],
-                                   lr_policy=self._hyperparams['lr_policy'],
-                                   momentum=self._hyperparams['momentum'],
-                                   weight_decay=self._hyperparams['weight_decay'],
-                                   vars_to_opt = self.task_vars)
+                                    # vars_to_opt = self.robot_vars)
+                                    vars_to_opt= self.av.values())
+        # task_loss = tf.add_n(self.ls['task_loss'])
+        # self.task_solver =TfSolver(loss_scalar=task_loss,
+        #                            solver_name=self._hyperparams['solver_type'],
+        #                            base_lr=self._hyperparams['lr'],
+        #                            lr_policy=self._hyperparams['lr_policy'],
+        #                            momentum=self._hyperparams['momentum'],
+        #                            weight_decay=self._hyperparams['weight_decay'],
+        #                            vars_to_opt = self.task_vars)
 
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
@@ -430,20 +431,20 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
                 feed_dict[self.ls['ee_input'][robot_number]] = ee_reshaped[robot_number][idx_i]
                 robot_dict.update(feed_dict)
-                robot_dict[self.ls['task_output'][robot_number]] = ee_reshaped[robot_number][idx_i]               
+                #robot_dict[self.ls['task_output'][robot_number]] = ee_reshaped[robot_number][idx_i]               
 
-            task_loss = self.task_solver(feed_dict, self.sess, device_string=self.device_string)
+            #task_loss = self.task_solver(feed_dict, self.sess, device_string=self.device_string)
             train_loss = self.robot_solver(robot_dict, self.sess, device_string=self.device_string)
 
             average_loss += train_loss
-            avg_taskloss += task_loss
+            # avg_taskloss += task_loss
             if i % 800 == 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_loss / 800)
                 print 'robot loss is ', (average_loss/800)
                 print 'task loss is ', (avg_taskloss/800)
                 average_loss = 0
-                avg_taskloss = 0
+                # avg_taskloss = 0
         for robot_number in range(self.num_robots):
             # Keep track of tensorflow iterations for loading solver states.
             self.tf_iter[robot_number] += self._hyperparams['iterations']
