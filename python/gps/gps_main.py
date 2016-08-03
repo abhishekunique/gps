@@ -148,11 +148,18 @@ class GPSMain(object):
         self.policy_opt.validation_samples = self.data_logger.unpickle('4peg_val.pkl')
 
 
-        size = 20
-        self.policy_opt.policy[0].scale = np.eye(size)
-        self.policy_opt.policy[0].bias = np.zeros((size,))
-        # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
-        self.policy_opt.policy[0].x_idx = range(size)
+        # size = 20
+        # self.policy_opt.policy[0].scale = np.eye(size)
+        # self.policy_opt.policy[0].bias = np.zeros((size,))
+        # # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
+        # self.policy_opt.policy[0].x_idx = range(size)
+        # import pickle
+        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_bottleneck_itr0.pkl', 'rb'))
+        # self.policy_opt.var = pol_var#[pol_var[-2]]
+        # for k,v in self.policy_opt.av.items():
+        #     if k in val_vars:
+        #         assign_op = v.assign(val_vars[k])
+        #         self.policy_opt.sess.run(assign_op)
 
         # for r in range(19):
         #     size = [18, 20, 28, 30, 28, 30, 18, 20, 18, 20,18, 20, 28, 30, 28, 30, 18, 20, 18, ][r]
@@ -162,18 +169,9 @@ class GPSMain(object):
         #     self.policy_opt.policy[r].x_idx = range(size)
 
 
-        # self.policy_opt.policy[0].scale = np.eye(20)
-        # self.policy_opt.policy[0].bias = np.zeros((20,))
-        # self.policy_opt.var = [np.load('/home/abhigupta/gps/pol_var_1.npy')[-2]]
-        # self.policy_opt.policy[0].x_idx = range(20)
+ 
 
-        import pickle
-        val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_bottleneck_itr0.pkl', 'rb'))
-        self.policy_opt.var = pol_var#[pol_var[-2]]
-        for k,v in self.policy_opt.av.items():
-            if k in val_vars:
-                assign_op = v.assign(val_vars[k])
-                self.policy_opt.sess.run(assign_op)
+   
 
  
         # for cond in range(4):
@@ -195,17 +193,17 @@ class GPSMain(object):
         # self.algorithm[0].reinitialize_net(2, sl2)
         # self.algorithm[0].reinitialize_net(3, sl3)
         # pool = Pool()
-        traj_distr = self.data_logger.unpickle('/home/coline/Downloads/traj_distr_newest.pkl')
-        # abh_traj_distr = self.data_logger.unpickle('abh_traj_distr_mtmr_moreiters.pkl')
-        for ag in range(self.num_robots):
-            name = self.agent[ag]._hyperparams['filename'][0]
-            # IPython.embed()
-            # if 'reach' in name:
-            for cond in  self._train_idx[ag]:
-                print ag, cond
-                self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
-        self.check_itr = 1
-        IPython.embed()
+        traj_distr = self.data_logger.unpickle('/home/coline/Downloads/traj_distr_newpeg.pkl')
+        # # abh_traj_distr = self.data_logger.unpickle('abh_traj_distr_mtmr_moreiters.pkl')
+        # for ag in range(self.num_robots):
+        #     name = self.agent[ag]._hyperparams['filename'][0]
+        #     # IPython.embed()
+        #     # if 'reach' in name:
+        #     for cond in  self._train_idx[ag]:
+        #         print ag, cond
+        #         self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+        self.check_itr = 4
+        #IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
 
             time2 = time.clock()
@@ -251,7 +249,7 @@ class GPSMain(object):
             data_dump =[vars, self.policy_opt.var]
             with open('weights_bottleneck_itr'+str(itr)+'.pkl','wb') as f:
                 pickle.dump(data_dump, f)
-            if itr % self.check_itr == 0:# and itr >0:
+            if itr % self.check_itr == 0 and itr >0:
                 import IPython
                 IPython.embed()
 
@@ -262,7 +260,7 @@ class GPSMain(object):
             #     for cond in  self._train_idx[ag]:
             #         print ag, cond
             #         traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
-            # self.data_logger.pickle("traj_distr_newest.pkl", traj_distr)
+            # self.data_logger.pickle("/home/coline/Downloads/traj_distr_newpeg.pkl", traj_distr)
 
         self._end()
 

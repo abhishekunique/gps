@@ -60,14 +60,31 @@ from gps.example_agents.push_out_4link_shortjoint import push_out_4link_shortjoi
 # from gps.example_agents.reach_avoid_4link import reach_avoid_4linkp
 
 agent_funs =[ reach_3link, #reach_4link, 
-              push_3link, push_4link, peg_3link,peg_4link,
+              push_3link, push_4link, peg_3link,
+              peg_4link,
               peg_right_3link, peg_right_4link,
-              reach_3link_shortjoint, reach_4link_shortjoint, push_3link_shortjoint, push_4link_shortjoint, 
-              peg_3link_shortjoint, peg_4link_shortjoint, peg_right_3link_shortjoint, peg_right_4link_shortjoint,]
-task_values = [0,1,1,2,2,3,3,
-               0,0,1,1,2,2,3,3]
-robot_values = [0,0,1,0,1,0,1,
-                2,3,2,3,2,3,2,3]
+              reach_3link_shortjoint, reach_4link_shortjoint, push_3link_shortjoint,push_4link_shortjoint, 
+              peg_3link_shortjoint, 
+              peg_4link_shortjoint#, peg_right_3link_shortjoint, 
+              #peg_right_4link_shortjoint,
+          ]
+task_values = [0,#0,
+               1,1,2,
+               2,
+               3,3,
+               0,0,1,1,
+               2,
+               2,3,
+               3]
+robot_values = [0,#1,
+                0,1,0,
+                1,
+                0,1,
+                2,3,2,3,
+                2,
+                3#,2,
+                #3
+            ]
 
 agents = []
 num_agents = len(agent_funs)

@@ -66,10 +66,22 @@ def peg_4link(robot_number, num_robots):
         # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
         # good: 0, 2, 1, 3, 4,6,
         # bad: 2,5?, ,7
-        'pos_body_offset': [[np.array([1.3, 0.0, 0.4])], [np.array([1., 0.0, 0.8])], [np.array([1.2, 0.0, 0.6])],
-                            [np.array([0.8, 0.0, 1.0])], [np.array([0.6, 0.0, 1.1])], [np.array([1.2 , 0.0, 0.6])], 
-                            [np.array([1.1, 0.0, 0.6])], [np.array([1., 0.0, 0.8])]
-                        ],
+        # 'pos_body_offset': [[np.array([1.3, 0.0, 0.4])], [np.array([1., 0.0, 0.8])], [np.array([1.2, 0.0, 0.6])],
+        #                     [np.array([0.8, 0.0, 1.0])], [np.array([0.6, 0.0, 1.1])], [np.array([1.2 , 0.0, 0.6])], 
+        #                     [np.array([1.1, 0.0, 0.6])], [np.array([1., 0.0, 0.8])]
+        #                 ],
+        'pos_body_offset': [
+            [np.array([1., 0.0, -1])], [np.array([1.2, 0.0, 0.7])],
+            [np.array([0.6, 0.0, -1.1])], [np.array([1.4, 0.0, -0.4])],
+            [np.array([0.6, 0.0, 1.4])], [np.array([1.4 , 0.0, 0.4])],
+            [np.array([1.1, 0.0, 0.7])], [np.array([1.3, 0.0, 0.6])]
+        ],
+        'quat_body_offset': [
+            [np.array([1.5, 0, 1.5,0])],
+            [np.array([0.5,0,5,0])], [np.array([1.,0,2,0])],[np.array([1,0,1.2,0])],
+            [np.array([0,0,0,0])],[np.array([0,0,0,0])],
+            [np.array([0,0,0,0])],[np.array([0,0,0,0])]
+        ],
         'pos_body_idx': np.array([7]),
         'conditions': 8,
         'train_conditions': [0,1,2,3],
