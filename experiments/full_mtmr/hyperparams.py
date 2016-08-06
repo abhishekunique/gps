@@ -62,7 +62,7 @@ from gps.example_agents.push_out_4link_shortjoint import push_out_4link_shortjoi
 agent_funs =[ reach_3link, #reach_4link, 
               push_3link, push_4link, peg_3link,
               peg_4link,
-              peg_right_3link, peg_right_4link,
+             # peg_right_3link, peg_right_4link,
               reach_3link_shortjoint, reach_4link_shortjoint, push_3link_shortjoint,push_4link_shortjoint, 
               peg_3link_shortjoint, 
               peg_4link_shortjoint#, peg_right_3link_shortjoint, 
@@ -71,15 +71,16 @@ agent_funs =[ reach_3link, #reach_4link,
 task_values = [0,#0,
                1,1,2,
                2,
-               3,3,
+              # 3,3,
                0,0,1,1,
                2,
-               2,3,
-               3]
+               2#,3,
+               #3
+           ]
 robot_values = [0,#1,
                 0,1,0,
                 1,
-                0,1,
+               # 0,1,
                 2,3,2,3,
                 2,
                 3#,2,
@@ -90,7 +91,9 @@ agents = []
 num_agents = len(agent_funs)
 for i in range(num_agents):
     agents.append(agent_funs[i](i, num_agents))
-
+# val_agent =  {'agent': reach_4link(num_agents),
+#               'task': 0,
+#               'robot': 1,}
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/full_mtmr/'
@@ -114,7 +117,8 @@ common = {
             'robot_list': robot_values,
             'agent_params':[a['network_params'] for a in agents],
         },
-        'iterations': 5000,
+        #'val_agents': [1],
+        'iterations': 25000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
@@ -144,6 +148,7 @@ config = {
     'inner_iterations': 4,
     'robot_iters': [range(25), range(0,25,2)],
     'to_log': [END_EFFECTOR_POINTS, JOINT_ANGLES, ACTION],
+    #'val_agents': [1],
 }
 
 common['info'] = generate_experiment_info(config)

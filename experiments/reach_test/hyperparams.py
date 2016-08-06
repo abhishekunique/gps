@@ -65,9 +65,9 @@ agent_funs =[ push_3link,  push_3link_shortjoint, push_4link_shortjoint,
 ]
 task_values = [0,0,0,1,1,1,1,2,2,2,2]
 robot_values = [0,2,3,0,1,2,3,0,1,2,3]
-agent_funs = [push_3link, push_4link]#, peg_3link, peg_4link]
-task_values= [0,1]#,1,1]
-robot_values= [0,1]#,0,1]
+agent_funs = [push_3link]#,reach_3link,push_3link]#, push_4link]#, peg_3link, peg_4link]
+task_values= [2]#,1,2]#,1,1]
+robot_values= [0]#,0,0]#,0,1]
 agents = []
 num_agents = len(agent_funs)
 for i in range(num_agents):
@@ -113,8 +113,8 @@ algorithm = [a['algorithm'] for a in agents]
 config = {
     'iterations': 25,
     'num_samples': 7,
-    'verbose_trials': 1,
-    'verbose_policy_trials': 3,
+    'verbose_trials': 0,
+    'verbose_policy_trials': 0,
     'save_wts': True,
     'common': common,
     'agent': agent,

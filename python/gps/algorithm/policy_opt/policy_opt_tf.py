@@ -47,6 +47,7 @@ class PolicyOptTf(PolicyOpt):
         self.init_solver()
         self.sess = tf.Session()
         self.policy = []
+
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
             self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string))
         # List of indices for state (vector) data and image (tensor) data in observation.
@@ -106,7 +107,20 @@ class PolicyOptTf(PolicyOpt):
             self.act_ops.append(tf_map.get_output_op())
             self.loss_scalars.append(tf_map.get_loss_op())
             self.feature_points.append(tf_map.feature_points)
-        self.combined_loss = tf.add_n(self.loss_scalars)
+
+        self.train_losses = []
+        self.val_agents= self._hyperparams['val_agents']
+        self.val_loss = 0#tf.add_n([self.loss_scalars[i] for i in self.val_agents])
+        for i in range(len(self.loss_scalars)):
+            if i  not in self.val_agents:
+                self.train_losses.append(self.loss_scalars[i])
+        self.combined_loss = tf.add_n(self.train_losses)
+
+        if isinstance(av, list):
+            d = {}
+            for v in av:
+                d[v.name] = v
+            av = d
         self.av = av
         self.ls = ls
 
@@ -213,6 +227,8 @@ class PolicyOptTf(PolicyOpt):
             tgt_prc_orig_reshaped.append(tgt_prc_orig)
 
         average_loss = 0
+        avg_val_loss = 0
+        prev_val_losses = []
         for i in range(self._hyperparams['iterations']):
             # Load in data for this batch.
             feed_dict = {}
@@ -220,17 +236,19 @@ class PolicyOptTf(PolicyOpt):
                 start_idx = int(i * self.batch_size %
                                 (batches_per_epoch_reshaped[robot_number] * self.batch_size))
                 idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                 feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
+            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
+            val_loss = self.sess.run(self.val_loss, val_dict)
+            avg_val_loss += val_loss
             average_loss += train_loss
-            if i % 800 == 0:
+            if i % 500 == 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 800)
-                print 'supervised tf loss is '
-                print (average_loss/800)
+                             i, average_loss / 500)
+                print 'supervised tf loss is ' (average_loss/800)
                 average_loss = 0
 
         for robot_number in range(self.num_robots):
@@ -418,32 +436,51 @@ class PolicyOptTf(PolicyOpt):
 
         average_loss = 0
         avg_taskloss = 0
+        avg_val_loss =0
+        all_val_losses = []
+        continue_iters =True
         for i in range(self._hyperparams['iterations']):
             # Load in data for this batch.
             feed_dict = {}
             robot_dict = {}
-            for robot_number in range(self.num_robots):
-                start_idx = int(i * self.batch_size %
-                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
-                feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-                feed_dict[self.ls['ee_input'][robot_number]] = ee_reshaped[robot_number][idx_i]
-                robot_dict.update(feed_dict)
-                #robot_dict[self.ls['task_output'][robot_number]] = ee_reshaped[robot_number][idx_i]               
+            if continue_iters:
+                for robot_number in range(self.num_robots):
+                    start_idx = int(i * self.batch_size %
+                                    (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                    idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                    if robot_number in self.val_agents:
+                        val_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                        val_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+                        val_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+                    else:
+                        feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                        feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+                        feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+                        #feed_dict[self.ls['ee_input'][robot_number]] = ee_reshaped[robot_number][idx_i]
+                    robot_dict.update(feed_dict)
+                    #robot_dict[self.ls['task_output'][robot_number]] = ee_reshaped[robot_number][idx_i]               
 
-            #task_loss = self.task_solver(feed_dict, self.sess, device_string=self.device_string)
-            train_loss = self.robot_solver(robot_dict, self.sess, device_string=self.device_string)
-
-            average_loss += train_loss
-            # avg_taskloss += task_loss
-            if i % 800 == 0:
-                LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 800)
-                print 'robot loss is ', (average_loss/800)
-                print 'task loss is ', (avg_taskloss/800)
-                average_loss = 0
+                #task_loss = self.task_solver(feed_dict, self.sess, device_string=self.device_string)
+                train_loss = self.robot_solver(robot_dict, self.sess, device_string=self.device_string)
+                #val_loss = self.sess.run(self.val_loss, val_dict)
+                #avg_val_loss += val_loss
+                average_loss += train_loss
+                # avg_taskloss += task_loss
+                if i % 500 == 0:
+                    LOGGER.debug('tensorflow iteration %d, average loss %f',
+                                 i, average_loss / 500)
+                    print 'robot loss is ', (average_loss/500)
+                    #print 'task loss is ', (avg_taskloss/500
+                    #print 'task loss is ', (avg_val_loss/500)
+                    #all_val_losses.append(avg_val_loss)
+                    average_loss = 0
+                    avg_val_loss = 0
+                    if len(all_val_losses) >2:
+                        print "checking past val losses"
+                        # print all_val_losses
+                        # if all_val_losses[-1] >all_val_losses[-2] and all_val_losses[-2] > all_val_losses[-3]:
+                        #     print "Val loss is increasing, stop iters"
+                        #     continue_iters = False
                 # avg_taskloss = 0
         for robot_number in range(self.num_robots):
             # Keep track of tensorflow iterations for loading solver states.

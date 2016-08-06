@@ -49,6 +49,7 @@ POLICY_OPT_TF = {
     'network_model': multi_input_multi_output_images_shared,
     'checkpoint_prefix': checkpoint_path,
     'restore_shared_wts': False,
+    'val_agents': [],
 }
 
 POLICY_OPT_TF.update(GENERIC_CONFIG)

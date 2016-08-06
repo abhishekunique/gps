@@ -43,6 +43,9 @@ def init_weights(shape, name=None):
 def init_bias(shape, name=None):
     return tf.Variable(tf.zeros(shape, dtype='float'), name=name)
 
+def init_ones(shape, name=None):
+    return tf.Variable(tf.ones(shape, dtype='float'), name=name)
+
 
 def batched_matrix_vector_multiply(vector, matrix):
     """ computes x^T A in mini-batches. """
@@ -495,7 +498,7 @@ def example_tf_network_multi(dim_input=[27, 27], dim_output=[7, 7], batch_size=2
     num_robots = len(dim_input)
     nnets = []
     # with tf.variable_scope("shared_wts"):
-    for robot_number, robot_params in enumerate(network_config):
+    for robot_number, robot_params in enumerate(network_config['agent_params']):
         n_layers = 4
         layer_size = 60
         dim_hidden = (n_layers - 1)*[layer_size]
@@ -880,10 +883,10 @@ def multitask_multirobot_fc_dropout(dim_input=[27, 27], dim_output=[7, 7], batch
     robot_list = network_config['robot_list']
     num_robots = max(robot_list)+1
     num_tasks = max(task_list)+1
-    #  tasks = [2]
-    # robots= [1]
-    tasks= range(num_tasks)
-    robots=range(num_robots)
+    tasks = [0]
+    robots= [1]
+    # tasks= range(num_tasks)
+    # robots=range(num_robots)
     nnets = []
     keep_prob= 0.8
     n_layers = 6
@@ -1247,18 +1250,19 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     robot_list = network_config['robot_list']
     num_robots = max(robot_list)+1
     num_tasks = max(task_list)+1
-    tasks = [0]
-    robots= [1]
-    # tasks= range(num_tasks)
-    # robots=range(num_robots)
+    tasks = [2]
+    robots= [0]
+    tasks= range(num_tasks)
+    robots=range(num_robots)
     nnets = []
     n_layers = 6
-    layer_size = 60
+    layer_size = 80
     dim_hidden = (n_layers - 1)*[layer_size]
     robot_weights = {}
     task_weights = {}
     dim_diff = 20
-    task_out_size = 24
+    task_out_size = 12
+    keep_prob = 1.0
     dim_robot_specific_list = [None for r in range(num_robots)]
     dim_task_specific_list = [None for t in range(num_tasks)]
     dim_robot_output_list = [None for r in range(num_robots)]
@@ -1299,6 +1303,7 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
         task_weights['b3_tn_' + str(task_number)] = init_bias((dim_hidden[2],), name='b3_tn_' + str(task_number))
         task_weights['taskout_tn_' + str(task_number)] = init_weights((dim_hidden[2], task_out_size), name='taskout_tn_' + str(task_number))
         task_weights['taskout_b_tn_' + str(task_number)] = init_bias((task_out_size,), name='task_out_tn_' + str(task_number))
+        task_weights['task_weights_tn_' + str(task_number)] = init_ones((task_out_size,), name='task_weights_' + str(task_number))
     tensors = {}
     tensors['task_loss'] =[]
     tensors['ee_input'] =[]
@@ -1318,10 +1323,11 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
         task_input = tf.transpose(tf.gather(nn_input_t, task_idx), perm=[1,0])
 
         print "task", task_index, "robot", robot_index
-        layer1 = tf.nn.relu(tf.matmul(task_input, task_weights['w1_tn_' + str(task_index)]) + task_weights['b1_tn_' + str(task_index)])
-        layer2 = tf.nn.relu(tf.matmul(layer1, task_weights['w2_tn_' + str(task_index)]) + task_weights['b2_tn_' + str(task_index)])
-        layer3 = tf.nn.relu(tf.matmul(layer2, task_weights['w3_tn_' + str(task_index)]) + task_weights['b3_tn_' + str(task_index)])
-        taskout = tf.matmul(layer3, task_weights['taskout_tn_'+str(task_index)]) + task_weights['taskout_b_tn_'+str(task_index)]
+        layer1 = tf.nn.dropout(tf.nn.relu(tf.matmul(task_input, task_weights['w1_tn_' + str(task_index)]) + task_weights['b1_tn_' + str(task_index)]), keep_prob)
+        layer2 = tf.nn.dropout(tf.nn.relu(tf.matmul(layer1, task_weights['w2_tn_' + str(task_index)]) + task_weights['b2_tn_' + str(task_index)]), keep_prob)
+        layer3 = tf.nn.dropout(tf.nn.relu(tf.matmul(layer2, task_weights['w3_tn_' + str(task_index)]) + task_weights['b3_tn_' + str(task_index)]), keep_prob)
+        taskout = tf.nn.relu(tf.nn.dropout(tf.matmul(layer3, task_weights['taskout_tn_'+str(task_index)]) + task_weights['taskout_b_tn_'+str(task_index)], keep_prob))
+        # taskout = tf.mul(taskout, task_weights['task_weights_tn_'+str(task_index)])
         # taskout_pos = taskout[:,:3]
         # taskout_vel = taskou
         # weights = tf.sqrt(tf.reduce_sum(tf.square(ee_input[:,:3]), reduction_indices=1, keep_dims=True))
@@ -1330,8 +1336,8 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
         lastlayer_input = tf.concat(concat_dim=1, values=[taskout, robot_input])
         #lastlayer_input = tf.concat(concat_dim=1, values=[ee_input, robot_input])
 
-        layer4 = tf.nn.relu(tf.matmul(lastlayer_input, robot_weights['w4_rn_' + str(robot_index)]) + robot_weights['b4_rn_' + str(robot_index)])
-        layer5 = tf.nn.relu(tf.matmul(layer4, robot_weights['w5_rn_' + str(robot_index)]) + robot_weights['b5_rn_' + str(robot_index)])
+        layer4 = tf.nn.dropout(tf.nn.relu(tf.matmul(lastlayer_input, robot_weights['w4_rn_' + str(robot_index)]) + robot_weights['b4_rn_' + str(robot_index)]), keep_prob)
+        layer5 = tf.nn.dropout(tf.nn.relu(tf.matmul(layer4, robot_weights['w5_rn_' + str(robot_index)]) + robot_weights['b5_rn_' + str(robot_index)]), keep_prob)
         output = tf.matmul(layer5, robot_weights['wout_rn_' + str(robot_index)]) + robot_weights['bout_rn_' + str(robot_index)]
         loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
         nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))

@@ -69,13 +69,21 @@ def peg_4link_shortjoint(robot_number, num_robots):
         #                     [np.array([1.1, 0.0, 0.6])], [np.array([1., 0.0, 0.8])]
         #                 ],
         'pos_body_offset': [
-            [np.array([1., 0.0, -1])], [np.array([1.2, 0.0, 0.7])],
-            [np.array([0.6, 0.0, -1.1])], [np.array([1.4, 0.0, -0.4])],
-            [np.array([0.6, 0.0, 1.4])], [np.array([1.4 , 0.0, 0.4])],
-            [np.array([1.1, 0.0, 0.7])], [np.array([1.3, 0.0, 0.6])]
-        ],
+           #  [np.array([1., 0.0, -1])], [np.array([1.2, 0.0, 0.7])],
+        #     [np.array([0.6, 0.0, -1.1])], [np.array([1.4, 0.0, -0.4])],
+        #     [np.array([0.6, 0.0, 1.4])], [np.array([1.4 , 0.0, 0.4])],
+        #     [np.array([1.1, 0.0, 0.7])], [np.array([1.3, 0.0, 0.6])]
+        # ],
+            [np.array([ 0.5 ,  0.  , -1.15])],
+            [np.array([ 1.25,  0.  ,  0.95])],
+            [np.array([ 0.4,  0. ,  1.2])],
+            [np.array([ 1.2,  0. , -0.8])],
+            [np.array([ 0.6 ,  0.  , -1.25])],
+            [np.array([ 1.45,  0.  ,  0.85])],
+            [np.array([ 0.2,  0. ,  1.4])],
+            [np.array([ 1.25,  0.  , -0.9 ])]],
         'quat_body_offset': [
-            [np.array([1.5, 0, 1.5,0])],
+            [np.array([.0, 0, .0,0])],
             [np.array([0.5,0,5,0])], [np.array([1.,0,2,0])],[np.array([1,0,1.2,0])],
             [np.array([0,0,0,0])],[np.array([0,0,0,0])],
             [np.array([0,0,0,0])],[np.array([0,0,0,0])]

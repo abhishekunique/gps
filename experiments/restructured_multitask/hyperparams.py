@@ -43,14 +43,16 @@ from gps.example_agents.peg_right_3link import peg_right_3link
 from gps.example_agents.peg_right_4link import peg_right_4link
 from gps.example_agents.peg_3link import peg_3link
 from gps.example_agents.peg_4link import peg_4link
+from gps.example_agents.peg_3link_shortjoint import peg_3link_shortjoint
+from gps.example_agents.peg_4link_shortjoint import peg_4link_shortjoint
 agent_funs = [reach_3link, reach_4link, push_3link, push_4link, peg_3link, 
               peg_right_3link, peg_right_4link]
 # agent_funs = [reach_3link_shortjoint, reach_4link_shortjoint, push_3link_shortjoint, push_4link_shortjoint, peg_3link]
 task_values = [0,0,1,1,2,3,3]
 robot_values = [0,1,0,1,0,0,1]
-agent_funs=[reach_4link]
-task_values=[0]
-robot_values=[1]
+agent_funs=[peg_3link]
+task_values=[2]#,0]
+robot_values=[0]#,1]
 agents = []
 num_agents = len(agent_funs)
 for i in range(num_agents):
@@ -79,7 +81,7 @@ common = {
             'robot_list': robot_values,
             'agent_params':[a['network_params'] for a in agents],
         },
-        'iterations': 5000,
+        'iterations': 4000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
@@ -96,8 +98,8 @@ algorithm = [a['algorithm'] for a in agents]
 config = {
     'iterations': 25,
     'num_samples': 7,
-    'verbose_trials': 1,
-    'verbose_policy_trials': 1,
+    'verbose_trials':2,
+    'verbose_policy_trials': 0,
     'save_wts': True,
     'common': common,
     'agent': agent,
@@ -106,7 +108,7 @@ config = {
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
-    'inner_iterations': 4,
+    'inner_iterations': 2,
     'robot_iters': [range(25), range(0,25,2)],
     'to_log': [END_EFFECTOR_POINTS, JOINT_ANGLES, ACTION],
 }
