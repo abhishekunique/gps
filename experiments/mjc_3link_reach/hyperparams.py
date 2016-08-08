@@ -186,8 +186,8 @@ fk_cost_1 = [{
 
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i]],
-    'weights': [1.0],
+    'costs': [torque_cost_1[i], fk_cost_1[i]],
+    'weights': [1.0, 1.0],
 } for i in common['train_conditions']]
 
 

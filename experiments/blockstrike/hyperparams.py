@@ -21,7 +21,7 @@ from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd, init_from_fil
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, invariant_subspace_test
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, invariant_subspace_test, invariant_subspace_test_action
 from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
 from gps.utility.data_logger import DataLogger
 
@@ -66,8 +66,10 @@ common = {
         'type': PolicyOptTf,
         'network_model': example_tf_network_multi,
         'network_model_feat': invariant_subspace_test,
+        'network_model_feat_action': invariant_subspace_test_action,
         'run_feats': True,
-        'load_weights': '/home/abhigupta/gps/subspace_multipositionreachweights.pkl',
+        'load_weights': '/home/abhigupta/gps/subspace_state.pkl',
+        'load_weights_action': '/home/abhigupta/gps/subspace_action.pkl',
         'network_params': [{
             'dim_hidden': [10],
             'num_filters': [10, 20],
@@ -266,7 +268,7 @@ config = {
     'inner_iterations': 4,
     'to_log': [],
     'robot_iters': [range(25), range(0,25,2)],    
-    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
+    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7)]),
 
 }
 

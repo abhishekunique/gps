@@ -856,7 +856,7 @@ def invariant_subspace_test(dim_input=[27, 27], dim_output=[7, 7], batch_size=25
     weight_dict = {}
     for robot_number, robot_params in enumerate(network_config):
         indiv_losses = []
-        nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
+        nn_input = tf.placeholder("float", [None, dim_input[robot_number]], name='nn_input' + str(robot_number))
         w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
         b_input = init_bias((dim_hidden[0],), name='b_input'+str(robot_number))
         w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_' + str(robot_number))
@@ -882,7 +882,7 @@ def invariant_subspace_test(dim_input=[27, 27], dim_output=[7, 7], batch_size=25
             indiv_losses.append(contrastive)
             #might need to scale here
             loss = loss + contrastive
-        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss], layer2, indiv_losses))
+        nnets.append(TfMap.init_from_lists([nn_input, None, None], [output], [loss], layer2, indiv_losses))
         weight_dict[w_input.name] = w_input
         weight_dict[b_input.name] = b_input
         weight_dict[w1.name] = w1
@@ -891,6 +891,50 @@ def invariant_subspace_test(dim_input=[27, 27], dim_output=[7, 7], batch_size=25
         weight_dict[b2.name] = b2
         weight_dict[w3.name] = w3
         weight_dict[b3.name] = b3
+        weight_dict[w_output.name] = w_output
+        weight_dict[b_output.name] = b_output
+    return nnets, weight_dict
+
+def invariant_subspace_test_action(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
+    num_robots = len(dim_input)
+    nnets = []
+    n_layers = 4
+    layer_size = 20
+    dim_hidden = (n_layers - 1)*[layer_size]
+    feature_layers = []
+    weight_dict = {}
+    for robot_number, robot_params in enumerate(network_config):
+        indiv_losses = []
+        nn_input = tf.placeholder("float", [None, dim_input[robot_number]], name='action_nn_input10' + str(robot_number))
+        w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='aw_input10' + str(robot_number))
+        b_input = init_bias((dim_hidden[0],), name='ab_input10'+str(robot_number))
+        w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='aw1_10' + str(robot_number))
+        b1 = init_bias((dim_hidden[1],), name='ab1_10' + str(robot_number))
+        w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='aw2_10' + str(robot_number))
+        b2 = init_bias((dim_hidden[2],), name='ab2_10' + str(robot_number))
+        w_output = init_weights((dim_hidden[2], dim_input[robot_number]), name='aw_output10'+str(robot_number))
+        b_output = init_bias((dim_input[robot_number],), name = 'ab_output10'+str(robot_number))
+        layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
+        layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
+        feature_layers.append(layer1)
+        layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
+        output = tf.matmul(layer2, w_output) + b_output
+        loss = tf.nn.l2_loss(nn_input - output) #euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
+        indiv_losses.append(loss)
+        if robot_number == 1:
+            contrastive = tf.nn.l2_loss(feature_layers[0]-feature_layers[1])
+            scale_factor = 0.5
+            contrastive = contrastive*scale_factor
+            indiv_losses.append(contrastive)
+            #might need to scale here
+            loss = loss + contrastive
+        nnets.append(TfMap.init_from_lists([nn_input, None, None], [output], [loss], layer1, indiv_losses))
+        weight_dict[w_input.name] = w_input
+        weight_dict[b_input.name] = b_input
+        weight_dict[w1.name] = w1
+        weight_dict[b1.name] = b1
+        weight_dict[w2.name] = w2
+        weight_dict[b2.name] = b2
         weight_dict[w_output.name] = w_output
         weight_dict[b_output.name] = b_output
     return nnets, weight_dict

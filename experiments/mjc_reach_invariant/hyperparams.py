@@ -17,7 +17,7 @@ from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
 from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, invariant_subspace_test,double_contrastive_invariance
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, invariant_subspace_test,double_contrastive_invariance, invariant_subspace_test_action
 
 
 IMAGE_WIDTH = 80
@@ -76,9 +76,11 @@ common = {
     'policy_opt': {
         'type': PolicyOptTf,
         'network_model': invariant_subspace_test,
-        'network_model_feat': invariant_subspace_test,
+        'network_model_feat': invariant_subspace_test_action,
+        'network_model_action': invariant_subspace_test_action,
         'run_feats': False,
         'load_weights': '/home/abhigupta/gps/subspace_weights.pkl',
+        'load_weights_action': '/home/abhigupta/gps/subspace_weights.pkl',
         'invariant_train': True,
         'network_params': [{
             'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
@@ -343,7 +345,7 @@ config = {
     'common': common,
     'save_wts': True,
     'agent': agent,
-    'gui_on': True,
+    'gui_on': False,
     'verbose_policy_trials': 5,
     'algorithm': algorithm,
     'conditions': common['conditions'],
@@ -351,10 +353,10 @@ config = {
     'test_conditions': common['test_conditions'],
     'inner_iterations': 4,
     'to_log': [],
-    'robot0_file': '/home/abhigupta/gps/experiments/mjc_3link_reach/data_files/traj_sample_itr_16_rn_00.pkl',
-    'robot1_file': '/home/abhigupta/gps/experiments/mjc_4link_reach/data_files/traj_sample_itr_16_rn_00.pkl',
+    'robot0_file': '/home/abhigupta/gps/experiments/mjc_3link_reach/data_files/traj_sample_itr_08_rn_00.pkl',
+    'robot1_file': '/home/abhigupta/gps/experiments/mjc_4link_reach/data_files/traj_sample_itr_08_rn_00.pkl',
     'r0_index_list': np.concatenate([np.arange(0,3), np.arange(3,6), np.arange(6,9), np.arange(12,15)]),
-    'r1_index_list': np.concatenate([np.arange(0,4), np.arange(4,8), np.arange(8,11), np.arange(14,17)]),
+    'r1_index_list': np.concatenate([np.arange(0,4), np.arange(4,8)]),
 }
 
 common['info'] = generate_experiment_info(config)

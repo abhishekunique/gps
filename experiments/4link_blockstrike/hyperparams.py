@@ -13,7 +13,8 @@ from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_fk_dev import CostFKDev
 from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_action import CostAction
-from gps.algorithm.cost.cost_dev_rs import CostDevRs
+from gps.algorithm.cost.cost_dev_rs_strike_noee import CostDevRs
+from gps.algorithm.cost.cost_dev_rs_action import CostDevRsAction
 from gps.algorithm.cost.cost_sum_decreasing import CostSumDecrease
 from gps.algorithm.cost.cost_sum import CostSum
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
@@ -23,7 +24,7 @@ from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd, init_from_fil
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, invariant_subspace_test
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, invariant_subspace_test, invariant_subspace_test_action
 from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
 from gps.utility.data_logger import DataLogger
 
@@ -38,8 +39,8 @@ from gps.gui.config import generate_experiment_info
 SENSOR_DIMS = [{
     JOINT_ANGLES: 5,
     JOINT_VELOCITIES: 5,
-    END_EFFECTOR_POINTS: 9,
-    END_EFFECTOR_POINT_VELOCITIES: 9,
+    END_EFFECTOR_POINTS: 6,
+    END_EFFECTOR_POINT_VELOCITIES: 6,
     ACTION: 4,
     RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
     RGB_IMAGE_SIZE: 3,
@@ -64,35 +65,37 @@ common = {
     'train_conditions': [0,1],
     'test_conditions': [2,3],
     'num_robots':1,
-    'policy_opt': {
-        'type': PolicyOptTf,
-        'network_model': example_tf_network_multi,
-        'network_model_feat': invariant_subspace_test,
-        'run_feats': False,
-        'load_weights': '/home/abhigupta/gps/subspace_multipositionreachweights.pkl',
-        'network_params': [{
-            'dim_hidden': [10],
-            'num_filters': [10, 20],
-            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_image_data':[],
-            'image_width': IMAGE_WIDTH,
-            'image_height': IMAGE_HEIGHT,
-            'image_channels': IMAGE_CHANNELS,
-            'sensor_dims': SENSOR_DIMS[0],
-            'batch_size': 25,
-            # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
-        }],
-        'iterations': 4000,
-        'fc_only_iterations': 5000,
-        'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-        # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
-    }
+    # 'policy_opt': {
+    #     'type': PolicyOptTf,
+    #     'network_model': example_tf_network_multi,
+    #     'network_model_feat': invariant_subspace_test,
+    #     'network_model_action': invariant_subspace_test_action,
+    #     'run_feats': False,
+    #     'load_weights': '/home/abhigupta/gps/subspace_affine_noee.pkl',
+    #     'load_weights_action': '/home/abhigupta/gps/subspace_affine_noee.pkl',
+    #     'network_params': [{
+    #         'dim_hidden': [10],
+    #         'num_filters': [10, 20],
+    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_image_data':[],
+    #         'image_width': IMAGE_WIDTH,
+    #         'image_height': IMAGE_HEIGHT,
+    #         'image_channels': IMAGE_CHANNELS,
+    #         'sensor_dims': SENSOR_DIMS[0],
+    #         'batch_size': 25,
+    #         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
+    #     }],
+    #     'iterations': 4000,
+    #     'fc_only_iterations': 5000,
+    #     'checkpoint_prefix': EXP_DIR + 'data_files/policy',
+    #     # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
+    # }
 }
 
 if not os.path.exists(common['data_files_dir']):
     os.makedirs(common['data_files_dir'])
-
+offset = 0.0
 agent = [{
     'type': AgentMuJoCo,
     'filename': './mjc_models/4link_gripper_strike.xml',
@@ -101,17 +104,17 @@ agent = [{
     'substeps': 5,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
     'pos_body_offset': [
-                        [np.array([-0.8, 0.0, 0.75]),np.array([0.0, 0.0, 0.75])],
-                        [np.array([-0.8, 0.0, -0.8]),np.array([0.0, 0.0, -0.8])],
-                        [np.array([-0.9, 0.0, 0.7]),np.array([0.5, 0.0, 1.3])],
-                        [np.array([-0.7, 0.0, -0.6]),np.array([0.8, 0.0, -1.2])],
+                        [np.array([0., 0., offset]), np.array([-0.8, 0.0, 0.75 + offset]),np.array([0.0, 0.0, 0.75 + offset])],
+                        [np.array([0., 0., offset]), np.array([-0.8, 0.0, -0.8 + offset]),np.array([0.0, 0.0, -0.8 + offset])],
+                        [np.array([0., 0., offset]), np.array([-0.9, 0.0, 0.7 + offset]),np.array([0.5, 0.0, 1.3 + offset])],
+                        [np.array([0., 0., offset]), np.array([-0.7, 0.0, -0.6 + offset]),np.array([0.8, 0.0, -1.2 + offset])],
 
                         # [np.array([-0.3, 0.0, 0.6]),np.array([0.5, 0.0, 0.9])],
                         # [np.array([-0.4, 0.0, -0.5]),np.array([0.5, 0.0, -0.75])],
                         # [np.array([-0.3, 0.0, 0.6]),np.array([0.6, 0.0, 0.85])],
                         # [np.array([-0.4, 0.0, -0.6]),np.array([0.45, 0.0, -0.95])],
                         ],
-    'pos_body_idx': np.array([7,9]),
+    'pos_body_idx': np.array([1, 7,9]),
     'conditions': 4,
     'train_conditions': [0, 1],
     'test_conditions': [2, 3],
@@ -176,10 +179,10 @@ torque_cost_1 = [{
 
 fk_cost_1 = [{
     'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0,0,0]), 
-                                           np.array([0.05, 0.05, 0.05]) + agent[0]['pos_body_offset'][i][1],
+    'target_end_effector': np.concatenate([
+                                           np.array([0.05, 0.05, 0.05]) + agent[0]['pos_body_offset'][i][2],
                                            np.array([0,0,0])]),
-    'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+    'wp': np.array([1, 1, 1,0,0,0]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
@@ -208,7 +211,7 @@ fk_cost_blocktouch = [{
 } for i in agent[0]['train_conditions']]
 
 # data_logger = DataLogger()
-# data_traj = data_logger.unpickle('/home/abhigupta/gps/experiments/blockstrike/data_files/traj_sample_itr_08_rn_00.pkl')
+# data_traj = data_logger.unpickle('/home/abhigupta/gps/experiments/blockstrike/data_files/traj_sample_itr_16_rn_00.pkl')
 # # import IPython
 # # IPython.embed()
 # fk_cost_2 = [{
@@ -230,14 +233,28 @@ test_cost = [{
     'l2': 10.0,
     'alpha': 1e-5,
     'target_feats': load_trajs[0][i],
-    'load_file': '/home/abhigupta/gps/subspace_multipositionreachweights.pkl'
+    'load_file': '/home/abhigupta/gps/subspace_state.pkl'
 } for i in agent[0]['train_conditions']]
+
+# load_trajs_act = np.load('/home/abhigupta/gps/experiments/blockstrike/data_files/actionfps_16_rn_00.pkl.npy')
+# # import IPython
+# # IPython.embed()
+# test_cost_action = [{
+#     'type': CostDevRsAction,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'target_feats': load_trajs_act[0][i],
+#     'load_file': '/home/abhigupta/gps/subspace_action.pkl'
+# } for i in agent[0]['train_conditions']]
+
+
 
 
 algorithm[0]['cost'] = [{
-    'type': CostSum,
-    'costs': [fk_cost_1[i]],
-    'weights': [1.0],
+    'type': CostSumDecrease,
+    'costs': [fk_cost_1[i],test_cost[i]],
+    'weights': [1.0, 0.5],
 } for i in agent[0]['train_conditions']]
 
 

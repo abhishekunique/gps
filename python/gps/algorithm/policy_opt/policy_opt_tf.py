@@ -11,7 +11,7 @@ from gps.algorithm.policy_opt.policy_opt import PolicyOpt
 from gps.algorithm.policy_opt.config import POLICY_OPT_TF
 from gps.algorithm.policy_opt.tf_utils import TfSolver
 LOGGER = logging.getLogger(__name__)
-
+import pickle
 
 class PolicyOptTf(PolicyOpt):
     """ Policy optimization using tensor flow for DAG computations/nonlinear function approximation. """
@@ -43,8 +43,26 @@ class PolicyOptTf(PolicyOpt):
             self.precision_tensors.append(None)
             self.action_tensors.append(None)
             self.var.append(self._hyperparams['init_var'] * np.ones(dU_ind))
+
+
+        self.act_ops_action = []
+        self.loss_scalars_action = []
+        self.obs_tensors_action = []
+        self.precision_tensors_action = []
+        self.action_tensors_action = []
+        self.solver_action = None
+        for i, dU_ind in enumerate(dU):
+            self.act_ops_action.append(None)
+            self.loss_scalars_action.append(None)
+            self.obs_tensors_action.append(None)
+            self.precision_tensors_action.append(None)
+            self.action_tensors_action.append(None)
+
         if not self._hyperparams['run_feats']:
             self.init_network()
+            if 'invariant_train' in self._hyperparams and self._hyperparams['invariant_train']:
+                self.init_action_network()
+                # self.init_action_solver()
             self.init_solver()
         self.tf_vars = tf.trainable_variables()
         if self._hyperparams['run_feats']:
@@ -84,12 +102,20 @@ class PolicyOptTf(PolicyOpt):
                     print(k)        
                     assign_op = v.assign(val_vars[k])
                     self.sess.run(assign_op)
+        # if self._hyperparams['load_weights_action'] and self._hyperparams['run_feats']:
+        #     import pickle
+        #     val_vars = pickle.load(open(self._hyperparams['load_weights_action'], 'rb'))
+        #     for k,v in self.var_list_feat_act.items():
+        #         if k in val_vars:   
+        #             print("act" + str(k))        
+        #             assign_op = v.assign(val_vars[k])
+        #             self.sess.run(assign_op)
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
         if 'invariant_train' in self._hyperparams and self._hyperparams['invariant_train']:
-            dO = [20, 22]
+            dO = [6, 8]
         else:
             dO = self._dO
         tf_maps, var_list = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
@@ -110,11 +136,35 @@ class PolicyOptTf(PolicyOpt):
             self.feature_points.append(tf_map.feature_points)
             self.individual_losses.append(tf_map.individual_losses)
         self.combined_loss = tf.add_n(self.loss_scalars)
+        self.var_list= var_list
+
+    def init_action_network(self):
+        """ Helper method to initialize the tf networks used """
+        tf_map_generator = self._hyperparams['network_model_action']
+        tf_maps, var_list = tf_map_generator(dim_input=self._dU, dim_output=self._dU, batch_size=self.batch_size,
+                             network_config=self._hyperparams['network_params'])
+        self.obs_tensors_action = []
+        self.action_tensors_action = []
+        self.precision_tensors_action = []
+        self.act_ops_action = []
+        self.loss_scalars_action = []
+        self.feature_points_action = []
+        self.individual_losses_action = []
+        for tf_map in tf_maps:
+            self.obs_tensors_action.append(tf_map.get_input_tensor())
+            self.action_tensors_action.append(tf_map.get_target_output_tensor())
+            self.precision_tensors_action.append(tf_map.get_precision_tensor())
+            self.act_ops_action.append(tf_map.get_output_op())
+            self.loss_scalars_action.append(tf_map.get_loss_op())
+            self.feature_points_action.append(tf_map.feature_points)
+            self.individual_losses_action.append(tf_map.individual_losses)
+        self.combined_loss_action = tf.add_n(self.loss_scalars_action)
+        self.var_list_action = var_list
 
     def init_feature_space(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model_feat']
-        dO = [20, 22]
+        dO = [6, 8]
         tf_maps, var_list = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params'])
         self.obs_tensors_feat = []
@@ -129,6 +179,23 @@ class PolicyOptTf(PolicyOpt):
         self.combined_loss_feat = tf.add_n(self.loss_scalars_feat)
         self.var_list_feat = var_list
 
+
+        # tf_map_generator = self._hyperparams['network_model_feat_action']
+        # tf_maps, var_list_act = tf_map_generator(dim_input=self._dU, dim_output=self._dU, batch_size=self.batch_size,
+        #                      network_config=self._hyperparams['network_params'])
+        # self.obs_tensors_feat_act = []
+        # self.act_ops_feat_act = []
+        # self.loss_scalars_feat_act = []
+        # self.feature_points_feat_act = []
+        # for tf_map in tf_maps:
+        #     self.obs_tensors_feat_act.append(tf_map.get_input_tensor())
+        #     self.act_ops_feat_act.append(tf_map.get_output_op())
+        #     self.loss_scalars_feat_act.append(tf_map.get_loss_op())
+        #     self.feature_points_feat_act.append(tf_map.feature_points)
+        # self.combined_loss_feat_act = tf.add_n(self.loss_scalars_feat_act)
+        # self.var_list_feat_act = var_list_act
+
+
     def init_solver(self):
         """ Helper method to initialize the solver. """
         self.solver =TfSolver(loss_scalar=self.combined_loss,
@@ -136,20 +203,29 @@ class PolicyOptTf(PolicyOpt):
                               base_lr=self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
                               momentum=self._hyperparams['momentum'],
-                              weight_decay=self._hyperparams['weight_decay'])
+                              weight_decay=self._hyperparams['weight_decay'],
+                              vars_to_opt=self.var_list.values())
+
+    def init_action_solver(self):
+        """ Helper method to initialize the solver. """
+        self.solver_action =TfSolver(loss_scalar=self.combined_loss_action,
+                              solver_name=self._hyperparams['solver_type'],
+                              base_lr=self._hyperparams['lr'],
+                              lr_policy=self._hyperparams['lr_policy'],
+                              momentum=self._hyperparams['momentum'],
+                              weight_decay=self._hyperparams['weight_decay'],
+                              vars_to_opt=self.var_list_action.values())
 
     def train_invariant_autoencoder(self, obs_full):
         obs_reshaped = []
-        
         for robot_number in range(self.num_robots):
             obs = obs_full[robot_number]
             N, T = obs.shape[:2]
-            dO = [20, 22][robot_number]
+            dO = [6, 8][robot_number]
             dU = self._dU[robot_number]
             obs = np.reshape(obs, (N*T, dO))
             obs_reshaped.append(obs)
-        import IPython
-        IPython.embed()
+
         idx = range(N*T)
         np.random.shuffle(idx)
         batches_per_epoch = np.floor(N*T / self.batch_size)
@@ -187,21 +263,88 @@ class PolicyOptTf(PolicyOpt):
                 average_loss_1 = 0
                 average_loss_2 = 0
                 average_loss_3 = 0
-        print("subspace training")
         import IPython
         IPython.embed()
+        var_dict = {}
+        for k, v in self.var_list.items():
+            var_dict[k] = self.sess.run(v)
+        pickle.dump(var_dict, open("subspace_state.pkl", "wb"))
+        print("state training")
 
+    def train_action_autoencoder(self, act_full):
+        act_reshaped = []
+        for robot_number in range(self.num_robots):
+            act = act_full[robot_number]
+            N, T = act.shape[:2]
+            dU = self._dU[robot_number]
+            act = np.reshape(act, (N*T, dU))
+            act_reshaped.append(act)
+        idx = range(N*T)
+        np.random.shuffle(idx)
+        batches_per_epoch = np.floor(N*T / self.batch_size)
+        average_loss = 0
+        average_loss_1 = 0
+        average_loss_2 = 0
+        average_loss_3 = 0
+        for i in range(self._hyperparams['iterations']):
+            feed_dict = {}
+            start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
+            idx_i = idx[start_idx:start_idx+self.batch_size]
+            for robot_number in range(self.num_robots):
+                feed_dict[self.obs_tensors_action[robot_number]] = act_reshaped[robot_number][idx_i]
+            train_loss = self.solver_action(feed_dict, self.sess, device_string=self.device_string)
+            train_loss_1 = self.sess.run(self.individual_losses_action[0][0], feed_dict)
+            train_loss_2 = self.sess.run(self.individual_losses_action[1][0], feed_dict)
+            train_loss_3 = self.sess.run(self.individual_losses_action[1][1], feed_dict)
+            average_loss += train_loss
+            average_loss_1 += train_loss_1
+            average_loss_2 += train_loss_2
+            average_loss_3 += train_loss_3
+            if i % 1000 == 0 and i != 0:
+                LOGGER.debug('tensorflow iteration %d, average loss %f',
+                             i, average_loss / 100)
+                print 'supervised act tf loss is '
+                print (average_loss/100)
+                print 'robot1 act loss is '
+                print (average_loss_1/100)
+                print 'robot2 act loss is '
+                print (average_loss_2/100)
+                print 'contrastive act loss is '
+                print (average_loss_3/100)
+                print("--------------------------")
+                average_loss = 0
+                average_loss_1 = 0
+                average_loss_2 = 0
+                average_loss_3 = 0
+        import IPython
+        IPython.embed()
+        var_dict = {}
+        for k, v in self.var_list_action.items():
+            var_dict[k] = self.sess.run(v)
+        pickle.dump(var_dict, open("subspace_action.pkl", "wb"))
+        print("action training")
 
     def run_features_forward(self, obs, robot_number):
         feed_dict = {}
         N, T = obs.shape[:2]
-        dO = [20, 22][robot_number]
+        dO = [6, 8][robot_number]
         dU = self._dU[robot_number]
         obs = np.reshape(obs, (N*T, dO))
         # obs = np.concatenate([obs[:, 0:3], obs[:, 4:7], obs[:, 8:11], obs[:, 17:20]], axis = 1)
         feed_dict[self.obs_tensors_feat[robot_number]] = obs
         output = self.sess.run(self.feature_points_feat[robot_number], feed_dict=feed_dict)
         output = np.reshape(output, (N, T, 60))
+        return output
+
+    def run_features_forward_action(self, act, robot_number):
+        feed_dict = {}
+        N, T = act.shape[:2]
+        dU = self._dU[robot_number]
+        act = np.reshape(act, (N*T, dU))
+        # obs = np.concatenate([obs[:, 0:3], obs[:, 4:7], obs[:, 8:11], obs[:, 17:20]], axis = 1)
+        feed_dict[self.obs_tensors_feat_act[robot_number]] = act
+        output = self.sess.run(self.feature_points_feat_act[robot_number], feed_dict=feed_dict)
+        output = np.reshape(output, (N, T, 20))
         return output
 
 
