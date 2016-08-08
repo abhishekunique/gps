@@ -203,8 +203,8 @@ class PolicyOptTf(PolicyOpt):
                               base_lr=self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
                               momentum=self._hyperparams['momentum'],
-                              weight_decay=self._hyperparams['weight_decay'],
-                              vars_to_opt=self.var_list.values())
+                              weight_decay=self._hyperparams['weight_decay'])#,
+                              #vars_to_opt=self.var_list.values())
 
     def init_action_solver(self):
         """ Helper method to initialize the solver. """

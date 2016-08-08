@@ -74,6 +74,8 @@ class TfSolver:
             raise NotImplementedError('learning rate policies other than fixed are not implemented')
 
         self.weight_decay = weight_decay
+        if vars_to_opt is None:
+            vars_to_opt = tf.trainable_variables()
         if weight_decay is not None:
             if vars_to_opt is None:
                 trainable_vars = tf.trainable_variables()
