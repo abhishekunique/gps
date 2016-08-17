@@ -531,20 +531,24 @@ class GPSMain(object):
             self.gui[robot_number].stop_display_calculating()
 
 
-    def _take_policy_samples(self, N=None, robot_number=0):
+    def _take_policy_samples(self, robot_number=0):
         """
         Take samples from the policy to see how it's doing.
         Args:
             N  : number of policy samples to take per condition
         Returns: None
         """
-        # if 'verbose_policy_trials' not in self._hyperparams:
-        #     return None
-        if not N:
-            N = self._hyperparams['verbose_policy_trials']
+        if 'verbose_policy_trials' not in self._hyperparams:
+            # AlgorithmTrajOpt
+            return None
+        verbose = self._hyperparams['verbose_policy_trials']
+        N = verbose
         if self.gui:
             self.gui[robot_number].set_status_text('Taking policy samples.')
         pol_samples = [[None for _ in range(N)] for _ in range(self._conditions[robot_number])]
+        # Since this isn't noisy, just take one sample.
+        # TODO: Make this noisy? Add hyperparam?
+        # TODO: Take at all conditions for GUI?
         for cond in range(self._conditions[robot_number]):
             for i in range(N):
                 pol_samples[cond][i] = self.agent[robot_number].sample(

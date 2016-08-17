@@ -6,7 +6,7 @@ import numpy as np
 import scipy as sp
 
 from gps.algorithm.algorithm import Algorithm
-from gps.algorithm.algorithm_utils import PolicyInfo, gauss_fit_joint_prior
+from gps.algorithm.algorithm_utils import PolicyInfo
 from gps.algorithm.config import ALG_BADMM
 from gps.sample.sample_list import SampleList
 from gps.algorithm.policy.lin_gauss_policy import LinearGaussianPolicy
@@ -24,9 +24,9 @@ class AlgorithmBADMM(Algorithm):
         config.update(hyperparams)
         Algorithm.__init__(self, config)
 
+        policy_prior = self._hyperparams['policy_prior']
         for m in range(self.M):
             self.cur[m].pol_info = PolicyInfo(self._hyperparams)
-            policy_prior = self._hyperparams['policy_prior']
             self.cur[m].pol_info.policy_prior = \
                     policy_prior['type'](policy_prior)
 
@@ -39,7 +39,7 @@ class AlgorithmBADMM(Algorithm):
         """
         for m in range(self.M):
             self.cur[m].sample_list = sample_lists[m]
-        
+
         self._set_interp_values()
         self._update_dynamics()  # Update dynamics model using all sample.
         self._update_policy_samples()  # Choose samples to use with the policy.
@@ -147,9 +147,9 @@ class AlgorithmBADMM(Algorithm):
             X = samples.get_X()
             N = len(samples)
             if inner_itr > 0:
-              traj, pol_info = self.new_traj_distr[m], self.cur[m].pol_info
+                traj, pol_info = self.new_traj_distr[m], self.cur[m].pol_info
             else:
-              traj, pol_info = self.cur[m].traj_distr, self.cur[m].pol_info
+                traj, pol_info = self.cur[m].traj_distr, self.cur[m].pol_info
             mu = np.zeros((N, T, dU))
             prc = np.zeros((N, T, dU, dU))
             wt = np.zeros((N, T))
@@ -162,7 +162,7 @@ class AlgorithmBADMM(Algorithm):
                     mu[i, t, :] = \
                             (traj.K[t, :, :].dot(X[i, t, :]) + traj.k[t, :]) - \
                             np.linalg.solve(
-                                prc[i, t, :, :] / pol_info.pol_wt[t],  #TODO: Divide by pol_wt[t].
+                                prc[i, t, :, :] / pol_info.pol_wt[t],
                                 pol_info.lambda_K[t, :, :].dot(X[i, t, :]) + \
                                         pol_info.lambda_k[t, :]
                             )
@@ -224,7 +224,9 @@ class AlgorithmBADMM(Algorithm):
         X = samples.get_X()
         pol_mu, pol_sig = self.policy_opt.prob(samples.get_obs().copy(), robot_number=self.robot_number)[:2]
         pol_info.pol_mu, pol_info.pol_sig = pol_mu, pol_sig
+
         # Update policy prior.
+        policy_prior = pol_info.policy_prior
         if init:
             self.cur[m].pol_info.policy_prior.update(
                 samples, self.policy_opt,
@@ -240,25 +242,13 @@ class AlgorithmBADMM(Algorithm):
         # on state.
         pol_sig = np.mean(pol_sig, axis=0)
         # Estimate the policy linearization at each time step.
+
+        # Fit linearization and store in pol_info.
+        pol_info.pol_K, pol_info.pol_k, pol_info.pol_S = \
+                policy_prior.fit(X, pol_mu, pol_sig)
         for t in range(T):
-            # Assemble diagonal weights matrix and data.
-            dwts = (1.0 / N) * np.ones(N)
-            Ts = X[:, t, :]
-            Ps = pol_mu[:, t, :]
-            Ys = np.concatenate((Ts, Ps), axis=1)
-            # Obtain Normal-inverse-Wishart prior.
-            mu0, Phi, mm, n0 = self.cur[m].pol_info.policy_prior.eval(Ts, Ps)
-            sig_reg = np.zeros((dX+dU, dX+dU))
-            # On the first time step, always slightly regularize covariance.
-            if t == 0:
-                sig_reg[:dX, :dX] = 1e-8 * np.eye(dX)
-            # Perform computation.
-            pol_K, pol_k, pol_S = gauss_fit_joint_prior(Ys, mu0, Phi, mm, n0,
-                                                        dwts, dX, dU, sig_reg)
-            pol_S += pol_sig[t, :, :]
-            pol_info.pol_K[t, :, :], pol_info.pol_k[t, :] = pol_K, pol_k
-            pol_info.pol_S[t, :, :], pol_info.chol_pol_S[t, :, :] = \
-                    pol_S, sp.linalg.cholesky(pol_S)
+            pol_info.chol_pol_S[t, :, :] = \
+                    sp.linalg.cholesky(pol_info.pol_S[t, :, :])
 
 
     def reinitialize_net(self, m, sample_list_nn):

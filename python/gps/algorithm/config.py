@@ -46,5 +46,6 @@ ALG_MDGPS = {
     'init_pol_wt': 0.01,
     'policy_sample_mode': 'add',
     'max_policy_samples': 20,
-    'step_rule': 'classic',
+    # Whether to use 'laplace' or 'mc' cost in step adjusment
+    'step_rule': 'laplace',
 }
