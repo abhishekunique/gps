@@ -14,6 +14,7 @@ import threading
 import time
 import pickle
 import tensorflow as tf
+import IPython
 # Add gps/python to path so that imports work.
 sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
 from gps.gui.gps_training_gui import GPSTrainingGUI
@@ -140,28 +141,18 @@ class GPSMain(object):
         Returns: None
         """
         # self.collect_img_dataset(1)
-        import IPython
+        # import IPython
         time1 = time.clock()
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         self.policy_opt.validation_samples = self.data_logger.unpickle('4peg_val.pkl')
 
-
-        # size = 18
-        # self.policy_opt.policy[0].scale = np.eye(size)
-        # self.policy_opt.policy[0].bias = np.zeros((size,))
-        # # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
-        # self.policy_opt.policy[0].x_idx = range(size)
-        # import pickle
-        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_bottleneck_itr9.pkl', 'rb'))
-        # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/weights_ec2/weights_continuum_itr9.pkl', 'rb'))
-        # self.policy_opt.var = pol_var#[pol_var[-2]]
-        # for k,v in self.policy_opt.av.items():
-        #     if k in val_vars:
-        #         assign_op = v.assign(val_vars[k])
-        #         self.policy_opt.sess.run(assign_op)
-
+        size = 18
+        self.policy_opt.policy[0].scale = np.eye(size)
+        self.policy_opt.policy[0].bias = np.zeros((size,))
+        # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
+        self.policy_opt.policy[0].x_idx = range(size)
         # for r in range(2):
         #     size = [18, 18, 28, 30, 28, 30, 18, 20, 18, 20,18, 20, 28, 30, 28, 30, 18, 20, 18, ][r]
         #     self.policy_opt.policy[r].scale = np.eye(size)
@@ -188,17 +179,29 @@ class GPSMain(object):
         # self.algorithm[0].reinitialize_net(2, sl2)
         # self.algorithm[0].reinitialize_net(3, sl3)
         # pool = Pool()
-        traj_distr = self.data_logger.unpickle('/home/coline/Downloads/traj_distr_newest.pkl')
+
+
+        import pickle
+        val_vars, pol_var = pickle.load(open('/home/abhigupta/gps/weights_reachtest_itr0.pkl', 'rb'))
+        self.policy_opt.var = pol_var#[pol_var[-2]]
+        for k,v in self.policy_opt.av.items():
+            if k in val_vars:
+                print(k)
+                assign_op = v.assign(val_vars[k])
+                self.policy_opt.sess.run(assign_op)
+        # IPython.embed()
+        traj_distr = self.data_logger.unpickle('/home/abhigupta/gps/traj_distr_goalpos.pkl')
         # abh_traj_distr = self.data_logger.unpickle('abh_traj_distr_mtmr_moreiters.pkl')
         for ag in range(self.num_robots):
-            name = self.agent[ag]._hyperparams['filename'][0]
+            name = 0 #self.agent[ag]._hyperparams['filename'][0]
             if name in traj_distr:
                 for cond in  self._train_idx[ag]:
                     print ag, cond
                     self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
             else:
                 print name, "not in traj_distr"
-        self.check_itr = 10
+        self.check_itr = 2
+        import IPython
         IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
 
@@ -249,14 +252,15 @@ class GPSMain(object):
                 import IPython
                 IPython.embed()
 
+            # traj_distr = {}
             # for ag in range(self.num_robots):
-            #     name = self.agent[ag]._hyperparams['filename'][0]
+            #     name = 0
             #     print name
             #     traj_distr[name] = []
             #     for cond in  self._train_idx[ag]:
             #         print ag, cond
             #         traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
-            # self.data_logger.pickle("/home/coline/Downloads/traj_distr_aligned.pkl", traj_distr)
+            # self.data_logger.pickle("/home/abhigupta/gps/traj_distr_goalpos.pkl", traj_distr)
 
         self._end()
 
@@ -649,8 +653,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(30)
-        np.random.seed(30)
+        random.seed(0)
+        np.random.seed(0)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:

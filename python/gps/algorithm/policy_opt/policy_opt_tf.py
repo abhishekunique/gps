@@ -47,9 +47,8 @@ class PolicyOptTf(PolicyOpt):
         self.init_solver()
         self.sess = tf.Session()
         self.policy = []
-
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
-            self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string))
+            self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string, self.ls['keep_prob']))
         # List of indices for state (vector) data and image (tensor) data in observation.
 
         self.x_idx = []
@@ -285,6 +284,7 @@ class PolicyOptTf(PolicyOpt):
         output = np.zeros((N, T, dU)) 
         for i in range(N):
             feed_dict = {self.obs_tensors[robot_number]: obs[i, :]}
+            feed_dict[self.ls['keep_prob']] = 1.0
             with tf.device(self.device_string):
                 output[i, :, :] = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
 
@@ -444,18 +444,20 @@ class PolicyOptTf(PolicyOpt):
             feed_dict = {}
             robot_dict = {}
             if continue_iters:
+                robot_dict[self.ls['keep_prob']] = 0.8
                 for robot_number in range(self.num_robots):
                     start_idx = int(i * self.batch_size %
                                     (batches_per_epoch_reshaped[robot_number] * self.batch_size))
                     idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                    if robot_number in self.val_agents:
-                        val_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                        val_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
-                        val_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
-                    else:
-                        feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                        feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
-                        feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+                    # if robot_number in self.val_agents:
+                    #     val_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                    #     val_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+                    #     val_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+                    # else:
+                    feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                    feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+                    feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+
                         #feed_dict[self.ls['ee_input'][robot_number]] = ee_reshaped[robot_number][idx_i]
                     robot_dict.update(feed_dict)
                     #robot_dict[self.ls['task_output'][robot_number]] = ee_reshaped[robot_number][idx_i]               

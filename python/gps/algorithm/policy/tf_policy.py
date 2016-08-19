@@ -20,7 +20,7 @@ class TfPolicy(Policy):
         sess: tf session.
         device_string: tf device string for running on either gpu or cpu.
     """
-    def __init__(self, dU, obs_tensor, act_op, var, sess, device_string):
+    def __init__(self, dU, obs_tensor, act_op, var, sess, device_string, keep_prob):
         Policy.__init__(self)
         self.dU = dU
         self.obs_tensor = obs_tensor
@@ -31,6 +31,7 @@ class TfPolicy(Policy):
         self.scale = None  # must be set from elsewhere based on observations
         self.bias = None
         self.x_idx = None
+        self.keep_prob = keep_prob
 
     def act(self, x, obs, t, noise):
         """
@@ -47,7 +48,7 @@ class TfPolicy(Policy):
             obs = np.expand_dims(obs, axis=0)
         obs[:, self.x_idx] = obs[:, self.x_idx].dot(self.scale) + self.bias
         with tf.device(self.device_string):
-            action_mean = self.sess.run(self.act_op, feed_dict={self.obs_tensor: obs})
+            action_mean = self.sess.run(self.act_op, feed_dict={self.obs_tensor: obs, self.keep_prob:1.0})
         if noise is None:
             u = action_mean
         else:
@@ -59,7 +60,7 @@ class TfPolicy(Policy):
             obs = np.expand_dims(obs, axis=0)
         obs[:, self.x_idx] = obs[:, self.x_idx].dot(self.scale) + self.bias
         with tf.device(self.device_string):
-            out = self.sess.run([self.act_op]+ tensors, feed_dict={self.obs_tensor: obs})
+            out = self.sess.run([self.act_op]+ tensors, feed_dict={self.obs_tensor: obs, self.keep_prob:1.0})
             action_mean = out[0]
             tensor_vals = out[1:]
         if noise is None:

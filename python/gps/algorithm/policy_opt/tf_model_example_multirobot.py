@@ -1250,10 +1250,10 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     robot_list = network_config['robot_list']
     num_robots = max(robot_list)+1
     num_tasks = max(task_list)+1
-    tasks = [2]
-    robots= [0]
-    tasks= range(num_tasks)
-    robots=range(num_robots)
+    # tasks= range(num_tasks)
+    # robots=range(num_robots)
+    tasks = [0]
+    robots = [2]
     nnets = []
     n_layers = 6
     layer_size = 80
@@ -1262,7 +1262,7 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     task_weights = {}
     dim_diff = 20
     task_out_size = 12
-    keep_prob = 1.0
+    keep_prob = tf.placeholder(tf.float32)
     dim_robot_specific_list = [None for r in range(num_robots)]
     dim_task_specific_list = [None for t in range(num_tasks)]
     dim_robot_output_list = [None for r in range(num_robots)]
@@ -1305,6 +1305,7 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
         task_weights['taskout_b_tn_' + str(task_number)] = init_bias((task_out_size,), name='task_out_tn_' + str(task_number))
         task_weights['task_weights_tn_' + str(task_number)] = init_ones((task_out_size,), name='task_weights_' + str(task_number))
     tensors = {}
+    tensors['keep_prob'] = keep_prob
     tensors['task_loss'] =[]
     tensors['ee_input'] =[]
     tensors['task_output'] =[]
