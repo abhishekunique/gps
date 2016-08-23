@@ -64,25 +64,26 @@ def reach_4link_green(robot_number, num_robots):
         END_EFFECTOR_POINTS: 15,
         END_EFFECTOR_POINT_VELOCITIES: 15,
         ACTION: 4,
+        RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
+        RGB_IMAGE_SIZE: 3,
     }
     agent_dict= {}
     agent_dict['network_params']= {
         'dim_hidden': [10],
         'num_filters': [10, 20],
-        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-        'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-        'obs_image_data':[],
+        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE],
+        'obs_image_data':[RGB_IMAGE],
         'image_width': IMAGE_WIDTH,
         'image_height': IMAGE_HEIGHT,
         'image_channels': IMAGE_CHANNELS,
         'sensor_dims': SENSOR_DIMS,
         'batch_size': 25,
         'robot_specific_idx': range(11)+range(23,26),
-        'task_specific_idx': range(8, 38),
+        'task_specific_idx': range(8,11) + range(23,26),
         'dim_robot_specific':14,
         'dim_output':4,
         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
-    }    
+    }   
     agent_dict['agent'] = {
         'type': AgentMuJoCo,
         'filename': './mjc_models/arm_4link_reach_colors.xml',
@@ -102,8 +103,7 @@ def reach_4link_green(robot_number, num_robots):
         'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
                           END_EFFECTOR_POINT_VELOCITIES],
         #include the camera images appropriately here
-        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
-                        END_EFFECTOR_POINT_VELOCITIES],
+        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE],
         'meta_include': [],
         'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
         'unchanged_object': 8

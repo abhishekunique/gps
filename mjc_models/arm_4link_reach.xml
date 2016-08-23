@@ -36,7 +36,7 @@
         </body>
 
 <body name="goal" pos="0.8 0.0 0.5">
-    <geom rgba="1. 0. 0. 1" type="box" size="0.1 0.1 0.1" density='0.00001' contype="0" conaffinity="0"/>
+    <geom rgba="1 1 1 1" type="box" size="0.1 0.1 0.1" density='0.00001' contype="0" conaffinity="0"/>
     <site name="goal pos" pos="0 0 0" size="0.01" />
 </body>
     </worldbody>

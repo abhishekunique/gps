@@ -20,7 +20,6 @@ class PolicyOptTf(PolicyOpt):
         config.update(hyperparams)
 
         PolicyOpt.__init__(self, config, dO, dU)
-
         self.num_robots = len(dU)
         self.tf_iter = [0 for r_no in range(len(dU))]
         self.checkpoint_prefix = self._hyperparams['checkpoint_prefix']

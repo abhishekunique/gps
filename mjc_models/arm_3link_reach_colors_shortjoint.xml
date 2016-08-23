@@ -31,9 +31,24 @@
             </body>
         </body>
         
-        <body name="goal" pos="0.8 0.0 0.5">
-            <geom rgba="1 1 1 1" type="box" size="0.1 0.1 0.1" density='0.00001' contype="0" conaffinity="0"/>
-            <site name="goal pos" pos="0 0 0" size="0.01" />
+        <body name="goalred" pos="0.8 0.0 0.5">
+            <geom rgba="1. 0. 0. 1" type="box" size="0.1 0.1 0.1" density='0.00001' contype="0" conaffinity="0"/>
+            <site name="goal pos1" pos="0 0 0" size="0.01" />
+        </body>
+        
+        <body name="goalgreen" pos="0.8 0.0 0.5">
+            <geom rgba="0. 0.5 0. 1" type="box" size="0.1 0.1 0.1" density='0.00001' contype="0" conaffinity="0"/>
+            <site name="goal pos2" pos="0 0 0" size="0.01" />
+        </body>
+        
+        <body name="goalyellow" pos="0.8 0.0 0.5">
+            <geom rgba="1. 1. 0. 1" type="box" size="0.1 0.1 0.1" density='0.00001' contype="0" conaffinity="0"/>
+            <site name="goal pos3" pos="0 0 0" size="0.01" />
+        </body>
+        
+        <body name="goalblack" pos="0.8 0.0 0.5">
+            <geom rgba="0. 0. 0. 1" type="box" size="0.1 0.1 0.1" density='0.00001' contype="0" conaffinity="0"/>
+            <site name="goal pos4" pos="0 0 0" size="0.01" />
         </body>
     </worldbody>
     

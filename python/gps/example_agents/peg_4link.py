@@ -39,14 +39,16 @@ def peg_4link(robot_number, num_robots):
         END_EFFECTOR_POINTS: 6,
         END_EFFECTOR_POINT_VELOCITIES: 6,
         ACTION: 4,
+        RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
+        RGB_IMAGE_SIZE: 3,
     }
     agent_dict= {}
     agent_dict['network_params']= {
         'dim_hidden': [10],
         'num_filters': [10, 20],
-        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE],
         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-        'obs_image_data':[],
+        'obs_image_data':[RGB_IMAGE],
         'image_width': IMAGE_WIDTH,
         'image_height': IMAGE_HEIGHT,
         'image_channels': IMAGE_CHANNELS,
@@ -54,7 +56,7 @@ def peg_4link(robot_number, num_robots):
         'batch_size': 25,
         'dim_output':4,
         'robot_specific_idx': range(11)+range(14,17),
-        'task_specific_idx': range(8,11)+range(11,14)+range(14,17)+range(17,20),
+        'task_specific_idx': range(8,11)+range(14,17),
         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
     }
     agent_dict['agent'] = {
@@ -102,7 +104,7 @@ def peg_4link(robot_number, num_robots):
         'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
                           END_EFFECTOR_POINT_VELOCITIES],
         #include the camera images appropriately here
-        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE],
         'meta_include': [],
         'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
     }

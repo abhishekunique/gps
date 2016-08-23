@@ -105,8 +105,7 @@ class GPSMain(object):
         """
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
-        import IPython
-        IPython.embed()
+
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             for robot_number in range(self.num_robots):
@@ -148,7 +147,7 @@ class GPSMain(object):
 
         self.policy_opt.validation_samples = self.data_logger.unpickle('4peg_val.pkl')
 
-        size = 18
+        size = 20
         self.policy_opt.policy[0].scale = np.eye(size)
         self.policy_opt.policy[0].bias = np.zeros((size,))
         # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
@@ -189,11 +188,11 @@ class GPSMain(object):
                 print(k)
                 assign_op = v.assign(val_vars[k])
                 self.policy_opt.sess.run(assign_op)
-        # IPython.embed()
-        traj_distr = self.data_logger.unpickle('/home/abhigupta/gps/traj_distr_goalpos.pkl')
+        # # IPython.embed()
+        traj_distr = self.data_logger.unpickle('/home/abhigupta/gps/traj_distr_newest.pkl')
         # abh_traj_distr = self.data_logger.unpickle('abh_traj_distr_mtmr_moreiters.pkl')
         for ag in range(self.num_robots):
-            name = 0 #self.agent[ag]._hyperparams['filename'][0]
+            name = self.agent[ag]._hyperparams['filename'][0]
             if name in traj_distr:
                 for cond in  self._train_idx[ag]:
                     print ag, cond
