@@ -1252,7 +1252,7 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     num_tasks = max(task_list)+1
     # tasks= range(num_tasks)
     # robots=range(num_robots)
-    tasks = [0]
+    tasks = [2]
     robots = [2]
     nnets = []
     n_layers = 6
@@ -1261,7 +1261,7 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     robot_weights = {}
     task_weights = {}
     dim_diff = 20
-    task_out_size = 12
+    task_out_size = 24
     keep_prob = tf.placeholder(tf.float32)
     dim_robot_specific_list = [None for r in range(num_robots)]
     dim_task_specific_list = [None for t in range(num_tasks)]
@@ -1476,7 +1476,7 @@ def multitask_multirobot_conv_supervised(dim_input=[27, 27], dim_output=[7, 7], 
         for i in range(num_rows):
             for j in range(num_cols):
                 x_map[i, j] = (i - num_rows / 2.0) / num_rows
-                y_map[i, j] = (i - num_cols / 2.0) / num_cols
+                y_map[i, j] = (j - num_cols / 2.0) / num_cols
         x_map = tf.convert_to_tensor(x_map)
         y_map = tf.convert_to_tensor(y_map)
         x_map = tf.reshape(x_map, [num_rows * num_cols])

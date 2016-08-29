@@ -171,6 +171,7 @@ class AgentMuJoCo(Agent):
         new_sample.set(ACTION, U)
         if save:
             self._samples[condition].append(new_sample)
+            
         return new_sample
 
     def sample_for_tensors(self, policy, condition, tensors, verbose=True, save=True):
