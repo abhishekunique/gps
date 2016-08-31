@@ -27,7 +27,7 @@
                             <joint name="distal_j_4" type="hinge" pos="0 0 0" axis="1 0 0" range="-1.8 1.8" damping="0.2"/>
                             <site name="tip arml" pos="0.1 0 -0.2" size="0.01" />
                             <site name="tip armr" pos="0.1 0 0.2" size="0.01" />
-                            <geom type="box" pos = "0.1 0 0" size = "0.1 0.04 0.2" contype="1" conaffinity="1" />
+                            <geom density="188" type="box" pos = "0.1 0 0" size = "0.1 0.04 0.2" contype="1" conaffinity="1" />
                         </body>
                     </body>
                 </body>
