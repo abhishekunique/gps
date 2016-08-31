@@ -42,7 +42,11 @@ checkpoint_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                '..', 'policy_opt/tf_checkpoint/policy_checkpoint.ckpt'))
 POLICY_OPT_TF = {
     # Other hyperparameters.
-    'checkpoint_prefix': checkpoint_path
+    'checkpoint_prefix': checkpoint_path,
+    'fc_only_iterations': 0,
+    #'network_model': multi_input_multi_output_images_shared,
+    'restore_shared_wts': False,
+    'val_agents': [],
 }
 
 POLICY_OPT_TF.update(GENERIC_CONFIG)

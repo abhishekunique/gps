@@ -275,9 +275,9 @@ class GPSTrainingGUI(object):
         costs = [np.mean(np.sum(algorithm.prev[m].cs, axis=1)) for m in range(algorithm.M)]
         self._update_iteration_data(itr, algorithm, costs, pol_sample_lists)
         self._cost_plotter.update(costs, t=itr)
-        if END_EFFECTOR_POINTS in agent.x_data_types:
-            self._update_trajectory_visualizations(algorithm, agent,
-                    traj_sample_lists, pol_sample_lists)
+        # if END_EFFECTOR_POINTS in agent.x_data_types:
+        #     self._update_trajectory_visualizations(algorithm, agent,
+        #             traj_sample_lists, pol_sample_lists)
 
         self._fig.canvas.draw()
         self._fig.canvas.flush_events() # Fixes bug in Qt4Agg backend
@@ -316,10 +316,11 @@ class GPSTrainingGUI(object):
         avg_cost = np.mean(costs)
         if pol_sample_lists is not None:
             test_idx = algorithm._hyperparams['test_conditions']
+            train_idx = algorithm._hyperparams['train_conditions']
             # pol_sample_lists is a list of singletons
             samples = [sl[0] for sl in pol_sample_lists]
             pol_costs = [np.sum(algorithm.cost[idx].eval(s)[0])
-                    for s, idx in zip(samples, test_idx)]
+                    for s, idx in zip(samples, train_idx)]
             itr_data = '%3d | %8.2f %12.2f' % (itr, avg_cost, np.mean(pol_costs))
         else:
             itr_data = '%3d | %8.2f' % (itr, avg_cost)

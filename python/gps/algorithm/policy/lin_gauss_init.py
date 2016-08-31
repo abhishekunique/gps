@@ -140,3 +140,10 @@ def init_pd(hyperparams):
     invPSig = (1.0 / config['init_var']) * np.tile(np.eye(dU), [T, 1, 1])
 
     return LinearGaussianPolicy(K, k, PSig, cholPSig, invPSig)
+
+
+def init_from_file(hyperparams):
+    filename = hyperparams["filename"]
+    data_logger = DataLogger()
+    new_policy = data_logger.unpickle(filename)
+    return new_policy

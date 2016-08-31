@@ -1,0 +1,5 @@
+    <actuator>
+        <motor joint="proximal_j_1" ctrlrange="-2 2" ctrllimited="true"/>
+        <motor joint="distal_j_1" ctrlrange="-2 2" ctrllimited="true"/>
+        <motor joint="distal_j_2" ctrlrange="-2 2" ctrllimited="true"/>
+    </actuator>
