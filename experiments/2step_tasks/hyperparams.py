@@ -43,15 +43,34 @@ from gps.example_agents.lockkey_3link import lockkey_3link
 from gps.example_agents.lockkey_4link import lockkey_4link
 from gps.example_agents.lockkey_5link import lockkey_5link
 
-# agent_funs =[door_3link, door_4link, door_5link, \
-#             blockpushfree_3link, blockpushfree_4link, blockpushfree_5link,\
-#             lockkey_3link, lockkey_4link]
-# task_values = [0, 0, 0, 1, 1, 1, 2, 2]
-# robot_values =[0, 1, 2, 0, 1, 2, 0, 1]
+from gps.example_agents.horizdrawer_3link import horizdrawer_3link
+from gps.example_agents.horizdrawer_4link import horizdrawer_4link
+from gps.example_agents.horizdrawer_5link import horizdrawer_5link
+from gps.example_agents.vertdrawer_3link import vertdrawer_3link
+from gps.example_agents.vertdrawer_4link import vertdrawer_4link
+from gps.example_agents.vertdrawer_5link import vertdrawer_5link
 
-agent_funs =[lockkey_5link]
-task_values = [2]
-robot_values =[2]
+from gps.example_agents.blockpushfree_2step_3link import blockpushfree_2step_3link
+from gps.example_agents.blockpushfree_2step_4link import blockpushfree_2step_4link
+from gps.example_agents.blockpushfree_2step_5link import blockpushfree_2step_5link
+
+
+
+# agent_funs =[door_4link, door_5link, \
+#             blockpushfree_3link, blockpushfree_4link, blockpushfree_5link,\
+#             lockkey_3link, lockkey_4link, lockkey_5link]
+# task_values = [0, 0, 1, 1, 1, 2, 2, 2]
+# robot_values =[1, 2, 0, 1, 2, 0, 1, 2]
+
+# agent_funs =[vertdrawer_3link]
+# task_values = [0]
+# robot_values =[0]
+
+# agent_funs =[blockpushfree_2step_3link, blockpushfree_2step_4link, blockpushfree_2step_5link,
+# vertdrawer_3link, vertdrawer_4link, vertdrawer_5link, horizdrawer_4link, horizdrawer_5link]
+agent_funs = [horizdrawer_3link]
+task_values = [2]#, 0, 0, 1, 1, 1, 2, 2]
+robot_values =[0]#, 1, 2, 0, 1, 2, 1, 2]
 
 agents = []
 num_agents = len(agent_funs)
@@ -84,7 +103,7 @@ common = {
             'agent_params':[a['network_params'] for a in agents],
         },
         #'val_agents': [1],
-        'iterations': 5000,
+        'iterations': 15000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
@@ -99,10 +118,10 @@ agent = [a['agent'] for a in agents]
 algorithm = [a['algorithm'] for a in agents]
 
 config = {
-    'iterations': 25,
+    'iterations': 50,
     'num_samples': 10,
     'verbose_trials': 1,
-    'verbose_policy_trials': 10,
+    'verbose_policy_trials': 1,
     'save_wts': True,
     'common': common,
     'agent': agent,

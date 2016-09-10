@@ -888,7 +888,7 @@ def multitask_multirobot_fc_dropout(dim_input=[27, 27], dim_output=[7, 7], batch
     # tasks= range(num_tasks)
     # robots=range(num_robots)
     nnets = []
-    keep_prob= 0.8
+    keep_prob= 1.0
     n_layers = 6
     layer_size = 40
     dim_hidden = (n_layers - 1)*[layer_size]
@@ -1253,7 +1253,7 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     # tasks= range(num_tasks)
     # robots=range(num_robots)
     tasks = [2]
-    robots = [2]
+    robots = [0]
     nnets = []
     n_layers = 6
     layer_size = 80
@@ -1261,7 +1261,7 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     robot_weights = {}
     task_weights = {}
     dim_diff = 20
-    task_out_size = 24
+    task_out_size = 80
     keep_prob = tf.placeholder(tf.float32)
     dim_robot_specific_list = [None for r in range(num_robots)]
     dim_task_specific_list = [None for t in range(num_tasks)]

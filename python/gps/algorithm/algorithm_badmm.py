@@ -268,6 +268,7 @@ class AlgorithmBADMM(Algorithm):
         X = samples.get_X()
         pol_mu, pol_sig = self.policy_opt.prob(samples.get_obs().copy())[:2]
         pol_sig = np.mean(pol_sig, axis=0)
+        pol_sig *= 10.0
         self.cur[m].pol_info.policy_prior.update(
             samples, self.policy_opt,
             samples, robot_number=self.robot_number

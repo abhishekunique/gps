@@ -51,17 +51,17 @@ class AgentMuJoCo(Agent):
 
         # Initialize Mujoco worlds. If there's only one xml file, create a single world object,
         # otherwise create a different world for each condition.
-        if not isinstance(filename, list):
-            self._world = mjcpy.MJCWorld(filename)
-            self._model = self._world.get_model()
-            self._world = [self._world
-                           for _ in range(self._hyperparams['conditions'])]
-            self._model = [copy.deepcopy(self._model)
-                           for _ in range(self._hyperparams['conditions'])]
-        else:
-            for i in range(self._hyperparams['conditions']):
-                self._world.append(mjcpy.MJCWorld(self._hyperparams['filename'][i]))
-                self._model.append(self._world[i].get_model())
+        # if not isinstance(filename, list):
+        #     self._world = mjcpy.MJCWorld(filename)
+        #     self._model = self._world.get_model()
+        #     self._world = [self._world
+        #                    for _ in range(self._hyperparams['conditions'])]
+        #     self._model = [copy.deepcopy(self._model)
+        #                    for _ in range(self._hyperparams['conditions'])]
+        # else:
+        for i in range(self._hyperparams['conditions']):
+            self._world.append(mjcpy.MJCWorld(self._hyperparams['filename'][i]))
+            self._model.append(self._world[i].get_model())
 
         for i in range(self._hyperparams['conditions']):
             for j in range(len(self._hyperparams['pos_body_idx'][i])):
@@ -72,7 +72,6 @@ class AgentMuJoCo(Agent):
                 if 'quat_body_offset' in self._hyperparams:
                     self._model[i]['body_quat'][idx, :] += \
                             self._hyperparams['quat_body_offset'][i][j]
-                print "new model", self._model[i]['body_quat']
             self._world[i].set_model(self._model[i])
             x0 = self._hyperparams['x0'][i]
             idx = len(x0) // 2
@@ -89,6 +88,7 @@ class AgentMuJoCo(Agent):
         for i in range(self._hyperparams['conditions']):
             if END_EFFECTOR_POINTS in self.x_data_types:
                 self.eepts0.append(self._world[i].get_data()['site_xpos'].flatten())
+                print(self._world[i].get_data()['site_xpos'].flatten())
                 self.x0.append(
                     np.concatenate([self._hyperparams['x0'][i], self.eepts0[i], np.zeros_like(self.eepts0[i])])
                 )
@@ -171,7 +171,6 @@ class AgentMuJoCo(Agent):
         new_sample.set(ACTION, U)
         if save:
             self._samples[condition].append(new_sample)
-            
         return new_sample
 
     def sample_for_tensors(self, policy, condition, tensors, verbose=True, save=True):
@@ -224,6 +223,7 @@ class AgentMuJoCo(Agent):
         new_sample.set(ACTION, U)
         if save:
             self._samples[condition].append(new_sample)
+
         return new_sample, tensor_vals
 
 
