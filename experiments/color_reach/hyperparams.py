@@ -57,9 +57,9 @@ task_values = [0,1,2,3,0,1,2,3,0,1,2]
 robot_values =[0,0,0,0,1,1,1,1,2,2,2]
 
 
-agent_funs = [reach_4link_black]
-task_values = [3]
-robot_values = [2]
+# agent_funs = [reach_4link_black]
+# task_values = [3]
+# robot_values = [2]
 
 agents = []
 num_agents = len(agent_funs)

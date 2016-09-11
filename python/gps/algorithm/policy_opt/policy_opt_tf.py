@@ -443,7 +443,7 @@ class PolicyOptTf(PolicyOpt):
             feed_dict = {}
             robot_dict = {}
             if continue_iters:
-                robot_dict[self.ls['keep_prob']] = 1.0
+                robot_dict[self.ls['keep_prob']] = 0.8
                 for robot_number in range(self.num_robots):
                     start_idx = int(i * self.batch_size %
                                     (batches_per_epoch_reshaped[robot_number] * self.batch_size))

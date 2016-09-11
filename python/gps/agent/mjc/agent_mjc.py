@@ -51,17 +51,17 @@ class AgentMuJoCo(Agent):
 
         # Initialize Mujoco worlds. If there's only one xml file, create a single world object,
         # otherwise create a different world for each condition.
-        # if not isinstance(filename, list):
-        #     self._world = mjcpy.MJCWorld(filename)
-        #     self._model = self._world.get_model()
-        #     self._world = [self._world
-        #                    for _ in range(self._hyperparams['conditions'])]
-        #     self._model = [copy.deepcopy(self._model)
-        #                    for _ in range(self._hyperparams['conditions'])]
-        # else:
-        for i in range(self._hyperparams['conditions']):
-            self._world.append(mjcpy.MJCWorld(self._hyperparams['filename'][i]))
-            self._model.append(self._world[i].get_model())
+        if not isinstance(filename, list):
+            self._world = mjcpy.MJCWorld(filename)
+            self._model = self._world.get_model()
+            self._world = [self._world
+                           for _ in range(self._hyperparams['conditions'])]
+            self._model = [copy.deepcopy(self._model)
+                           for _ in range(self._hyperparams['conditions'])]
+        else:
+            for i in range(self._hyperparams['conditions']):
+                self._world.append(mjcpy.MJCWorld(self._hyperparams['filename'][i]))
+                self._model.append(self._world[i].get_model())
 
         for i in range(self._hyperparams['conditions']):
             for j in range(len(self._hyperparams['pos_body_idx'][i])):
@@ -114,27 +114,27 @@ class AgentMuJoCo(Agent):
         """
         # Create new sample, populate first time step.
         # act = np.load('/home/coline/abhishek_gps/gps/actions.npy')
-        # unchanged_object = copy.deepcopy(self._hyperparams['unchanged_object'])
-        # objs = copy.deepcopy(self._hyperparams['pos_body_idx'][condition]) #[6,7,8,9]
-        # all_offsets = copy.deepcopy(self._hyperparams['offsets'])
+        unchanged_object = copy.deepcopy(self._hyperparams['unchanged_object'])
+        objs = copy.deepcopy(self._hyperparams['pos_body_idx'][condition]) #[6,7,8,9]
+        all_offsets = copy.deepcopy(self._hyperparams['offsets'])
         # print(len(all_offsets))
         # print(condition%4)
-        # curr_offset = all_offsets[condition] #which of them to choose now
-        # del all_offsets[condition]
-        # orders = [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]]
-        # curr_order = random.choice(orders)
-        # order_idx = 0
-        # for j in objs:
-        #     if j == unchanged_object:
-        #         self._model[condition]['body_pos'][unchanged_object, :] = curr_offset
-        #     else:
-        #         if condition<=3:
-        #             self._model[condition]['body_pos'][j, :] = all_offsets[curr_order[order_idx]]
-        #         else:
-        #             self._model[condition]['body_pos'][j, :] = all_offsets[4+curr_order[order_idx]]
-        #         order_idx += 1
-        # self._world[condition].set_model(self._model[condition])
-        # self._world[condition].kinematics()
+        curr_offset = all_offsets[condition] #which of them to choose now
+        del all_offsets[condition]
+        orders = [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]]
+        curr_order = random.choice(orders)
+        order_idx = 0
+        for j in objs:
+            if j == unchanged_object:
+                self._model[condition]['body_pos'][unchanged_object, :] = curr_offset
+            else:
+                if condition<=3:
+                    self._model[condition]['body_pos'][j, :] = all_offsets[curr_order[order_idx]]
+                else:
+                    self._model[condition]['body_pos'][j, :] = all_offsets[4+curr_order[order_idx]]
+                order_idx += 1
+        self._world[condition].set_model(self._model[condition])
+        self._world[condition].kinematics()
         new_sample = self._init_sample(condition)
         mj_X = self._hyperparams['x0'][condition]
         U = np.zeros([self.T, self.dU])
