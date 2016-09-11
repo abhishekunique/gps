@@ -71,15 +71,15 @@ def reach_3link_yellow_shortjoint(robot_number, num_robots):
     agent_dict['network_params']= {
         'dim_hidden': [10],
         'num_filters': [10, 20],
-        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE],
-        'obs_image_data':[RGB_IMAGE],
+        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+        'obs_image_data':[],
         'image_width': IMAGE_WIDTH,
         'image_height': IMAGE_HEIGHT,
         'image_channels': IMAGE_CHANNELS,
         'sensor_dims': SENSOR_DIMS,
         'batch_size': 25,
         'robot_specific_idx': range(9)+range(21,24),
-        'task_specific_idx': range(6,9) + range(21,24),
+        'task_specific_idx': range(6,9) + range(9,21) + range(21,24) + range(24,36),
         'dim_robot_specific':12,
         'dim_output':3,
         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
@@ -103,7 +103,7 @@ def reach_3link_yellow_shortjoint(robot_number, num_robots):
         'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
                           END_EFFECTOR_POINT_VELOCITIES],
         #include the camera images appropriately here
-        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE],
+        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
         'meta_include': [],
         'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
         'unchanged_object': 8
