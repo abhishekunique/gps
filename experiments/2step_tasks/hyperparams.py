@@ -13,11 +13,14 @@ from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
+print "hi"
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
 from gps.algorithm.dynamics.dynamics_prior_gmm import DynamicsPriorGMM
 from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
 from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd, init_from_file
+print "he"
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
+print "ha"
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
 from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, multitask_multirobot_fc_supervised

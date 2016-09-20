@@ -225,7 +225,7 @@ def horizdrawer_3link(robot_number, num_robots):
     agent_dict['algorithm']['cost'] = [{
         'type': CostSum,
         'costs': [fk_cost_1[i], torque_cost_0[i]],
-        'weights': [3.0, 1.0],
+        'weights': [1.0, 0.0],
     } for i in agent_dict['agent']['train_conditions']]
 
 
