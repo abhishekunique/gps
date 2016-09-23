@@ -20,7 +20,10 @@ from gps.utility.data_logger import DataLogger
 from gps.sample.sample_list import SampleList
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
-from gps.proto.gps_pb2 import ACTION, RGB_IMAGE
+from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
+        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, \
+        END_EFFECTOR_POINT_JACOBIANS, ACTION, RGB_IMAGE, RGB_IMAGE_SIZE, \
+        CONTEXT_IMAGE, CONTEXT_IMAGE_SIZE
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
 
@@ -568,6 +571,17 @@ class GPSMain(object):
                 self.gui[robot_number].set_status_text('Training complete.')
                 self.gui[robot_number].end_mode()
 
+    def visualize_samples(self, samples):
+        # self._take_sample(0, 0, 0, robot_number=0)
+        a = self.agent[0]
+        for condition in range(len(samples)):
+            cond_samples = samples[condition]
+            for sample in cond_samples[:2]:
+                a._world[condition].set_model(a._model[condition])
+                mjx_data = np.hstack([sample.get(JOINT_ANGLES), sample.get(JOINT_VELOCITIES)])
+                for i in range(mjx_data.shape[0]):
+                    a._world[condition].plot(mjx_data[i])
+
 
 def main():
     """ Main function to be run. """
@@ -588,11 +602,14 @@ def main():
                         help='Train invariant subspace')
     parser.add_argument('-g', '--recordfeats', action='store_true',
                         help='Record features in feature space')
+    parser.add_argument('-v', '--visualize', type=str, default=None,
+                        help='Visualize trajectories')
     args = parser.parse_args()
 
     exp_name = args.experiment
     resume_training_itr = args.resume
     test_policy_N = args.policy
+    visualize_file = args.visualize
 
     exp_dir = 'experiments/' + exp_name + '/'
     hyperparams_file = exp_dir + 'hyperparams.py'
@@ -706,6 +723,23 @@ def main():
             else:
                 gps.run_subspace_learning(itr_load=resume_training_itr)
 
+    elif visualize_file:
+        import cPickle as pickle
+        import matplotlib.pyplot as plt
+
+        with open(visualize_file, 'rb') as v_file:
+            samples = pickle.load(v_file)
+
+        gps = GPSMain(hyperparams.config)
+
+        run_gps = threading.Thread(
+            target=lambda: gps.visualize_samples(samples)
+        )
+        run_gps.daemon = True
+        run_gps.start()
+
+        plt.ioff()
+        plt.show()
 
     else:
         import random
