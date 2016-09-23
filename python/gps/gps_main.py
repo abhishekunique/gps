@@ -573,6 +573,8 @@ class GPSMain(object):
 
     def visualize_samples(self, samples):
         # self._take_sample(0, 0, 0, robot_number=0)
+        import time
+        time.sleep(10)
         a = self.agent[0]
         for condition in range(len(samples)):
             cond_samples = samples[condition]

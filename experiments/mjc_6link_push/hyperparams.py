@@ -175,7 +175,7 @@ algorithm[0]['init_traj_distr'] = {
 
 torque_cost_1 = [{
     'type': CostAction,
-    'wu': 5e-5 / PR2_GAINS[0],
+    'wu': 5e-1 / PR2_GAINS[0],
 } for i in common['train_conditions']]
 
 # fk_cost_1 = [{
@@ -218,8 +218,8 @@ fk_cost_1 = [{
 #NO TORQUE COST!!
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [fkblock_cost_1[i], fk_cost_1[i]],
-    'weights': [0.5, 1.0],
+    'costs': [fk_cost_1[i], torque_cost_1[i]],
+    'weights': [1.0, 1.0],
 } for i in common['train_conditions']]
 
 

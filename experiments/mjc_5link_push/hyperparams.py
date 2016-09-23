@@ -8,6 +8,7 @@ from gps import __file__ as gps_filepath
 from gps.agent.mjc.agent_mjc import AgentMuJoCo
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
+from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
@@ -177,21 +178,50 @@ torque_cost_1 = [{
     'wu': 5e-1 / PR2_GAINS[0],
 } for i in common['train_conditions']]
 
-fk_cost_1 = [{
-    'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
-    'wp': np.array([1, 1, 1, 0, 0, 0]),
+# fk_cost_1 = [{
+#     'type': CostFK,
+#     'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
+#     'wp': np.array([1, 1, 1, 0, 0, 0]),
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+# } for i in common['train_conditions']
+# ]
+
+# algorithm[0]['cost'] = [{
+#     'type': CostSum,
+#     'costs': [torque_cost_1[i], fk_cost_1[i]],
+#     'weights': [1.0, 1.0],
+# } for i in common['train_conditions']]
+
+
+
+fkblock_cost_1 = [{
+    'type': CostFKBlock,
+    'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
-} for i in common['train_conditions']
-]
+} for i in common['train_conditions']]
 
+fk_cost_1 = [{
+    'type': CostFK,
+    'target_end_effector': np.concatenate([np.array([0., 0., 0.]),
+        np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i][1],
+        np.array([0., 0., 0.])]),
+    'wp': np.array([0, 0, 0, 1, 1, 1, 0, 0, 0]),
+    'l1': 0.1,
+    'l2': 10.0,
+    'alpha': 1e-5,
+} for i in common['train_conditions']]
+
+#NO TORQUE COST!!
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [torque_cost_1[i], fk_cost_1[i]],
+    'costs': [fk_cost_1[i]],
     'weights': [1.0, 1.0],
 } for i in common['train_conditions']]
+
 
 
 
