@@ -13,6 +13,8 @@ from gps.algorithm.policy_opt.tf_utils import TfSolver
 LOGGER = logging.getLogger(__name__)
 import pickle
 
+INVAR_SIZE = [10, 12]
+
 class PolicyOptTf(PolicyOpt):
     """ Policy optimization using tensor flow for DAG computations/nonlinear function approximation. """
     def __init__(self, hyperparams, dO, dU):
@@ -115,7 +117,7 @@ class PolicyOptTf(PolicyOpt):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
         if 'invariant_train' in self._hyperparams and self._hyperparams['invariant_train']:
-            dO = [6, 8]
+            dO = INVAR_SIZE
         else:
             dO = self._dO
         tf_maps, var_list = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
@@ -164,7 +166,8 @@ class PolicyOptTf(PolicyOpt):
     def init_feature_space(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model_feat']
-        dO = [6, 8]
+        #TODO(andrew): don't hardcode this
+        dO = INVAR_SIZE
         tf_maps, var_list = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params'])
         self.obs_tensors_feat = []
@@ -221,9 +224,10 @@ class PolicyOptTf(PolicyOpt):
         for robot_number in range(self.num_robots):
             obs = obs_full[robot_number]
             N, T = obs.shape[:2]
-            dO = [6, 8][robot_number]
+            #TODO(andrew): this shouldn't be hard coded
+            dO = INVAR_SIZE[robot_number]
             dU = self._dU[robot_number]
-            obs = np.reshape(obs, (N*T, dO))
+            obs = np.reshape(obs, (N*T, -1))
             obs_reshaped.append(obs)
 
         idx = range(N*T)
@@ -248,8 +252,7 @@ class PolicyOptTf(PolicyOpt):
             average_loss_2 += train_loss_2
             average_loss_3 += train_loss_3
             if i % 1000 == 0 and i != 0:
-                LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 100)
+                print('tensorflow iteration %d/%d, average loss %f' % (i,self._hyperparams['iterations'], average_loss / 100))
                 print 'supervised tf loss is '
                 print (average_loss/100)
                 print 'robot1 loss is '
@@ -327,7 +330,7 @@ class PolicyOptTf(PolicyOpt):
     def run_features_forward(self, obs, robot_number):
         feed_dict = {}
         N, T = obs.shape[:2]
-        dO = [6, 8][robot_number]
+        dO = INVAR_SIZE[robot_number]
         dU = self._dU[robot_number]
         obs = np.reshape(obs, (N*T, dO))
         # obs = np.concatenate([obs[:, 0:3], obs[:, 4:7], obs[:, 8:11], obs[:, 17:20]], axis = 1)
