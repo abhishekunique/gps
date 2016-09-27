@@ -19,7 +19,7 @@ from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi
-
+from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
 
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
@@ -206,20 +206,20 @@ fkblock_cost_1 = [{
 
 fk_cost_1 = [{
     'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0., 0., 0.]),
-        np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i][1],
-        np.array([0., 0., 0.])]),
-    'wp': np.array([0, 0, 0, 1, 1, 1, 0, 0, 0]),
+    'target_end_effector': np.concatenate([np.array([0,0,0]), 
+                                           np.array([0.8, 0.0, 0.5]) + agent[0]['pos_body_offset'][i][1],
+                                           np.array([0,0,0])]),
+    'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
     'l1': 0.1,
     'l2': 10.0,
-    'alpha': 1e-5,
-} for i in common['train_conditions']]
+    'alpha': 1e-5
+} for i in agent[0]['train_conditions']]
 
 #NO TORQUE COST!!
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i], torque_cost_1[i]],
-    'weights': [1.0, 1.0],
+    'costs': [fkblock_cost_1[i], fk_cost_1[i]],
+    'weights': [0.5, 1.0],
 } for i in common['train_conditions']]
 
 

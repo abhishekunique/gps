@@ -136,15 +136,15 @@ fk_cost = {
 #     'alpha': 1e-5,
 # }
 
-load_trajs = np.load('/home/abhigupta/gps/experiments/3d_push_3link/data_files/fps_16_rn_00.pkl.npy')
-test_cost = {
-    'type': CostDevRs3D,
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'target_feats': load_trajs[0][0],
-    'load_file': '/home/abhigupta/gps/subspace_3dwts_v2.pkl',
-}
+# load_trajs = np.load('/home/abhigupta/gps/experiments/3d_push_3link/data_files/fps_16_rn_00.pkl.npy')
+# test_cost = {
+#     'type': CostDevRs3D,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'target_feats': load_trajs[0][0],
+#     'load_file': '/home/abhigupta/gps/subspace_3dwts_v2.pkl',
+# }
 
 
 algorithm[0]['cost'] = {

@@ -187,19 +187,19 @@ fk_cost_1_gripper = [{
     'alpha': 1e-5,
     'ramp_option': RAMP_QUADRATIC
 } for i in agent[0]['train_conditions']]
-data_logger = DataLogger()
-data_traj = data_logger.unpickle('/home/abhigupta/gps/experiments/blockpush/data_files/pol_sample_itr_09_rn_00.pkl')
-import IPython
-IPython.embed()
-fk_cost_2 = [{
-    'type': CostFKDev,
-    'traj': data_traj[i][0]._data[END_EFFECTOR_POINTS],
-    'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-}for i in common['train_conditions']
-]
+# data_logger = DataLogger()
+# data_traj = data_logger.unpickle('/home/abhigupta/gps/experiments/blockpush/data_files/pol_sample_itr_09_rn_00.pkl')
+# import IPython
+# IPython.embed()
+# fk_cost_2 = [{
+#     'type': CostFKDev,
+#     'traj': data_traj[i][0]._data[END_EFFECTOR_POINTS],
+#     'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+# }for i in common['train_conditions']
+# ]
 
 # load_trajs = np.load('/home/abhigupta/gps/experiments/blockpush/data_files/fps_09_rn_00.pkl.npy')
 
@@ -216,7 +216,7 @@ fk_cost_2 = [{
 
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i], fk_cost_2[i]],
+    'costs': [fk_cost_1[i]],
     'weights': [1.0, 0.5],
     'ramp_option': RAMP_QUADRATIC
 } for i in agent[0]['train_conditions']]

@@ -574,7 +574,7 @@ class GPSMain(object):
     def visualize_samples(self, samples):
         # self._take_sample(0, 0, 0, robot_number=0)
         import time
-        time.sleep(10)
+        # time.sleep(10)
         a = self.agent[0]
         for condition in range(len(samples)):
             cond_samples = samples[condition]
@@ -737,11 +737,11 @@ def main():
         run_gps = threading.Thread(
             target=lambda: gps.visualize_samples(samples)
         )
-        run_gps.daemon = True
+        run_gps.daemon = store_true
         run_gps.start()
 
-        plt.ioff()
-        plt.show()
+        # plt.ioff()
+        # plt.show()
 
     else:
         import random

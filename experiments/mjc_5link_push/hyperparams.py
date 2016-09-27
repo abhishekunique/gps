@@ -112,7 +112,7 @@ agent = [ {
     'image_width': IMAGE_WIDTH,
     'image_height': IMAGE_HEIGHT,
     'image_channels': IMAGE_CHANNELS,
-    'T': 200,
+    'T': 100,
     'sensor_dims': SENSOR_DIMS[0],
     'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
                       END_EFFECTOR_POINT_VELOCITIES],
@@ -212,15 +212,14 @@ fk_cost_1 = [{
     'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
     'l1': 0.1,
     'l2': 10.0,
-    'alpha': 1e-5,
-    'ramp_option': RAMP_QUADRATIC
+    'alpha': 1e-5
 } for i in agent[0]['train_conditions']]
 
 #NO TORQUE COST!!
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i]],
-    'weights': [1.0, 1.0],
+    'costs': [fkblock_cost_1[i], fk_cost_1[i]],
+    'weights': [0.5, 1.0],
 } for i in common['train_conditions']]
 
 
