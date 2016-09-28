@@ -572,9 +572,6 @@ class GPSMain(object):
                 self.gui[robot_number].end_mode()
 
     def visualize_samples(self, samples):
-        # self._take_sample(0, 0, 0, robot_number=0)
-        import time
-        # time.sleep(10)
         a = self.agent[0]
         for condition in range(len(samples)):
             cond_samples = samples[condition]
@@ -583,6 +580,24 @@ class GPSMain(object):
                 mjx_data = np.hstack([sample.get(JOINT_ANGLES), sample.get(JOINT_VELOCITIES)])
                 for i in range(mjx_data.shape[0]):
                     a._world[condition].plot(mjx_data[i])
+
+    def test_cost(self, samples):
+        a = self.agent[0]
+        cost1 = self._hyperparams['algorithm'][0]['cmp_cost1']
+        cost2 = self._hyperparams['algorithm'][0]['cmp_cost2']
+        for condition in range(len(samples)):
+            cost1fn = cost1[condition]['type'](cost1[condition])
+            cost2fn = cost2[condition]['type'](cost2[condition])
+            cond_samples = samples[condition]
+            for sample in cond_samples:
+                tf_loss, tf_lx, tf_lu, tf_lxx, tf_luu, tf_lux = cost1fn.eval(sample)
+                l, lx, lu, lxx, luu, lux = cost2fn.eval(sample)
+                print(np.linalg.norm(tf_loss - l),
+                      np.linalg.norm(tf_lu - lu),
+                      np.linalg.norm(tf_lx - lx),
+                      np.linalg.norm(tf_luu - luu),
+                      np.linalg.norm(tf_lxx - lxx),
+                      np.linalg.norm(tf_lux - lux))
 
 
 def main():
@@ -606,6 +621,8 @@ def main():
                         help='Record features in feature space')
     parser.add_argument('-v', '--visualize', type=str, default=None,
                         help='Visualize trajectories')
+    parser.add_argument('-c', '--test', type=str, default=None,
+                        help='Test Cost Functions')
     args = parser.parse_args()
 
     exp_name = args.experiment
@@ -742,7 +759,14 @@ def main():
 
         # plt.ioff()
         # plt.show()
+    elif args.test:
+        import cPickle as pickle
+        hyperparams.config['gui_on'] = False
+        with open(args.test, 'rb') as v_file:
+            samples = pickle.load(v_file)
 
+        gps = GPSMain(hyperparams.config)
+        gps.test_cost(samples)
     else:
         import random
         import numpy as np

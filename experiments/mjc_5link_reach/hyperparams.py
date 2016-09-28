@@ -11,6 +11,7 @@ from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
+from gps.algorithm.cost.cost_tf import CostTF
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
 from gps.algorithm.dynamics.dynamics_prior_gmm import DynamicsPriorGMM
 from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
@@ -171,11 +172,39 @@ algorithm[0]['init_traj_distr'] = {
 
 
 torque_cost_1 = [{
+    'type': CostTF,
+    'wu': 5e-1 / PR2_GAINS[0],
+    'tf_loss': CostAction.tf_loss
+} for i in common['train_conditions']]
+
+
+torque_cost_2 = [{
     'type': CostAction,
     'wu': 5e-1 / PR2_GAINS[0],
 } for i in common['train_conditions']]
 
+algorithm[0]['cmp_cost1'] = torque_cost_1
+algorithm[0]['cmp_cost2'] = torque_cost_2
+
+
+from gps.algorithm.cost.cost_utils import RAMP_CONSTANT, evallogl2term
+
 fk_cost_1 = [{
+    'type': CostTF,
+    'tf_loss': CostFK.tf_loss_default,
+    'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
+    'wp': np.array([1, 1, 1, 0, 0, 0]),
+    'l1': 0.1,
+    'l2': 10.0,
+    'alpha': 1e-5,
+
+    'ramp_option': RAMP_CONSTANT,  # How target cost ramps over time.
+    'wp_final_multiplier': 1.0,  # Weight multiplier on final time step.
+    'env_target': True,  # TODO - This isn't used.
+} for i in common['train_conditions']]
+
+
+fk_cost_2 = [{
     'type': CostFK,
     'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
     'wp': np.array([1, 1, 1, 0, 0, 0]),
@@ -184,6 +213,9 @@ fk_cost_1 = [{
     'alpha': 1e-5,
 } for i in common['train_conditions']
 ]
+
+# algorithm[0]['cmp_cost1'] = fk_cost_1
+# algorithm[0]['cmp_cost2'] = fk_cost_2
 
 algorithm[0]['cost'] = [{
     'type': CostSum,
