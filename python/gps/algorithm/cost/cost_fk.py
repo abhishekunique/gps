@@ -71,3 +71,24 @@ class CostFK(Cost):
                                  data_types=[JOINT_ANGLES, JOINT_ANGLES])
 
         return l, lx, lu, lxx, luu, lux
+
+    @classmethod
+    def tf_loss_default(cls, hyperparams, x_input, u_input, jx_input):
+        pass
+        # wpm = get_ramp_multiplier(
+        #     self._hyperparams['ramp_option'], T,
+        #     wp_final_multiplier=self._hyperparams['wp_final_multiplier']
+        # )
+        # wp = self._hyperparams['wp'] * np.expand_dims(wpm, axis=-1)
+
+        # # Compute scaled quantities.
+        # sqrtwp = np.sqrt(wp)
+        # dsclsq = d * sqrtwp
+        # dscl = d * wp
+        # dscls = d * (wp ** 2)
+
+        # # Compute total cost.
+        # l = 0.5 * np.sum(dsclsq ** 2, axis=1) * l2 + \
+        #         np.sqrt(alpha + np.sum(dscl ** 2, axis=1)) * l1
+
+        # return 

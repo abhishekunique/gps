@@ -5,7 +5,7 @@ import numpy as np
 
 from gps.algorithm.cost.config import COST_ACTION
 from gps.algorithm.cost.cost import Cost
-
+import tensorflow as tf
 
 class CostAction(Cost):
     """ Computes torque penalties. """
@@ -31,3 +31,7 @@ class CostAction(Cost):
         lxx = np.zeros((T, Dx, Dx))
         lux = np.zeros((T, Du, Dx))
         return l, lx, lu, lxx, luu, lux
+
+    @classmethod
+    def tf_loss(cls, hyperparams, x_input, u_input, jx_input):
+        return 0.5 * tf.reduce_sum(hyperparams['wu'] * (u_input ** 2), 1)
