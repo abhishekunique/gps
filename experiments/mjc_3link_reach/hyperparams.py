@@ -67,28 +67,28 @@ common = {
     'train_conditions': [0,1,2,3],
     'test_conditions':[4,5,6,7],
     'num_robots':1,
-    'policy_opt': {
-        'type': PolicyOptTf,
-        'network_model': example_tf_network_multi,
-        'run_feats': False,
-        'load_weights': False,
-        'network_params': [{
-            'dim_hidden': [10],
-            'num_filters': [10, 20],
-            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_image_data':[],
-            'image_width': IMAGE_WIDTH,
-            'image_height': IMAGE_HEIGHT,
-            'image_channels': IMAGE_CHANNELS,
-            'sensor_dims': SENSOR_DIMS[0],
-            'batch_size': 25,
-            # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
-        }],
-        'iterations': 2000,
-        'fc_only_iterations': 5000,
-        'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-    }
+    # 'policy_opt': {
+    #     'type': PolicyOptTf,
+    #     'network_model': example_tf_network_multi,
+    #     'run_feats': False,
+    #     'load_weights': False,
+    #     'network_params': [{
+    #         'dim_hidden': [10],
+    #         'num_filters': [10, 20],
+    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_image_data':[],
+    #         'image_width': IMAGE_WIDTH,
+    #         'image_height': IMAGE_HEIGHT,
+    #         'image_channels': IMAGE_CHANNELS,
+    #         'sensor_dims': SENSOR_DIMS[0],
+    #         'batch_size': 25,
+    #         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
+    #     }],
+    #     'iterations': 2000,
+    #     'fc_only_iterations': 5000,
+    #     'checkpoint_prefix': EXP_DIR + 'data_files/policy',
+    # }
 }
 
 if not os.path.exists(common['data_files_dir']):

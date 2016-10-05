@@ -76,12 +76,14 @@ common = {
     'policy_opt': {
         'type': PolicyOptTf,
         'network_model': invariant_subspace_test,
-        'network_model_feat': invariant_subspace_test_action,
-        'network_model_action': invariant_subspace_test_action,
+        'network_model_feat': invariant_subspace_test,
+        # 'network_model_action': invariant_subspace_test_action,
         'run_feats': False,
         'load_weights': '/home/abhigupta/gps/subspace_weights.pkl',
         'load_weights_action': '/home/abhigupta/gps/subspace_weights.pkl',
         'invariant_train': True,
+        'r0_index_list': np.concatenate([np.arange(0,3), np.arange(3,6), np.arange(6,9), np.arange(12,15)]),
+        'r1_index_list': np.concatenate([np.arange(0,4), np.arange(4,8), np.arange(8,11), np.arange(14,17)]),
         'network_params': [{
             'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
             'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
@@ -353,10 +355,10 @@ config = {
     'test_conditions': common['test_conditions'],
     'inner_iterations': 4,
     'to_log': [],
-    'robot0_file': '/home/abhigupta/gps/experiments/mjc_3link_reach/data_files/traj_sample_itr_08_rn_00.pkl',
-    'robot1_file': '/home/abhigupta/gps/experiments/mjc_4link_reach/data_files/traj_sample_itr_08_rn_00.pkl',
-    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(3,6), np.arange(6,9), np.arange(12,15)]),
-    'r1_index_list': np.concatenate([np.arange(0,4), np.arange(4,8)]),
+    'robot0_file': '/home/abhigupta/subspace_sandbox/gps/experiments/mjc_3link_reach/data_files/traj_sample_itr_10_rn_00.pkl',
+    'robot1_file': '/home/abhigupta/subspace_sandbox/gps/experiments/mjc_4link_reach/data_files/traj_sample_itr_10_rn_00.pkl',
+    'r0_index_list': common['policy_opt']['r0_index_list'],
+    'r1_index_list': common['policy_opt']['r1_index_list'],
 }
 
 common['info'] = generate_experiment_info(config)

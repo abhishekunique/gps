@@ -92,7 +92,6 @@ class GPSMain(object):
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             feature_lists = []
-            feature_lists_action = []
             for robot_number in range(self.num_robots):
                 for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
@@ -104,7 +103,6 @@ class GPSMain(object):
                 ]
                 if rf:
                     feature_lists.append(self.policy_opt.run_features_forward(self._extract_features(traj_sample_lists[robot_number], robot_number), robot_number))
-                    # feature_lists_action.append(self.policy_opt.run_features_forward_action(self._extract_features_action(traj_sample_lists[robot_number], robot_number), robot_number))
 
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
@@ -114,7 +112,7 @@ class GPSMain(object):
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
                 if rf:
                     np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
-                    # np.save(self._data_files_dir + ('actionfps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists_action)))
+
             if itr % 16 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
@@ -171,79 +169,8 @@ class GPSMain(object):
             for s in slist._samples:
                 obs_data[j] += s.get_obs()
             obs_data[j] = obs_data[j]/float(len(slist._samples))
-        # obs_data = ([obs[:, 0:3], obs[:, 4:7], obs[:, 8:11], obs[:, 17:20]], axis = 1)
-        # obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 3:6], obs_data[:, :, 6:9],  obs_data[:, :, 12:15]], axis=2) 
         obs_data = obs_data[:, :, self._hyperparams['r0_index_list']]
         return obs_data
-
-    def _extract_features_action(self, pol_sample_lists, robot_number):
-        dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
-        act_data = np.zeros((len(pol_sample_lists), T, dU))
-        for j, slist in enumerate(pol_sample_lists):
-            for s in slist._samples:
-                act_data[j] += s.get_U()
-            act_data[j] = act_data[j]/float(len(slist._samples))
-        return act_data
-
-    # def run_subspace_learning(self, itr_load=None):
-    #     """
-    #     Run training by iteratively sampling and taking an iteration.
-    #     Args:
-    #         itr_load: If specified, loads algorithm state from that
-    #             iteration, and resumes training at the next iteration.
-    #     Returns: None
-    #     """
-    #     # self.collect_img_dataset(1)
-    #     obs_full = [None]*self.num_robots
-    #     for robot_number in range(self.num_robots):
-    #         if robot_number == 0:
-    #             obs_sample = self.data_logger.unpickle(self._hyperparams['robot0_file'])
-    #             for slist in obs_sample:
-    #                 for s in slist._samples:
-    #                     s.agent = self.agent[0]
-
-    #         else:
-    #             obs_sample = self.data_logger.unpickle(self._hyperparams['robot1_file'])
-    #             for slist in obs_sample:
-    #                 for s in slist._samples:
-    #                     s.agent = self.agent[1]
-        
-    #         dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
-    #         dO = self.algorithm[robot_number].dX
-    #         obs_data = np.zeros((0, T, dO))
-    #         for samples in obs_sample:
-    #             obs_data = np.concatenate((obs_data, samples.get_X()))
-
-    #         if robot_number == 0:
-    #             obs_data = obs_data[:, :, self._hyperparams['r0_index_list']]
-    #             # obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 3:6], obs_data[:, :, 6:9],  obs_data[:, :, 12:15]], axis=2) 
-    #             # obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 4:7], obs_data[:, :, 8:11],  obs_data[:, :, 17:20]], axis=2) 
-
-    #         else:
-    #             obs_data = obs_data[:, :, self._hyperparams['r1_index_list']]
-    #             # obs_data = np.concatenate([obs_data[:, :, 0:4], obs_data[:, :, 4:8], obs_data[:, :, 8:11], obs_data[:, :, 14:17]], axis=2) 
-    #             # obs_data = np.concatenate([obs_data[:, :, 0:4], obs_data[:, :, 5:9], obs_data[:, :, 10:13], obs_data[:, :, 19:22]], axis=2) 
-    #         obs_full[robot_number] = obs_data
-
-
-    #     # import matplotlib.pyplot as plt
-    #     # from mpl_toolkits.mplot3d import Axes3D
-
-    #     # fig = plt.figure()
-    #     # ax = fig.add_subplot(111, projection='3d')
-    #     # for c in range(3,4):
-    #     #     for s in range(10):
-    #     #         # ax.scatter(obs_full[0][c*10 + s][:,8],  obs_full[0][0][:,9], obs_full[0][0][:,10])
-    #     #         # ax.scatter(obs_full[1][c*10 + s][:,10], obs_full[1][0][:,11], obs_full[1][0][:,12], marker='x')
-
-    #     #         ax.scatter(obs_full[0][c*10 + s][:,11],  obs_full[0][0][:,12], obs_full[0][0][:,13])
-    #     #         ax.scatter(obs_full[1][c*10 + s][:,13], obs_full[1][0][:,14], obs_full[1][0][:,15], marker='x')
-    #     # plt.show()
-
-    #     import IPython
-    #     IPython.embed()
-    #     self.policy_opt.train_invariant_autoencoder(obs_full)
-
 
     def run_subspace_learning(self, itr_load=None):
         """
@@ -253,9 +180,7 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
-        # self.collect_img_dataset(1)
         obs_full = [None]*self.num_robots
-        act_full = [None]*self.num_robots
         for robot_number in range(self.num_robots):
             if robot_number == 0:
                 obs_sample = self.data_logger.unpickle(self._hyperparams['robot0_file'])
@@ -272,37 +197,15 @@ class GPSMain(object):
             dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
             dO = self.algorithm[robot_number].dX
             obs_data = np.zeros((0, T, dO))
-            act_data = np.zeros((0, T, dU))
             for samples in obs_sample:
                 obs_data = np.concatenate((obs_data, samples.get_X()))
-                act_data = np.concatenate((act_data, samples.get_U()))
 
             if robot_number == 0:
                 obs_data = obs_data[:, :, self._hyperparams['r0_index_list']]
-                # obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 3:6], obs_data[:, :, 6:9],  obs_data[:, :, 12:15]], axis=2) 
-                # obs_data = np.concatenate([obs_data[:, :, 0:3], obs_data[:, :, 4:7], obs_data[:, :, 8:11],  obs_data[:, :, 17:20]], axis=2) 
 
             else:
                 obs_data = obs_data[:, :, self._hyperparams['r1_index_list']]
-                # obs_data = np.concatenate([obs_data[:, :, 0:4], obs_data[:, :, 4:8], obs_data[:, :, 8:11], obs_data[:, :, 14:17]], axis=2) 
-                # obs_data = np.concatenate([obs_data[:, :, 0:4], obs_data[:, :, 5:9], obs_data[:, :, 10:13], obs_data[:, :, 19:22]], axis=2) 
             obs_full[robot_number] = obs_data
-            act_full[robot_number] = act_data
-
-        # import matplotlib.pyplot as plt
-        # from mpl_toolkits.mplot3d import Axes3D
-
-        # fig = plt.figure()
-        # ax = fig.add_subplot(111, projection='3d')
-        # for c in range(3,4):
-        #     for s in range(10):
-        #         # ax.scatter(obs_full[0][c*10 + s][:,8],  obs_full[0][0][:,9], obs_full[0][0][:,10])
-        #         # ax.scatter(obs_full[1][c*10 + s][:,10], obs_full[1][0][:,11], obs_full[1][0][:,12], marker='x')
-
-        #         ax.scatter(obs_full[0][c*10 + s][:,11],  obs_full[0][0][:,12], obs_full[0][0][:,13])
-        #         ax.scatter(obs_full[1][c*10 + s][:,13], obs_full[1][0][:,14], obs_full[1][0][:,15], marker='x')
-        # plt.show()
-        # self.policy_opt.train_action_autoencoder(act_full)
         self.policy_opt.train_invariant_autoencoder(obs_full)
         
 

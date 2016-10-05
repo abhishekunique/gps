@@ -13,7 +13,7 @@ from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_fk_dev import CostFKDev
 from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_action import CostAction
-from gps.algorithm.cost.cost_dev_rs_strike_noee import CostDevRs
+from gps.algorithm.cost.cost_dev_rs_strike import CostDevRs
 from gps.algorithm.cost.cost_dev_rs_action import CostDevRsAction
 from gps.algorithm.cost.cost_sum_decreasing import CostSumDecrease
 from gps.algorithm.cost.cost_sum import CostSum
@@ -39,8 +39,8 @@ from gps.gui.config import generate_experiment_info
 SENSOR_DIMS = [{
     JOINT_ANGLES: 5,
     JOINT_VELOCITIES: 5,
-    END_EFFECTOR_POINTS: 6,
-    END_EFFECTOR_POINT_VELOCITIES: 6,
+    END_EFFECTOR_POINTS: 9,
+    END_EFFECTOR_POINT_VELOCITIES: 9,
     ACTION: 4,
     RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
     RGB_IMAGE_SIZE: 3,
@@ -50,7 +50,7 @@ PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/4link_blockstrike/'
-INIT_POLICY_DIR = '/home/abhigupta/gps/'
+INIT_POLICY_DIR = '/home/abhigupta/subspace_sandbox/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
 
@@ -102,7 +102,6 @@ agent = [{
     'x0': np.zeros((10,)),
     'dt': 0.05,
     'substeps': 5,
-    # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
     'pos_body_offset': [
                         [np.array([0., 0., offset]), np.array([-0.8, 0.0, 0.75 + offset]),np.array([0.0, 0.0, 0.75 + offset])],
                         [np.array([0., 0., offset]), np.array([-0.8, 0.0, -0.8 + offset]),np.array([0.0, 0.0, -0.8 + offset])],
@@ -114,7 +113,7 @@ agent = [{
                         # [np.array([-0.3, 0.0, 0.6]),np.array([0.6, 0.0, 0.85])],
                         # [np.array([-0.4, 0.0, -0.6]),np.array([0.45, 0.0, -0.95])],
                         ],
-    'pos_body_idx': np.array([1, 7,9]),
+    'pos_body_idx': np.array([1, 7, 9]),
     'conditions': 4,
     'train_conditions': [0, 1],
     'test_conditions': [2, 3],
@@ -133,24 +132,6 @@ agent = [{
          }
 ]
 
-# algorithm = [{
-#     'type': AlgorithmBADMM,
-#     'conditions': agent[0]['conditions'],
-#     'train_conditions': agent[0]['train_conditions'],
-#     'test_conditions': agent[0]['test_conditions'],
-#     'num_robots': common['num_robots'],
-#     'iterations': 25,
-#     'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
-#     'policy_dual_rate': 0.2,
-#     'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
-#     'fixed_lg_step': 3,
-#     'kl_step': 5.0,
-#     'min_step_mult': 0.01,
-#     'max_step_mult': 1.0,
-#     'sample_decrease_var': 0.05,
-#     'sample_increase_var': 0.1,
-#     'init_pol_wt': 0.005,
-# }]
 algorithm = [{
     'type': AlgorithmTrajOpt,
     'conditions': agent[0]['conditions'],
@@ -179,10 +160,10 @@ torque_cost_1 = [{
 
 fk_cost_1 = [{
     'type': CostFK,
-    'target_end_effector': np.concatenate([
+    'target_end_effector': np.concatenate([ np.array([0,0,0]),
                                            np.array([0.05, 0.05, 0.05]) + agent[0]['pos_body_offset'][i][2],
                                            np.array([0,0,0])]),
-    'wp': np.array([1, 1, 1,0,0,0]),
+    'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
@@ -224,7 +205,7 @@ fk_cost_blocktouch = [{
 # } for i in common['train_conditions']]
 
 
-load_trajs = np.load('/home/abhigupta/gps/experiments/blockstrike/data_files/fps_16_rn_00.pkl.npy')
+load_trajs = np.load('/home/abhigupta/subspace_sandbox/gps/experiments/blockstrike/data_files/fps_16_rn_00.pkl.npy')
 # import IPython
 # IPython.embed()
 test_cost = [{
@@ -233,7 +214,7 @@ test_cost = [{
     'l2': 10.0,
     'alpha': 1e-5,
     'target_feats': load_trajs[0][i],
-    'load_file': '/home/abhigupta/gps/subspace_state.pkl'
+    'load_file': '/home/abhigupta/subspace_sandbox/gps/subspace_state.pkl'
 } for i in agent[0]['train_conditions']]
 
 # load_trajs_act = np.load('/home/abhigupta/gps/experiments/blockstrike/data_files/actionfps_16_rn_00.pkl.npy')

@@ -47,7 +47,7 @@ PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/blockstrike/'
-INIT_POLICY_DIR = '/home/abhigupta/gps/'
+INIT_POLICY_DIR = '/home/abhigupta/subspace_sandbox/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
 
@@ -66,10 +66,12 @@ common = {
         'type': PolicyOptTf,
         'network_model': example_tf_network_multi,
         'network_model_feat': invariant_subspace_test,
-        'network_model_feat_action': invariant_subspace_test_action,
+        # 'network_model_feat_action': invariant_subspace_test_action,
         'run_feats': True,
-        'load_weights': '/home/abhigupta/gps/subspace_state.pkl',
-        'load_weights_action': '/home/abhigupta/gps/subspace_action.pkl',
+        'load_weights': '/home/abhigupta/subspace_sandbox/gps/subspace_state.pkl',
+        'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
+        'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
+        # 'load_weights_action': '/home/abhigupta/gps/subspace_action.pkl',
         'network_params': [{
             'dim_hidden': [10],
             'num_filters': [10, 20],
@@ -268,7 +270,8 @@ config = {
     'inner_iterations': 4,
     'to_log': [],
     'robot_iters': [range(25), range(0,25,2)],    
-    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7)]),
+    'r0_index_list': common['policy_opt']['r0_index_list'],
+    'r1_index_list': common['policy_opt']['r1_index_list'],
 
 }
 
