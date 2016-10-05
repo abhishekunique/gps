@@ -184,7 +184,7 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
-            self._take_iteration_invariantautoencoder()
+            self._take_iteration_invariantautoencoder(traj_sample_lists)
 
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
@@ -303,7 +303,7 @@ class GPSMain(object):
                 self.gui[robot_number].stop_display_calculating()
 
 
-    def _take_iteration_invariantautoencoder(self):
+    def _take_iteration_invariantautoencoder(self, traj_sample_lists):
         """
         Take an iteration of the algorithm.
         Args:
@@ -312,9 +312,14 @@ class GPSMain(object):
         """
         # Run inner loop to compute new policies.
         #TODO: Could start from init controller.
+
+        # Compute target mean, cov, and weight for each sample.
         obs_full = [None]*self.num_robots
         for robot_number in range(self.num_robots):
-            obs, tgt_mu, tgt_prc, tgt_wt = self.algorithm[robot_number]._update_policy_lists(self.algorithm[robot_number].iteration_count, 0)
+            obs_data = np.zeros((0, T, dO))
+            for m in range(self._train_idx):
+                samples = traj_sample_lists[robot_number][m]
+                obs_data = np.concatenate((obs_data, samples.get_obs()))
             obs_full[robot_number] = obs
         self.train_invariant_autoencoder(obs_full, self._hyperparams["save_file"])
 

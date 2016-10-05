@@ -1093,10 +1093,10 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
         ### end l2 autoencoder loss function ####
 
         ### Terms for unsupervised domain confusion ###
-        dc_softmax =  tf.log(tf.nn.softmax(dc_output))
+        dc_softmax =  tf.log(tf.nn.softmax(disc1))
         dc_entropy = -1.0/num_robots*tf.reduce_sum(dc_softmax)
         dc_currrobot_loss = -tf.reduce_sum(dc_softmax[:,robot_number])  
-        dc_loss.append(dc_entropy)
+        dc_loss.append(dc_currrobot_loss)
         loss = loss + dc_weight*dc_entropy
         ### End terms for unsupervised domain confusion ###
         
