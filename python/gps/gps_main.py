@@ -162,6 +162,44 @@ class GPSMain(object):
 
         self._end()
 
+    def run_unsup_domainconfusion(self, itr_load=None, rf=False):
+        """
+        Run training by iteratively sampling and taking an iteration.
+        Args:
+            itr_load: If specified, loads algorithm state from that
+                iteration, and resumes training at the next iteration.
+        Returns: None
+        """
+        for robot_number in range(self.num_robots):
+            itr_start = self._initialize(itr_load, robot_number=robot_number)
+
+        for itr in range(itr_start, self._hyperparams['iterations']):
+            traj_sample_lists = {}
+            for robot_number in range(self.num_robots):
+                for cond in self._train_idx[robot_number]:
+                    for i in range(self._hyperparams['num_samples']):
+                        self._take_sample(itr, cond, i, robot_number=robot_number)
+                        
+                traj_sample_lists[robot_number] = [
+                    self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
+                    for cond_1 in self._train_idx[robot_number]
+                ]
+            self._take_iteration_invariantautoencoder()
+
+            for robot_number in range(self.num_robots):
+                self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+
+            for robot_number in range(self.num_robots):
+                pol_sample_lists = None #self._take_policy_samples(robot_number=robot_number)
+                self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
+
+            if itr % 4 == 0 and itr > 0:
+                import IPython
+                IPython.embed()
+
+        self._end()
+
+
     def _extract_features(self, pol_sample_lists, robot_number):
         dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
         obs_data = np.zeros((len(pol_sample_lists), T, dO))
@@ -263,6 +301,23 @@ class GPSMain(object):
             self.algorithm[robot_number]._advance_iteration_variables()
             if self.gui:
                 self.gui[robot_number].stop_display_calculating()
+
+
+    def _take_iteration_invariantautoencoder(self):
+        """
+        Take an iteration of the algorithm.
+        Args:
+            itr: Iteration number.
+        Returns: None
+        """
+        # Run inner loop to compute new policies.
+        #TODO: Could start from init controller.
+        obs_full = [None]*self.num_robots
+        for robot_number in range(self.num_robots):
+            obs, tgt_mu, tgt_prc, tgt_wt = self.algorithm[robot_number]._update_policy_lists(self.algorithm[robot_number].iteration_count, 0)
+            obs_full[robot_number] = obs
+        self.train_invariant_autoencoder(obs_full, self._hyperparams["save_file"])
+
 
     def test_policy(self, itr, N):
         """

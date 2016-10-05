@@ -142,7 +142,7 @@ class PolicyOptTf(PolicyOpt):
         
 
     ### GAN structure for training ###
-    def train_invariant_autoencoder(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
+    def train_invariant_autoencoder(self, obs_full, weight_save_file):
         """
         Update policy.
         Args:
@@ -156,78 +156,29 @@ class PolicyOptTf(PolicyOpt):
         N_reshaped = []
         T_reshaped = []
         obs_reshaped = []
-        tgt_mu_reshaped = []
-        tgt_prc_reshaped = []
-        tgt_wt_reshaped = []
-        itr_reshaped = []
         idx_reshaped = []
         batches_per_epoch_reshaped = []
-        tgt_prc_orig_reshaped = []
         for robot_number in range(self.num_robots):
             obs = obs_full[robot_number]
-            tgt_mu = tgt_mu_full[robot_number]
-            tgt_prc = tgt_prc_full[robot_number]
-            tgt_wt = tgt_wt_full[robot_number]
-            itr = itr_full[robot_number]
             N, T = obs.shape[:2]
             dU, dO = self._dU[robot_number], self._dO[robot_number]
 
-            # TODO - Make sure all weights are nonzero?
-
-            # Save original tgt_prc.
-            tgt_prc_orig = np.reshape(tgt_prc, [N*T, dU, dU])
-
-            # Renormalize weights.
-            tgt_wt *= (float(N * T) / np.sum(tgt_wt))
-            # Allow weights to be at most twice the robust median.
-            mn = np.median(tgt_wt[(tgt_wt > 1e-2).nonzero()])
-            for n in range(N):
-                for t in range(T):
-                    tgt_wt[n, t] = min(tgt_wt[n, t], 2 * mn)
-            # Robust median should be around one.
-            tgt_wt /= mn
-
             # Reshape inputs.
             obs = np.reshape(obs, (N*T, dO))
-            tgt_mu = np.reshape(tgt_mu, (N*T, dU))
-            tgt_prc = np.reshape(tgt_prc, (N*T, dU, dU))
-            tgt_wt = np.reshape(tgt_wt, (N*T, 1, 1))
-
-            # Fold weights into tgt_prc.
-            tgt_prc = tgt_wt * tgt_prc
-
-            # TODO: Find entries with very low weights?
-
-            # Normalize obs, but only compute normalzation at the beginning.
-            if itr == 0 and inner_itr == 1:
-                #TODO: may need to change this
-                self.policy[robot_number].x_idx = self.x_idx[robot_number]
-                self.policy[robot_number].scale = np.eye(np.diag(1.0 / (np.std(obs[:, self.x_idx[robot_number]], axis=0) + 1e-8)).shape[0])
-                self.policy[robot_number].bias = np.zeros((-np.mean(obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)).shape)
-                print("FIND")
-
-            obs[:, self.x_idx[robot_number]] = obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
-
             # Assuming that N*T >= self.batch_size.
             batches_per_epoch = np.floor(N*T / self.batch_size)
             idx = range(N*T)
             
             np.random.shuffle(idx)
             obs_reshaped.append(obs)
-            tgt_mu_reshaped.append(tgt_mu)
-            tgt_prc_reshaped.append(tgt_prc)
-            tgt_wt_reshaped.append(tgt_wt)
             N_reshaped.append(N)
             T_reshaped.append(T)
-            itr_reshaped.append(itr)
             idx_reshaped.append(idx)
             batches_per_epoch_reshaped.append(batches_per_epoch)
-            tgt_prc_orig_reshaped.append(tgt_prc_orig)
 
         average_loss = 0
         average_dc_loss = 0
         for i in range(self._hyperparams['iterations']):
-            # Load in data for this batch.
             feed_dict = {}
             for robot_number in range(self.num_robots):
                 start_idx = int(i * self.batch_size %
@@ -264,7 +215,11 @@ class PolicyOptTf(PolicyOpt):
                 print 'supervised tf loss is '
                 print (average_dc_loss/100)
                 average_dc_loss = 0
-
+        var_dict = {}
+        for k, v in self.var_list.items():
+            var_dict[k] = self.sess.run(v)
+        pickle.dump(var_dict, open(weight_save_file, "wb"))
+        print("done training invariant autoencoder and saving weights")
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
