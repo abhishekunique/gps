@@ -1026,6 +1026,90 @@ def double_contrastive_invariance(dim_input=[27, 27], dim_output=[7, 7], batch_s
     return nnets, None
 
 
+def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
+    num_robots = len(dim_input)
+    nnets = []
+    n_layers = 5
+    layer_size = 60
+    dim_hidden = (n_layers - 1)*[layer_size]
+    feature_layers = []
+    weight_dict = {}
+    gen_vars = []
+
+
+    ### creating discriminator variables ###
+    wdisc1 = init_weights((dim_hidden[2], dim_hidden_disc[0]), name='wdisc1')
+    bdisc1 = init_bias((dim_hidden_disc[0],), name='bdisc1')
+    wdisc2 = init_weights((dim_hidden_disc[0], dim_hidden_disc[1]), name='wdisc2')
+    bdisc2 = init_bias((ddim_hidden_disc[1],), name='bdisc2')
+    dc_vars = [dc_w1, dc_b1, dc_w2, dc_b2]
+    dc_var_dict = {}
+    for var in dc_vars:
+        dc_var_dict[var.name] = var
+
+    dc_weight = 1.0
+    dc_loss = []
+    ### end discriminator variables ###
+   
+    for robot_number, robot_params in enumerate(network_config):
+        indiv_losses = []
+        nn_input = tf.placeholder("float", [None, dim_input[robot_number]], name='nn_input' + str(robot_number))
+
+
+        ### Variable declaration ####
+        w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
+        b_input = init_bias((dim_hidden[0],), name='b_input'+str(robot_number))
+        w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_' + str(robot_number))
+        b1 = init_bias((dim_hidden[1],), name='b1_' + str(robot_number))
+        w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_' + str(robot_number))
+        b2 = init_bias((dim_hidden[2],), name='b2_' + str(robot_number))
+        w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_' + str(robot_number))
+        b3 = init_bias((dim_hidden[3],), name='b3_' + str(robot_number))
+        w_output = init_weights((dim_hidden[3], dim_input[robot_number]), name='w_output'+str(robot_number))
+        b_output = init_bias((dim_input[robot_number],), name = 'b_output'+str(robot_number))
+        gen_vars += [w_input, b_input, w1, b1, w2, b2, w3, b3, w_output, b_output]
+        ### End variable declaration ####
+       
+
+
+        ### Start net forward computation ####
+        layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
+        layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
+        layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
+        feature_layers.append(layer2)
+        layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
+        output = tf.matmul(layer3, w_output) + b_output
+        ### End net forward computation ####
+
+
+        ### Computation of discriminator ###
+        disc0 = tf.nn.relu(tf.matmul(layer2, wdisc1) + bdisc1)
+        disc1 = tf.matmul(disc0, wdisc2) + bdisc2)
+        ### End computation of discriminator ###
+
+        ### l2 autoencoder loss function ####
+        loss = tf.nn.l2_loss(nn_input - output) #euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
+        indiv_losses.append(loss)
+        ### end l2 autoencoder loss function ####
+
+        ### Terms for unsupervised domain confusion ###
+        dc_softmax =  tf.log(tf.nn.softmax(dc_output))
+        dc_entropy = -1.0/num_robots*tf.reduce_sum(dc_softmax)
+        dc_currrobot_loss = -tf.reduce_sum(dc_softmax[:,robot_number])  
+        dc_loss.append(dc_entropy)
+        loss = loss + dc_weight*dc_entropy
+        ### End terms for unsupervised domain confusion ###
+        
+        ### Creating TfMap object with appropriate losses ###
+        nnets.append(TfMap.init_from_lists([nn_input, None, None], [output], [loss], layer2, indiv_losses))
+
+    for var in gen_vars:
+        weight_dict[var.name] = var
+
+    other = {}
+    other['dc_loss'] = dc_loss
+    other['dc_vars'] = dc_vars
+    return nnets, weight_dict, other
 
 
 def conv2d(img, w, b):

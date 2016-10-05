@@ -101,11 +101,7 @@ class PolicyOptTf(PolicyOpt):
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        if 'r0_index_list' in self._hyperparams and 'r1_index_list' in self._hyperparams:
-            dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])]
-        else:
-            dO = self._dO
-        tf_maps, var_list = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
+        tf_maps, var_list, other = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
@@ -124,29 +120,11 @@ class PolicyOptTf(PolicyOpt):
             self.individual_losses.append(tf_map.individual_losses)
         self.combined_loss = tf.add_n(self.loss_scalars)
         self.var_list= var_list
-
-    def init_feature_space(self):
-        """ Helper method to initialize the tf networks used """
-        tf_map_generator = self._hyperparams['network_model_feat']
-        dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])]
-        tf_maps, var_list = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
-                             network_config=self._hyperparams['network_params'])
-        self.obs_tensors_feat = []
-        self.act_ops_feat = []
-        self.loss_scalars_feat = []
-        self.feature_points_feat = []
-        for tf_map in tf_maps:
-            self.obs_tensors_feat.append(tf_map.get_input_tensor())
-            self.act_ops_feat.append(tf_map.get_output_op())
-            self.loss_scalars_feat.append(tf_map.get_loss_op())
-            self.feature_points_feat.append(tf_map.feature_points)
-        self.combined_loss_feat = tf.add_n(self.loss_scalars_feat)
-        self.var_list_feat = var_list
-
+        self.other = other
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver =TfSolver(loss_scalar=self.combined_loss,
+        self.solver = TfSolver(loss_scalar=self.combined_loss,
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
@@ -154,71 +132,139 @@ class PolicyOptTf(PolicyOpt):
                               weight_decay=self._hyperparams['weight_decay'],
                               vars_to_opt=self.var_list.values())
 
-    def train_invariant_autoencoder(self, obs_full):
+        self.dc_solver = TfSolver(loss_scalar=tf.reduce_sum(self.other['dc_loss']),
+                      solver_name=self._hyperparams['solver_type'],
+                      base_lr=self._hyperparams['lr'],
+                      lr_policy=self._hyperparams['lr_policy'],
+                      momentum=self._hyperparams['momentum'],
+                      weight_decay=self._hyperparams['weight_decay'],
+                      vars_to_opt=self.other['dc_vars'])
+        
+
+    ### GAN structure for training ###
+    def train_invariant_autoencoder(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
+        """
+        Update policy.
+        Args:
+            obs: Numpy array of observations, N x T x dO.
+            tgt_mu: Numpy array of mean controller outputs, N x T x dU.
+            tgt_prc: Numpy array of precision matrices, N x T x dU x dU.
+            tgt_wt: Numpy array of weights, N x T.
+        Returns:
+            A tensorflow object with updated weights.
+        """
+        N_reshaped = []
+        T_reshaped = []
         obs_reshaped = []
+        tgt_mu_reshaped = []
+        tgt_prc_reshaped = []
+        tgt_wt_reshaped = []
+        itr_reshaped = []
+        idx_reshaped = []
+        batches_per_epoch_reshaped = []
+        tgt_prc_orig_reshaped = []
         for robot_number in range(self.num_robots):
             obs = obs_full[robot_number]
+            tgt_mu = tgt_mu_full[robot_number]
+            tgt_prc = tgt_prc_full[robot_number]
+            tgt_wt = tgt_wt_full[robot_number]
+            itr = itr_full[robot_number]
             N, T = obs.shape[:2]
-            dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])][robot_number]
-            dU = self._dU[robot_number]
-            obs = np.reshape(obs, (N*T, dO))
-            obs_reshaped.append(obs)
+            dU, dO = self._dU[robot_number], self._dO[robot_number]
 
-        idx = range(N*T)
-        np.random.shuffle(idx)
-        batches_per_epoch = np.floor(N*T / self.batch_size)
+            # TODO - Make sure all weights are nonzero?
+
+            # Save original tgt_prc.
+            tgt_prc_orig = np.reshape(tgt_prc, [N*T, dU, dU])
+
+            # Renormalize weights.
+            tgt_wt *= (float(N * T) / np.sum(tgt_wt))
+            # Allow weights to be at most twice the robust median.
+            mn = np.median(tgt_wt[(tgt_wt > 1e-2).nonzero()])
+            for n in range(N):
+                for t in range(T):
+                    tgt_wt[n, t] = min(tgt_wt[n, t], 2 * mn)
+            # Robust median should be around one.
+            tgt_wt /= mn
+
+            # Reshape inputs.
+            obs = np.reshape(obs, (N*T, dO))
+            tgt_mu = np.reshape(tgt_mu, (N*T, dU))
+            tgt_prc = np.reshape(tgt_prc, (N*T, dU, dU))
+            tgt_wt = np.reshape(tgt_wt, (N*T, 1, 1))
+
+            # Fold weights into tgt_prc.
+            tgt_prc = tgt_wt * tgt_prc
+
+            # TODO: Find entries with very low weights?
+
+            # Normalize obs, but only compute normalzation at the beginning.
+            if itr == 0 and inner_itr == 1:
+                #TODO: may need to change this
+                self.policy[robot_number].x_idx = self.x_idx[robot_number]
+                self.policy[robot_number].scale = np.eye(np.diag(1.0 / (np.std(obs[:, self.x_idx[robot_number]], axis=0) + 1e-8)).shape[0])
+                self.policy[robot_number].bias = np.zeros((-np.mean(obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale), axis=0)).shape)
+                print("FIND")
+
+            obs[:, self.x_idx[robot_number]] = obs[:, self.x_idx[robot_number]].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
+
+            # Assuming that N*T >= self.batch_size.
+            batches_per_epoch = np.floor(N*T / self.batch_size)
+            idx = range(N*T)
+            
+            np.random.shuffle(idx)
+            obs_reshaped.append(obs)
+            tgt_mu_reshaped.append(tgt_mu)
+            tgt_prc_reshaped.append(tgt_prc)
+            tgt_wt_reshaped.append(tgt_wt)
+            N_reshaped.append(N)
+            T_reshaped.append(T)
+            itr_reshaped.append(itr)
+            idx_reshaped.append(idx)
+            batches_per_epoch_reshaped.append(batches_per_epoch)
+            tgt_prc_orig_reshaped.append(tgt_prc_orig)
+
         average_loss = 0
-        average_loss_1 = 0
-        average_loss_2 = 0
-        average_loss_3 = 0
+        average_dc_loss = 0
         for i in range(self._hyperparams['iterations']):
+            # Load in data for this batch.
             feed_dict = {}
-            start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
-            idx_i = idx[start_idx:start_idx+self.batch_size]
             for robot_number in range(self.num_robots):
+                start_idx = int(i * self.batch_size %
+                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+                feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
-            train_loss_1 = self.sess.run(self.individual_losses[0][0], feed_dict)
-            train_loss_2 = self.sess.run(self.individual_losses[1][0], feed_dict)
-            train_loss_3 = self.sess.run(self.individual_losses[1][1], feed_dict)
+
             average_loss += train_loss
-            average_loss_1 += train_loss_1
-            average_loss_2 += train_loss_2
-            average_loss_3 += train_loss_3
-            if i % 1000 == 0 and i != 0:
+            if i % 100 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_loss / 100)
                 print 'supervised tf loss is '
                 print (average_loss/100)
-                print 'robot1 loss is '
-                print (average_loss_1/100)
-                print 'robot2 loss is '
-                print (average_loss_2/100)
-                print 'contrastive loss is '
-                print (average_loss_3/100)
-                print("--------------------------")
                 average_loss = 0
-                average_loss_1 = 0
-                average_loss_2 = 0
-                average_loss_3 = 0
-        import IPython
-        IPython.embed()
-        var_dict = {}
-        for k, v in self.var_list.items():
-            var_dict[k] = self.sess.run(v)
-        pickle.dump(var_dict, open("subspace_state.pkl", "wb"))
-        print("done training invariant autoencoder and saving weights")
 
-    def run_features_forward(self, obs, robot_number):
-        feed_dict = {}
-        N, T = obs.shape[:2]
-        dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])][robot_number]
-        dU = self._dU[robot_number]
-        obs = np.reshape(obs, (N*T, dO))
-        feed_dict[self.obs_tensors_feat[robot_number]] = obs
-        output = self.sess.run(self.feature_points_feat[robot_number], feed_dict=feed_dict)
-        output = np.reshape(output, (N, T, 60))
-        return output
+
+            dc_feed_dict = {}
+            for robot_number in range(self.num_robots):
+                start_idx = int(i * self.batch_size %
+                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                dc_feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                dc_feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
+                dc_feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+            dc_loss = self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
+
+            average_dc_loss += train_loss
+            if i % 100 == 0 and i != 0:
+                LOGGER.debug('tensorflow iteration %d, average loss %f',
+                             i, average_dc_loss / 100)
+                print 'supervised tf loss is '
+                print (average_dc_loss/100)
+                average_dc_loss = 0
+
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
