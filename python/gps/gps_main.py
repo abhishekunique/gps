@@ -120,47 +120,6 @@ class GPSMain(object):
 
         self._end()
 
-    def run_badmm(self, itr_load=None, rf=False):
-        """
-        Run training by iteratively sampling and taking an iteration.
-        Args:
-            itr_load: If specified, loads algorithm state from that
-                iteration, and resumes training at the next iteration.
-        Returns: None
-        """
-        for robot_number in range(self.num_robots):
-            itr_start = self._initialize(itr_load, robot_number=robot_number)
-
-        for itr in range(itr_start, self._hyperparams['iterations']):
-            traj_sample_lists = {}
-            feature_lists = []
-            for robot_number in range(self.num_robots):
-                for cond in self._train_idx[robot_number]:
-                    for i in range(self._hyperparams['num_samples']):
-                        self._take_sample(itr, cond, i, robot_number=robot_number)
-                        
-                traj_sample_lists[robot_number] = [
-                    self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
-                    for cond_1 in self._train_idx[robot_number]
-                ]
-                if rf:
-                    feature_lists.append(self.policy_opt.run_features_forward(self._extract_features(traj_sample_lists[robot_number], robot_number), robot_number))
-
-            for robot_number in range(self.num_robots):
-                self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
-
-            self._take_iteration_shared()
-
-            for robot_number in range(self.num_robots):
-                pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
-                self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-                if rf:
-                    np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
-            if itr % 4 == 0 and itr > 0:
-                import IPython
-                IPython.embed()
-
-        self._end()
 
     def run_unsup_domainconfusion(self, itr_load=None, rf=False):
         """
@@ -170,6 +129,7 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
+        print("starting unsupervised domain confusion")
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
@@ -315,13 +275,18 @@ class GPSMain(object):
 
         # Compute target mean, cov, and weight for each sample.
         obs_full = [None]*self.num_robots
+        shaped_full = [None]*self.num_robots
         for robot_number in range(self.num_robots):
-            obs_data = np.zeros((0, T, dO))
-            for m in range(self._train_idx):
+            obs_data = np.zeros((0, self.algorithm[robot_number].T,  self.algorithm[robot_number].dO))
+            shaped_cost = np.zeros((0, self.algorithm[robot_number].T))
+            for m in self._train_idx[robot_number]:
                 samples = traj_sample_lists[robot_number][m]
                 obs_data = np.concatenate((obs_data, samples.get_obs()))
-            obs_full[robot_number] = obs
-        self.train_invariant_autoencoder(obs_full, self._hyperparams["save_file"])
+                for sample in samples._samples:
+                    shaped_cost = np.concatenate((shaped_cost, np.asarray([self.algorithm[robot_number].cost[m]._costs[-1].eval(sample)[0]])))
+            obs_full[robot_number] = obs_data
+            shaped_full[robot_number] = shaped_cost
+        self.policy_opt.train_invariant_autoencoder(obs_full, shaped_full, "/home/abhigupta/temp.pkl")
 
 
     def test_policy(self, itr, N):
@@ -647,16 +612,16 @@ def main():
         if hyperparams.config['gui_on']:
             if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
                 run_gps = threading.Thread(
-                    target=lambda: gps.run_subspace_learning(itr_load=resume_training_itr)
+                    target=lambda: gps.run_unsup_domainconfusion(itr_load=resume_training_itr)
                 )
             else:
                 if args.multithread:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_subspace_learning(itr_load=resume_training_itr)
+                        target=lambda: gps.run_unsup_domainconfusion(itr_load=resume_training_itr)
                     )
                 else:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_subspace_learning(itr_load=resume_training_itr)
+                        target=lambda: gps.run_unsup_domainconfusion(itr_load=resume_training_itr)
                     )
             run_gps.daemon = True
             run_gps.start()
@@ -665,9 +630,9 @@ def main():
             plt.show()
         else:
             if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
-                gps.run_subspace_learning(itr_load=resume_training_itr)
+                gps.run_unsup_domainconfusion(itr_load=resume_training_itr)
             else:
-                gps.run_subspace_learning(itr_load=resume_training_itr)
+                gps.run_unsup_domainconfusion(itr_load=resume_training_itr)
 
 
     else:

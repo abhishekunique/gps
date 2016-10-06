@@ -132,7 +132,7 @@ class PolicyOptTf(PolicyOpt):
                               weight_decay=self._hyperparams['weight_decay'],
                               vars_to_opt=self.var_list.values())
 
-        self.dc_solver = TfSolver(loss_scalar=tf.reduce_sum(self.other['dc_loss']),
+        self.dc_solver = TfSolver(loss_scalar=tf.add_n(self.other['dc_loss']),
                       solver_name=self._hyperparams['solver_type'],
                       base_lr=self._hyperparams['lr'],
                       lr_policy=self._hyperparams['lr_policy'],
@@ -142,7 +142,7 @@ class PolicyOptTf(PolicyOpt):
         
 
     ### GAN structure for training ###
-    def train_invariant_autoencoder(self, obs_full, weight_save_file):
+    def train_invariant_autoencoder(self, obs_full, shaped_full, weight_save_file):
         """
         Update policy.
         Args:
@@ -156,21 +156,25 @@ class PolicyOptTf(PolicyOpt):
         N_reshaped = []
         T_reshaped = []
         obs_reshaped = []
+        shaped_cost_reshaped = []
         idx_reshaped = []
         batches_per_epoch_reshaped = []
         for robot_number in range(self.num_robots):
             obs = obs_full[robot_number]
+            shaped_cost = shaped_full[robot_number]
             N, T = obs.shape[:2]
             dU, dO = self._dU[robot_number], self._dO[robot_number]
 
             # Reshape inputs.
             obs = np.reshape(obs, (N*T, dO))
+            shaped_cost = np.reshape(shaped_cost, (N*T,))
             # Assuming that N*T >= self.batch_size.
             batches_per_epoch = np.floor(N*T / self.batch_size)
             idx = range(N*T)
             
             np.random.shuffle(idx)
             obs_reshaped.append(obs)
+            shaped_cost_reshaped.append(shaped_cost)
             N_reshaped.append(N)
             T_reshaped.append(T)
             idx_reshaped.append(idx)
@@ -185,8 +189,8 @@ class PolicyOptTf(PolicyOpt):
                                 (batches_per_epoch_reshaped[robot_number] * self.batch_size))
                 idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
-                feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+                if robot_number == 0:
+                    feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
             average_loss += train_loss
@@ -204,15 +208,15 @@ class PolicyOptTf(PolicyOpt):
                                 (batches_per_epoch_reshaped[robot_number] * self.batch_size))
                 idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
                 dc_feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                dc_feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
-                dc_feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
+                if robot_number == 0:
+                    dc_feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
             dc_loss = self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
 
-            average_dc_loss += train_loss
+            average_dc_loss += dc_loss
             if i % 100 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_dc_loss / 100)
-                print 'supervised tf loss is '
+                print 'supervised dc loss is '
                 print (average_dc_loss/100)
                 average_dc_loss = 0
         var_dict = {}
