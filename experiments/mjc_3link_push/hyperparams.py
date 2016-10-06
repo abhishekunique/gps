@@ -8,10 +8,10 @@ from gps import __file__ as gps_filepath
 from gps.agent.mjc.agent_mjc import AgentMuJoCo
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
+from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
-from gps.algorithm.cost.cost_tf import CostTF
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
 from gps.algorithm.dynamics.dynamics_prior_gmm import DynamicsPriorGMM
 from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
@@ -19,7 +19,7 @@ from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi
-
+from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
 
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
@@ -29,19 +29,19 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
 from gps.gui.config import generate_experiment_info
 
-N_LINKS = 5
+N_LINKS = 3
 
 SENSOR_DIMS = [{
-    JOINT_ANGLES: N_LINKS,
-    JOINT_VELOCITIES: N_LINKS,
-    END_EFFECTOR_POINTS: 6,
-    END_EFFECTOR_POINT_VELOCITIES: 6,
+    JOINT_ANGLES: N_LINKS + 1,
+    JOINT_VELOCITIES: N_LINKS + 1,
+    END_EFFECTOR_POINTS: 9,
+    END_EFFECTOR_POINT_VELOCITIES: 9,
     ACTION: N_LINKS,
 },]
 
 PR2_GAINS = [np.array([1.0] * N_LINKS)]
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
-EXP_DIR = BASE_DIR + ('/../experiments/mjc_%dlink_reach/' % N_LINKS)
+EXP_DIR = BASE_DIR + ('/../experiments/mjc_%dlink_push/' % N_LINKS)
 
 #close to the blockstrike positions
 # all_offsets = [[np.array([-0.8, 0.0, 0.25])],
@@ -49,15 +49,17 @@ EXP_DIR = BASE_DIR + ('/../experiments/mjc_%dlink_reach/' % N_LINKS)
 #                 [np.array([0.0, 0.0, 0.75])],
 #                 [np.array([0.1, 0.0, -0.75])]]
 
-all_offsets = [[np.asarray([-0.3, 0., -1.5])],
-               [np.asarray([0.3, 0., 0.3])],
-               [np.asarray([-0.4, 0.0, 0.6])],
-               [np.asarray([0.3, 0., -1.2])], 
-               [np.asarray([.5, 0.0, 0.3])],
-               [np.asarray([.7, 0.0, -0.3])],
-               [np.array([0., 0., -1.2])],
-               [np.array([0.4, 0., -0.9])]]
+all_offsets = [
+                        [np.array([1.0, 0.0, 0.45]),np.array([0.4, 0.0, 0.45])],
+                        [np.array([1.0, 0.0, -0.5]),np.array([0.6, 0.0, -0.5])],
+                        [np.array([0.6, 0.0, 0.65]),np.array([0.2, 0.0, 0.65])],
+                        [np.array([0.8, 0.0, -0.65]),np.array([0.6, 0.0, -0.65])],
 
+                        [np.array([0.8, 0.0, 0.5]),np.array([0.3, 0.0, 0.5])],
+                        [np.array([0.8, 0.0, -0.5]),np.array([0.4, 0.0, -0.5])],
+                        [np.array([0.7, 0.0, 0.6]),np.array([0.4, 0.0, 0.6])],
+                        [np.array([0.75, 0.0, -0.55]),np.array([0.45, 0.0, -0.55])],
+                        ]
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),
@@ -98,12 +100,12 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = [ {
     'type': AgentMuJoCo,
-    'filename': './mjc_models/arm_%dlink_reach.xml' % N_LINKS,
-    'x0': np.zeros(N_LINKS * 2),
+    'filename': './mjc_models/arm_%dlink_push.xml' % N_LINKS,
+    'x0': np.zeros((N_LINKS + 1) * 2),
     'dt': 0.05,
     'substeps': 5,
     'pos_body_offset': all_offsets,
-    'pos_body_idx': np.array([N_LINKS + 3]),
+    'pos_body_idx': np.array([N_LINKS + 3, N_LINKS + 5]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
@@ -172,56 +174,54 @@ algorithm[0]['init_traj_distr'] = {
 
 
 torque_cost_1 = [{
-    'type': CostTF,
-    'wu': 5e-1 / PR2_GAINS[0],
-    'tf_loss': CostAction.tf_loss
-} for i in common['train_conditions']]
-
-
-torque_cost_2 = [{
     'type': CostAction,
     'wu': 5e-1 / PR2_GAINS[0],
 } for i in common['train_conditions']]
 
-algorithm[0]['cmp_cost1'] = torque_cost_1
-algorithm[0]['cmp_cost2'] = torque_cost_2
+# fk_cost_1 = [{
+#     'type': CostFK,
+#     'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
+#     'wp': np.array([1, 1, 1, 0, 0, 0]),
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+# } for i in common['train_conditions']
+# ]
+
+# algorithm[0]['cost'] = [{
+#     'type': CostSum,
+#     'costs': [torque_cost_1[i], fk_cost_1[i]],
+#     'weights': [1.0, 1.0],
+# } for i in common['train_conditions']]
 
 
-from gps.algorithm.cost.cost_utils import RAMP_CONSTANT, evallogl2term
+
+fkblock_cost_1 = [{
+    'type': CostFKBlock,
+    'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
+    'l1': 0.1,
+    'l2': 10.0,
+    'alpha': 1e-5,
+} for i in common['train_conditions']]
 
 fk_cost_1 = [{
-    'type': CostTF,
-    'tf_loss': CostFK.tf_loss_default,
-    'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
-    'wp': np.array([1, 1, 1, 0, 0, 0]),
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-
-    'ramp_option': RAMP_CONSTANT,  # How target cost ramps over time.
-    'wp_final_multiplier': 1.0,  # Weight multiplier on final time step.
-    'env_target': True,  # TODO - This isn't used.
-} for i in common['train_conditions']]
-
-
-fk_cost_2 = [{
     'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
-    'wp': np.array([1, 1, 1, 0, 0, 0]),
+    'target_end_effector': np.concatenate([np.array([0,0,0]), 
+                                           np.array([0.8, 0.0, 0.5]) + agent[0]['pos_body_offset'][i][1],
+                                           np.array([0,0,0])]),
+    'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
     'l1': 0.1,
     'l2': 10.0,
-    'alpha': 1e-5,
-} for i in common['train_conditions']
-]
+    'alpha': 1e-5
+} for i in agent[0]['train_conditions']]
 
-algorithm[0]['cmp_cost1'] = fk_cost_1
-algorithm[0]['cmp_cost2'] = fk_cost_2
-
+#NO TORQUE COST!!
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [torque_cost_1[i], fk_cost_1[i]],
-    'weights': [1.0, 1.0],
+    'costs': [fkblock_cost_1[i], fk_cost_1[i]],
+    'weights': [0.5, 1.0],
 } for i in common['train_conditions']]
+
 
 
 

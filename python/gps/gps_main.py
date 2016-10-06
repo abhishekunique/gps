@@ -590,8 +590,11 @@ class GPSMain(object):
             cost2fn = cost2[condition]['type'](cost2[condition])
             cond_samples = samples[condition]
             for sample in cond_samples:
+                sample.agent = a
                 tf_loss, tf_lx, tf_lu, tf_lxx, tf_luu, tf_lux = cost1fn.eval(sample)
                 l, lx, lu, lxx, luu, lux = cost2fn.eval(sample)
+                # print tf_loss
+                # print tf_loss, l
                 print(np.linalg.norm(tf_loss - l),
                       np.linalg.norm(tf_lu - lu),
                       np.linalg.norm(tf_lx - lx),
@@ -754,11 +757,11 @@ def main():
         run_gps = threading.Thread(
             target=lambda: gps.visualize_samples(samples)
         )
-        run_gps.daemon = store_true
+        run_gps.daemon = True
         run_gps.start()
 
-        # plt.ioff()
-        # plt.show()
+        plt.ioff()
+        plt.show()
     elif args.test:
         import cPickle as pickle
         hyperparams.config['gui_on'] = False

@@ -33,5 +33,5 @@ class CostAction(Cost):
         return l, lx, lu, lxx, luu, lux
 
     @classmethod
-    def tf_loss(cls, hyperparams, x_input, u_input, jx_input):
-        return 0.5 * tf.reduce_sum(hyperparams['wu'] * (u_input ** 2), 1)
+    def tf_loss(cls, hyperparams, T, x_input, u_input, jx_input, ee_input):
+        return 0.5 * tf.reduce_sum(hyperparams['wu'] * (u_input ** 2), 1), False

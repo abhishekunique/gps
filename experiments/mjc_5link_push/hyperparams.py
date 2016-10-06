@@ -219,7 +219,7 @@ fk_cost_1 = [{
 algorithm[0]['cost'] = [{
     'type': CostSum,
     'costs': [fkblock_cost_1[i], fk_cost_1[i]],
-    'weights': [0.5, 1.0],
+    'weights': [3.0, 1.0],
 } for i in common['train_conditions']]
 
 

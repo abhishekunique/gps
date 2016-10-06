@@ -8,6 +8,7 @@ from gps.algorithm.cost.cost import Cost
 from gps.algorithm.cost.cost_utils import get_ramp_multiplier
 from gps.proto.gps_pb2 import JOINT_ANGLES, END_EFFECTOR_POINTS, \
         END_EFFECTOR_POINT_JACOBIANS
+import tensorflow as tf
 
 
 class CostFK(Cost):
@@ -73,22 +74,25 @@ class CostFK(Cost):
         return l, lx, lu, lxx, luu, lux
 
     @classmethod
-    def tf_loss_default(cls, hyperparams, x_input, u_input, jx_input):
-        pass
-        # wpm = get_ramp_multiplier(
-        #     self._hyperparams['ramp_option'], T,
-        #     wp_final_multiplier=self._hyperparams['wp_final_multiplier']
-        # )
-        # wp = self._hyperparams['wp'] * np.expand_dims(wpm, axis=-1)
+    def tf_loss_default(cls, hyperparams, T, x_input, u_input, jx_input, ee_input):
+        tgt = hyperparams['target_end_effector']
+        d = ee_input - tgt
+        wpm = get_ramp_multiplier(
+            hyperparams['ramp_option'], T,
+            wp_final_multiplier=hyperparams['wp_final_multiplier']
+        )
+        wp = hyperparams['wp'] * np.expand_dims(wpm, axis=-1)
+        l1 = hyperparams['l1']
+        l2 = hyperparams['l2']
+        alpha = hyperparams['alpha']
 
-        # # Compute scaled quantities.
-        # sqrtwp = np.sqrt(wp)
-        # dsclsq = d * sqrtwp
-        # dscl = d * wp
-        # dscls = d * (wp ** 2)
+        sqrtwp = np.sqrt(wp)
+        dsclsq = d * sqrtwp
+        dscl = d * wp
+        dscls = d * (wp ** 2)
 
-        # # Compute total cost.
-        # l = 0.5 * np.sum(dsclsq ** 2, axis=1) * l2 + \
-        #         np.sqrt(alpha + np.sum(dscl ** 2, axis=1)) * l1
+        # Compute total cost.
+        l = 0.5 * tf.reduce_sum(dsclsq ** 2, 1) * l2 + \
+                0.5 * tf.log(alpha + tf.reduce_sum(dscl ** 2, 1)) * l1
+        return l, True
 
-        # return 
