@@ -135,6 +135,7 @@ class GPSMain(object):
 
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
+            print("SAMPLING")
             for robot_number in range(self.num_robots):
                 for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
@@ -144,8 +145,12 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
+            import IPython
+            IPython.embed()
+            print("INVARIANT ENCODER")
             self._take_iteration_invariantautoencoder(traj_sample_lists)
 
+            print("TAKE ITERATION")
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
@@ -283,10 +288,25 @@ class GPSMain(object):
                 samples = traj_sample_lists[robot_number][m]
                 obs_data = np.concatenate((obs_data, samples.get_obs()))
                 for sample in samples._samples:
-                    shaped_cost = np.concatenate((shaped_cost, np.asarray([self.algorithm[robot_number].cost[m]._costs[-1].eval(sample)[0]])))
+                    if robot_number == 0:
+                        shaped_cost = np.concatenate((shaped_cost, np.asarray([self.algorithm[robot_number].cost[m]._costs[-1].eval(sample)[0]])))
+                    else:
+                        shaped_cost = np.concatenate((shaped_cost, np.zeros((1, self.algorithm[robot_number].T))))
             obs_full[robot_number] = obs_data
             shaped_full[robot_number] = shaped_cost
-        self.policy_opt.train_invariant_autoencoder(obs_full, shaped_full, "/home/abhigupta/temp.pkl")
+        traj_feats, nn_weights = self.policy_opt.train_invariant_autoencoder(obs_full, shaped_full, "/home/abhigupta/temp.pkl")
+        #setting feature trajectories and nn weights in the cost function
+        num_conds = len(self._train_idx[0])
+        N = traj_feats.shape[0]
+        T = traj_feats.shape[1]
+        dO = traj_feats.shape[2]
+        traj_feats = np.reshape(traj_feats, (num_conds, int(N/num_conds), T, dO))
+        import IPython
+        IPython.embed()
+        traj_feats = np.mean(traj_feats, axis=1)
+        for m in self._train_idx[robot_number]:
+            self.algorithm[1].cost[m]._costs[-1].traj_feats = traj_feats[m]
+            self.algorithm[1].cost[m]._costs[-1].nn_weights = nn_weights
 
 
     def test_policy(self, itr, N):

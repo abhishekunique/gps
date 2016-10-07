@@ -11,6 +11,7 @@ from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_fk_dev import CostFKDev
+from gps.algorithm.cost.cost_dev_rs_strike import CostDevRs
 from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
@@ -104,7 +105,7 @@ common = {
             'batch_size': 25,
             # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
         }],
-        'iterations': 60000,
+        'iterations': 2000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
@@ -280,17 +281,26 @@ fk_cost_2 = [{
     'ramp_option': RAMP_QUADRATIC
 } for i in agent[1]['train_conditions']]
 
-fk_cost_blocktouch2 = [{
-    'type': CostFKBlock,
-    'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
+# fk_cost_blocktouch2 = [{
+#     'type': CostFKBlock,
+#     'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+# } for i in agent[1]['train_conditions']]
+
+
+test_cost = [{
+    'type': CostDevRs,
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
-} for i in agent[1]['train_conditions']]
+} for i in agent[0]['train_conditions']]
+
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_2[i], fk_cost_blocktouch2[i]],
+    'costs': [fk_cost_2[i], test_cost[i]],
     'weights': [1.0, 1.0],
 } for i in agent[0]['train_conditions']]
 

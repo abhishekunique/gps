@@ -219,11 +219,31 @@ class PolicyOptTf(PolicyOpt):
                 print 'supervised dc loss is '
                 print (average_dc_loss/100)
                 average_dc_loss = 0
+
+
         var_dict = {}
         for k, v in self.var_list.items():
             var_dict[k] = self.sess.run(v)
         pickle.dump(var_dict, open(weight_save_file, "wb"))
+        import IPython
+        IPython.embed()
+        traj_feats = self.run_features_forward(obs_full[0], 0)
+        #need to take mean here
+        # np.save("fps_r0.npy", traj_feats)
         print("done training invariant autoencoder and saving weights")
+        return traj_feats, var_dict
+
+    def run_features_forward(self, obs, robot_number):
+        feed_dict = {}
+        N, T = obs.shape[:2]
+        dO = obs.shape[2]
+        #dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])][robot_number]
+        dU = self._dU[robot_number]
+        obs = np.reshape(obs, (N*T, dO))
+        feed_dict[self.obs_tensors[robot_number]] = obs
+        output = self.sess.run(self.feature_points[robot_number], feed_dict=feed_dict)
+        output = np.reshape(output, (N, T, 60))
+        return output
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
