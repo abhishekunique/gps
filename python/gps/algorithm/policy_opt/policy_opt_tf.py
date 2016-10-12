@@ -202,7 +202,7 @@ class PolicyOptTf(PolicyOpt):
                 average_loss = 0
 
                 print np.linalg.norm(self.reward_forward(obs_full[0], 0) -
-                    shaped_cost_reshaped[robot_number])
+                    shaped_cost_reshaped[0])
 #            dc_feed_dict = {}
 #            for robot_number in range(self.num_robots):
 #                start_idx = int(i * self.batch_size %
@@ -226,8 +226,8 @@ class PolicyOptTf(PolicyOpt):
         for k, v in self.var_list.items():
             var_dict[k] = self.sess.run(v)
         pickle.dump(var_dict, open(weight_save_file, "wb"))
-        #import IPython
-        #IPython.embed()
+        import IPython
+        IPython.embed()
         traj_feats = self.run_features_forward(obs_full[0], 0)
         #need to take mean here
         # np.save("fps_r0.npy", traj_feats)
