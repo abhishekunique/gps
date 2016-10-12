@@ -93,8 +93,8 @@ class PolicyOptTf(PolicyOpt):
             import pickle
             val_vars = pickle.load(open(self._hyperparams['load_weights'], 'rb'))
             for k,v in self.var_list_feat.items():
-                if k in val_vars:   
-                    print(k)        
+                if k in val_vars:
+                    print(k)
                     assign_op = v.assign(val_vars[k])
                     self.sess.run(assign_op)
 
@@ -139,7 +139,7 @@ class PolicyOptTf(PolicyOpt):
                       momentum=self._hyperparams['momentum'],
                       weight_decay=self._hyperparams['weight_decay'],
                       vars_to_opt=self.other['dc_vars'])
-        
+
 
     ### GAN structure for training ###
     def train_invariant_autoencoder(self, obs_full, shaped_full, weight_save_file):
@@ -171,7 +171,7 @@ class PolicyOptTf(PolicyOpt):
             # Assuming that N*T >= self.batch_size.
             batches_per_epoch = np.floor(N*T / self.batch_size)
             idx = range(N*T)
-            
+
             np.random.shuffle(idx)
             obs_reshaped.append(obs)
             shaped_cost_reshaped.append(shaped_cost)
@@ -182,7 +182,7 @@ class PolicyOptTf(PolicyOpt):
 
         average_loss = 0
         average_dc_loss = 0
-        for i in range(self._hyperparams['iterations']):
+        for i in range(10*self._hyperparams['iterations']):
             feed_dict = {}
             for robot_number in range(self.num_robots):
                 start_idx = int(i * self.batch_size %
@@ -201,37 +201,49 @@ class PolicyOptTf(PolicyOpt):
                 print (average_loss/100)
                 average_loss = 0
 
-
-            dc_feed_dict = {}
-            for robot_number in range(self.num_robots):
-                start_idx = int(i * self.batch_size %
-                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                dc_feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                if robot_number == 0:
-                    dc_feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
-            dc_loss = self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
-
-            average_dc_loss += dc_loss
-            if i % 100 == 0 and i != 0:
-                LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_dc_loss / 100)
-                print 'supervised dc loss is '
-                print (average_dc_loss/100)
-                average_dc_loss = 0
+                print np.linalg.norm(self.reward_forward(obs_full[0], 0) -
+                    shaped_cost_reshaped[robot_number])
+#            dc_feed_dict = {}
+#            for robot_number in range(self.num_robots):
+#                start_idx = int(i * self.batch_size %
+#                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+#                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+#                dc_feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+#                if robot_number == 0:
+#                    dc_feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
+#            dc_loss = self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
+#
+#            average_dc_loss += dc_loss
+#            if i % 100 == 0 and i != 0:
+#                LOGGER.debug('tensorflow iteration %d, average loss %f',
+#                             i, average_dc_loss / 100)
+#                print 'supervised dc loss is '
+#                print (average_dc_loss/100)
+#                average_dc_loss = 0
 
 
         var_dict = {}
         for k, v in self.var_list.items():
             var_dict[k] = self.sess.run(v)
         pickle.dump(var_dict, open(weight_save_file, "wb"))
-        import IPython
-        IPython.embed()
+        #import IPython
+        #IPython.embed()
         traj_feats = self.run_features_forward(obs_full[0], 0)
         #need to take mean here
         # np.save("fps_r0.npy", traj_feats)
         print("done training invariant autoencoder and saving weights")
         return traj_feats, var_dict
+
+    def reward_forward(self, obs, robot_number):
+        feed_dict = {}
+        N, T = obs.shape[:2]
+        dO = obs.shape[2]
+        dU = self._dU[robot_number]
+        obs = np.reshape(obs, (N*T, dO))
+        feed_dict[self.obs_tensors[robot_number]] = obs
+        output = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
+        output = np.reshape(output, (N*T))
+        return output
 
     def run_features_forward(self, obs, robot_number):
         feed_dict = {}
@@ -314,7 +326,7 @@ class PolicyOptTf(PolicyOpt):
             # Assuming that N*T >= self.batch_size.
             batches_per_epoch = np.floor(N*T / self.batch_size)
             idx = range(N*T)
-            
+
             np.random.shuffle(idx)
             obs_reshaped.append(obs)
             tgt_mu_reshaped.append(tgt_mu)

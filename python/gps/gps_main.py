@@ -28,7 +28,7 @@ class GPSMain(object):
     """ Main class to run algorithms and experiments. """
     def __init__(self, config):
         self._hyperparams = config
-        self._conditions = [] 
+        self._conditions = []
 
         self._train_idx = []
         self._test_idx = []
@@ -140,13 +140,13 @@ class GPSMain(object):
                 for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
                         self._take_sample(itr, cond, i, robot_number=robot_number)
-                        
+
                 traj_sample_lists[robot_number] = [
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
-            import IPython
-            IPython.embed()
+            #import IPython
+            #IPython.embed()
             print("INVARIANT ENCODER")
             self._take_iteration_invariantautoencoder(traj_sample_lists)
 
@@ -158,7 +158,7 @@ class GPSMain(object):
                 pol_sample_lists = None #self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
 
-            if itr % 4 == 0 and itr > 0:
+            if itr % 10 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
@@ -196,7 +196,7 @@ class GPSMain(object):
                 for slist in obs_sample:
                     for s in slist._samples:
                         s.agent = self.agent[1]
-        
+
             dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
             dO = self.algorithm[robot_number].dX
             obs_data = np.zeros((0, T, dO))
@@ -210,9 +210,9 @@ class GPSMain(object):
                 obs_data = obs_data[:, :, self._hyperparams['r1_index_list']]
             obs_full[robot_number] = obs_data
         self.policy_opt.train_invariant_autoencoder(obs_full)
-        
 
-       
+
+
     def _take_iteration_start(self, itr, sample_lists, robot_number=0):
         """
         Take an iteration of the algorithm.
@@ -301,8 +301,8 @@ class GPSMain(object):
         T = traj_feats.shape[1]
         dO = traj_feats.shape[2]
         traj_feats = np.reshape(traj_feats, (num_conds, int(N/num_conds), T, dO))
-        import IPython
-        IPython.embed()
+        #import IPython
+        #IPython.embed()
         traj_feats = np.mean(traj_feats, axis=1)
         for m in self._train_idx[robot_number]:
             self.algorithm[1].cost[m]._costs[-1].traj_feats = traj_feats[m]
@@ -359,7 +359,7 @@ class GPSMain(object):
             if self.algorithm is None:
                 print("Error: cannot find '%s.'" % algorithm_file)
                 os._exit(1) # called instead of sys.exit(), since this is in a thread
-                
+
             if self.gui:
                 traj_sample_lists = self.data_logger.unpickle(self._data_files_dir +
                     ('traj_sample_itr_%02d.pkl' % itr_load))
@@ -470,7 +470,7 @@ class GPSMain(object):
         #     self._data_files_dir + ('algorithm_itr_%02d.pkl' % itr),
         #     copy.copy(self.algorithm)
         # )
-    
+
         self.data_logger.pickle(
             self._data_files_dir + ('traj_sample_itr_%02d_rn_%02d.pkl' % (itr,robot_number)),
             copy.copy(traj_sample_lists)
@@ -507,7 +507,7 @@ class GPSMain(object):
 
         if 'no_sample_logging' in self._hyperparams['common']:
             return
- 
+
 
     def _end(self):
         """ Finish running and exit. """
