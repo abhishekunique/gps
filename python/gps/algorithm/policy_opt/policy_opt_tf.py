@@ -236,8 +236,8 @@ class PolicyOptTf(PolicyOpt):
         # A = obs
         # x = np.linalg.lstsq(A, y)
         #y_pred = A.dot(x)
-        import IPython
-        IPython.embed()
+        # import IPython
+        # IPython.embed()
         traj_feats = self.run_features_forward(obs_full[0], 0)
         #need to take mean here
         # np.save("fps_r0.npy", traj_feats)

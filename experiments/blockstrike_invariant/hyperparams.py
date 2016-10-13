@@ -292,6 +292,9 @@ fk_cost_2 = [{
 
 test_cost = [{
     'type': CostDevRs,
+
+    # for testing purposes
+    'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,

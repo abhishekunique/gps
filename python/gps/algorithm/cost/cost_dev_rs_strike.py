@@ -6,6 +6,7 @@ import numpy as np
 from gps.algorithm.cost.config import COST_STATE
 from gps.algorithm.cost.cost import Cost
 from gps.algorithm.cost.cost_utils import evall1l2term, get_ramp_multiplier
+from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 import tensorflow as tf
 def init_weights(shape, name=None):
     return tf.Variable(tf.random_normal(shape, stddev=0.01), name=name)
@@ -24,6 +25,7 @@ class CostDevRs(Cost):
         self.init_feature_space()
         self.nn_weights = None
         self.traj_feats = None
+        self.costfk = CostFKBlock(hyperparams)
 
     def init_feature_space(self):
         """ Helper method to initialize the tf networks used """
@@ -56,11 +58,13 @@ class CostDevRs(Cost):
             feature_layers = layer2
             layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
             output = tf.matmul(layer3, w_output) + b_output
-            gradients = tf.gradients(layer2, nn_input)
+            # gradients = tf.gradients(layer2, nn_input)
+            gradients = tf.gradients(output, nn_input)
             init_op = tf.initialize_local_variables()
             self.feature_layers = feature_layers
             self.gradients = gradients
             self.input = nn_input
+            self.output = output
             col_sum = tf.reduce_sum(self.feature_layers, 0)
             split_feats = tf.split(0, num_feats, col_sum)
             grad_ops = []
@@ -96,6 +100,8 @@ class CostDevRs(Cost):
             sample:  A single sample
         """
         self.load_weights()
+
+        return self.costfk.eval(sample)
         T = sample.T
         Du = sample.dU
         Dx = sample.dX
