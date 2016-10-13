@@ -301,8 +301,8 @@ class GPSMain(object):
         T = traj_feats.shape[1]
         dO = traj_feats.shape[2]
         traj_feats = np.reshape(traj_feats, (num_conds, int(N/num_conds), T, dO))
-        #import IPython
-        #IPython.embed()
+        import IPython
+        IPython.embed()
         traj_feats = np.mean(traj_feats, axis=1)
         for m in self._train_idx[robot_number]:
             self.algorithm[1].cost[m]._costs[-1].traj_feats = traj_feats[m]

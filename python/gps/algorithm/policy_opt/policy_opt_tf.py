@@ -124,7 +124,7 @@ class PolicyOptTf(PolicyOpt):
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver = TfSolver(loss_scalar=self.combined_loss,
+        self.solver = TfSolver(loss_scalar=self.loss_scalars[0],#self.combined_loss,
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
@@ -182,7 +182,7 @@ class PolicyOptTf(PolicyOpt):
 
         average_loss = 0
         average_dc_loss = 0
-        for i in range(10*self._hyperparams['iterations']):
+        for i in range(self._hyperparams['iterations']):
             feed_dict = {}
             for robot_number in range(self.num_robots):
                 start_idx = int(i * self.batch_size %
@@ -201,8 +201,10 @@ class PolicyOptTf(PolicyOpt):
                 print (average_loss/100)
                 average_loss = 0
 
-                print np.linalg.norm(self.reward_forward(obs_full[0], 0) -
-                    shaped_cost_reshaped[0])
+                #import IPython
+                #IPython.embed()
+                print np.linalg.norm(self.reward_forward(obs_full[0], 0)  -
+                    shaped_cost_reshaped[0])/shaped_cost_reshaped[0].shape[0]
 #            dc_feed_dict = {}
 #            for robot_number in range(self.num_robots):
 #                start_idx = int(i * self.batch_size %
@@ -226,6 +228,14 @@ class PolicyOptTf(PolicyOpt):
         for k, v in self.var_list.items():
             var_dict[k] = self.sess.run(v)
         pickle.dump(var_dict, open(weight_save_file, "wb"))
+        obs = obs_full[0]
+        N, T = obs.shape[:2]
+        dO = obs.shape[2]
+        obs = np.reshape(obs, (N*T, dO))
+        y = shaped_cost_reshaped[0]
+        A = obs
+        x = np.linalg.lstsq(A, y)
+        #y_pred = A.dot(x)
         import IPython
         IPython.embed()
         traj_feats = self.run_features_forward(obs_full[0], 0)
