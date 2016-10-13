@@ -57,7 +57,7 @@ PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/blockstrike_invariant/'
-INIT_POLICY_DIR = '/home/abhigupta/gps/'
+# INIT_POLICY_DIR = '/home/abhigupta/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
 
@@ -377,8 +377,8 @@ config = {
     'inner_iterations': 4,
     'to_log': [],
     'robot_iters': [range(25), range(0,25,2)],
-    'robot0_file': '/home/abhigupta/gps/experiments/blockstrike/data_files/traj_sample_itr_07_rn_00.pkl',
-    'robot1_file': '/home/abhigupta/gps/experiments/4link_blockstrike/data_files/traj_sample_itr_13_rn_00.pkl',
+    'robot0_file': BASE_DIR + '/../experiments/blockstrike/data_files/traj_sample_itr_07_rn_00.pkl',
+    'robot1_file': BASE_DIR + '/../gps/experiments/4link_blockstrike/data_files/traj_sample_itr_13_rn_00.pkl',
     'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
     'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
 }
