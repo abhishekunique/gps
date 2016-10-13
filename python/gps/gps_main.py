@@ -294,7 +294,7 @@ class GPSMain(object):
                         shaped_cost = np.concatenate((shaped_cost, np.zeros((1, self.algorithm[robot_number].T))))
             obs_full[robot_number] = obs_data
             shaped_full[robot_number] = shaped_cost
-        traj_feats, nn_weights = self.policy_opt.train_invariant_autoencoder(obs_full, shaped_full, "/home/abhigupta/temp.pkl")
+        traj_feats, nn_weights = self.policy_opt.train_invariant_autoencoder(obs_full, shaped_full, "temp.pkl")
         #setting feature trajectories and nn weights in the cost function
         num_conds = len(self._train_idx[0])
         N = traj_feats.shape[0]
