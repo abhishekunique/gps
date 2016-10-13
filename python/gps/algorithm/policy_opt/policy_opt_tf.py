@@ -149,7 +149,6 @@ class PolicyOptTf(PolicyOpt):
             tgt_mu: Numpy array of mean controller outputs, N x T x dU.
             tgt_prc: Numpy array of precision matrices, N x T x dU x dU.
             tgt_wt: Numpy array of weights, N x T.
-            fc_only: If true, don't train end-to-end.
         Returns:
             A tensorflow object with updated weights.
         """
@@ -244,9 +243,8 @@ class PolicyOptTf(PolicyOpt):
             avg_val_loss += val_loss
             average_loss += train_loss
             if (i+1) % 50 == 0:
-                LOGGER.debug('tensorflow iteration %d, average loss %f',
+                LOGGER.info('tensorflow iteration %d, average loss %f',
                              i+1, average_loss / 50)
-                print ('supervised tf loss is ' + str(average_loss))
                 average_loss = 0
 
         for robot_number in range(self.num_robots):
