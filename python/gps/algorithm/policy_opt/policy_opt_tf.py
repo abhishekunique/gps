@@ -228,13 +228,13 @@ class PolicyOptTf(PolicyOpt):
         for k, v in self.var_list.items():
             var_dict[k] = self.sess.run(v)
         pickle.dump(var_dict, open(weight_save_file, "wb"))
-        obs = obs_full[0]
-        N, T = obs.shape[:2]
-        dO = obs.shape[2]
-        obs = np.reshape(obs, (N*T, dO))
-        y = shaped_cost_reshaped[0]
-        A = obs
-        x = np.linalg.lstsq(A, y)
+        # obs = obs_full[0]
+        # N, T = obs.shape[:2]
+        # dO = obs.shape[2]
+        # obs = np.reshape(obs, (N*T, dO))
+        # y = shaped_cost_reshaped[0]
+        # A = obs
+        # x = np.linalg.lstsq(A, y)
         #y_pred = A.dot(x)
         import IPython
         IPython.embed()

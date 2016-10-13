@@ -35,7 +35,8 @@ class CostDevRs(Cost):
         layer_size = 60
         dim_hidden = (n_layers - 1)*[layer_size]
         feature_layers = []
-        dim_input = 28
+        #TODO(andrew): make this variable
+        dim_input = 26
         num_feats = 60
         with g.as_default():
             nn_input = tf.placeholder("float", [None, dim_input], name='nn_input1')
@@ -118,7 +119,8 @@ class CostDevRs(Cost):
         for j, gv in enumerate(grad_vals):
             gradients_all[:, j, :] = gv
         print("next")
-        size_ls = 28
+        #TODO(andrew): make this variable
+        size_ls = 26
         l = np.zeros((T,))
         ls = np.zeros((T,size_ls))
         lss = np.zeros((T, size_ls, size_ls))
