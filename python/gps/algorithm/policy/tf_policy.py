@@ -69,9 +69,21 @@ class TfPolicy(Policy):
             u = action_mean + self.chol_pol_covar.T.dot(noise)
         return u[0], tensor_vals  # the DAG computations are batched by default, but we use batch size 1.
 
+    def get_features(self, obs):
+        """
+        Return the image features for an observation.
+        Args:
+            obs: Observation vector.
+        """
+        if len(obs.shape) == 1:
+            obs = np.expand_dims(obs, axis=0)
+        # assume that the features don't depend on the robot config, so don't normalize
+        with tf.device(self.device_string):
+            feat = self.sess.run(self.feat_op, feed_dict={self.obs_tensor: obs})
+        return feat[0]
 
     def pickle_policy(self, deg_obs, deg_action, var_dict, checkpoint_path='',
-                      itr=0,goal_state=None, should_hash=False):
+                      itr=0, goal_state=None, should_hash=False):
         """
         We can save just the policy if we are only interested in running forward at a later point
         without needing a policy optimization class. Useful for debugging and deploying.
@@ -117,4 +129,3 @@ class TfPolicy(Policy):
         cls_init.bias = pol_dict['bias']
         cls_init.x_idx = pol_dict['x_idx']
         return cls_init
-

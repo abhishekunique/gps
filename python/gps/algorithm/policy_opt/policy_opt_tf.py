@@ -1,6 +1,8 @@
 """ This file defines policy optimization for a tensorflow policy. """
 import copy
 import logging
+import os
+import tempfile
 
 import numpy as np
 
@@ -139,7 +141,7 @@ class PolicyOptTf(PolicyOpt):
                                     # vars_to_opt = self.robot_vars)
                                     vars_to_opt= self.av.values())
 
-    def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
+    def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr, fc_only=False):
         """
         Update policy.
         Args:
@@ -147,6 +149,7 @@ class PolicyOptTf(PolicyOpt):
             tgt_mu: Numpy array of mean controller outputs, N x T x dU.
             tgt_prc: Numpy array of precision matrices, N x T x dU x dU.
             tgt_wt: Numpy array of weights, N x T.
+            fc_only: If true, don't train end-to-end.
         Returns:
             A tensorflow object with updated weights.
         """
@@ -240,9 +243,9 @@ class PolicyOptTf(PolicyOpt):
             val_loss = self.sess.run(self.val_loss, val_dict)
             avg_val_loss += val_loss
             average_loss += train_loss
-            if (i+1) % 500 == 0:
+            if (i+1) % 50 == 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i+1, average_loss / 500)
+                             i+1, average_loss / 50)
                 print ('supervised tf loss is ' + str(average_loss))
                 average_loss = 0
 
@@ -313,13 +316,60 @@ class PolicyOptTf(PolicyOpt):
         saver = tf.train.Saver()
         saver.restore(sess, self.checkpoint_prefix + "_itr"+str(itr)+'.ckpt')
 
+    def linearize(self, obs):
+        """
+        Linearize policy about observations
+        Args:
+            obs: Numpy array of observations that is T x dO
+        """
+        # TODO - modify this in case of image features being in the state.
+        T = obs.shape[0]
+
+        # Initialize
+        pol_K = np.empty((T, self._dU, self._dO))
+        pol_k = np.empty((T, self._dU))
+
+        # Perform scaling
+        x = obs.copy() # Store pre-scaled
+        if self.policy.scale is not None:
+            obs[:, self.x_idx] = \
+                    obs[:, self.x_idx].dot(self.policy.scale) + \
+                    self.policy.bias
+
+        # Constant bias/gain matrices
+        feed_dict = {self.obs_tensor: obs}
+        pol_k = self.sess.run(self.act_op, feed_dict=feed_dict)
+        for u in range(self._dU):
+            pol_K[:, u, :] = self.sess.run(self.grads[u], feed_dict=feed_dict)
+
+        # Correct bias
+        for t in range(T):
+            if self.policy.scale is not None:
+                pol_K[t, :, :] = pol_K[t, :, :].dot(self.policy.scale)
+            pol_k[t, :] -= pol_K[t, :, :].dot(x[t])
+
+        return pol_K, pol_k
 
     def set_ent_reg(self, ent_reg, robot_number=0):
         """ Set the entropy regularization. """
         self.ent_reg[robot_number] = ent_reg
 
+    def save_model(self, fname):
+        LOGGER.debug('Saving model to: %s', fname)
+        self.saver.save(self.sess, fname)
+
+    def restore_model(self, fname):
+        self.saver.restore(self.sess, fname)
+        LOGGER.debug('Restoring model from: %s', fname)
+
     # For pickling.
     def __getstate__(self):
+        with tempfile.NamedTemporaryFile('w+b', delete=True) as f:
+            self.save_model(f.name) # TODO - is this implemented.
+            f.seek(0)
+            with open(f.name, 'r') as f2:
+                wts = f2.read()
+            os.remove(f.name+'.meta')
         return {
             'hyperparams': self._hyperparams,
             'dO': self._dO,
@@ -327,6 +377,9 @@ class PolicyOptTf(PolicyOpt):
             'scale': [pol.scale for pol in self.policy],
             'bias': [pol.bias for pol in self.policy],
             'tf_iter': self.tf_iter,
+            'x_idx': self.policy.x_idx,
+            'chol_pol_covar': self.policy.chol_pol_covar,
+            'wts': wts,
         }
 
     # For unpickling.
@@ -336,7 +389,14 @@ class PolicyOptTf(PolicyOpt):
         self.__init__(state['hyperparams'], state['dO'], state['dU'])
         self.policy.scale = state['scale']
         self.policy.bias = state['bias']
+        self.policy.x_idx = state['x_idx']
+        self.policy.chol_pol_covar = state['chol_pol_covar']
         self.tf_iter = state['tf_iter']
+
+        with tempfile.NamedTemporaryFile('w+b', delete=True) as f:
+            f.write(state['wts'])
+            f.seek(0)
+            self.restore_model(f.name)
 
         # saver = tf.train.Saver()
         # check_file = self.checkpoint_file

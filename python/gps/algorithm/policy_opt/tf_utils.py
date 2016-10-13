@@ -49,6 +49,9 @@ class TfMap:
     def get_output_op(self):
         return self.output_op
 
+    def get_feature_op(self):
+        return self.img_feat_op
+
     def set_output_op(self, output_op):
         self.output_op = output_op
 
@@ -62,7 +65,7 @@ class TfMap:
 class TfSolver:
     """ A container for holding solver hyperparams in tensorflow. Used to execute backwards pass. """
     def __init__(self, loss_scalar, solver_name='adam', base_lr=None, lr_policy=None,
-                 momentum=None, weight_decay=None, robot_number=0, fc_vars=None, 
+                 momentum=None, weight_decay=None, robot_number=0, fc_vars=None,
                  last_conv_vars=None, vars_to_opt=None):
         self.base_lr = base_lr
         self.lr_policy = lr_policy
