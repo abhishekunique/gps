@@ -204,7 +204,7 @@ class PolicyOptTf(PolicyOpt):
                 #import IPython
                 #IPython.embed()
                 print np.linalg.norm(self.reward_forward(obs_full[0], 0)  -
-                    shaped_cost_reshaped[0])/shaped_cost_reshaped[0].shape[0]
+                    shaped_cost_reshaped[0])/np.sqrt(shaped_cost_reshaped[0].shape[0])
 #            dc_feed_dict = {}
 #            for robot_number in range(self.num_robots):
 #                start_idx = int(i * self.batch_size %

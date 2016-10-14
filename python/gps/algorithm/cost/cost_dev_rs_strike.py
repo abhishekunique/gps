@@ -62,7 +62,7 @@ class CostDevRs(Cost):
             gradients = tf.gradients(output, nn_input)
             init_op = tf.initialize_local_variables()
             self.feature_layers = feature_layers
-            self.gradients = gradients
+            self.gradients = gradients[0]
             self.input = nn_input
             self.output = output
             col_sum = tf.reduce_sum(self.feature_layers, 0)
@@ -167,8 +167,16 @@ class CostDevRs(Cost):
 
         cmp_l, cmp_lx, cmp_lu, cmp_lxx, cmp_luu, cmp_lux = self.costfk.eval(sample)
 
-        print(np.linalg.norm(cmp_l-final_l), np.linalg.norm(cmp_lx-final_lx),
-            np.linalg.norm(cmp_lu-final_lu), np.linalg.norm(cmp_lxx-final_lxx),
-            np.linalg.norm(cmp_luu - final_luu), np.linalg.norm(cmp_lux - final_lux))
-
+        sqT = np.sqrt(T)
+        O, G = self.session.run([self.output, self.gradients], feed_dict=feed_dict)
+        O = np.reshape(O, (-1))
+        # import IPython
+        # IPython.embed()
+        final_lxx = np.zeros((T, Dx, Dx))
+        final_l = O
+        final_lx = G
+        print(np.linalg.norm(cmp_l-final_l)/sqT, np.linalg.norm(cmp_lx-final_lx)/sqT,
+            np.linalg.norm(cmp_lu-final_lu)/sqT, np.linalg.norm(cmp_lxx-final_lxx)/sqT,
+            np.linalg.norm(cmp_luu - final_luu)/sqT, np.linalg.norm(cmp_lux - final_lux)/sqT)
+        print final_l
         return final_l, final_lx, final_lu, final_lxx, final_luu, final_lux
