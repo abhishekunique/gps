@@ -1093,7 +1093,7 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
         ### l2 autoencoder loss function ####
         if robot_number == 0:
             reward_shaping = tf.placeholder("float", [None], name='rs' + str(robot_number))
-            loss = tf.nn.l2_loss(reward_shaping - output) #euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
+            loss = tf.nn.l2_loss(reward_shaping - tf.reshape(output, [-1])) #euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
             indiv_losses.append(loss)
         else:
             reward_shaping = None
