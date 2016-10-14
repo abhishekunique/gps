@@ -101,7 +101,7 @@ class CostDevRs(Cost):
         """
         self.load_weights()
 
-        return self.costfk.eval(sample)
+
         T = sample.T
         Du = sample.dU
         Dx = sample.dX
@@ -163,4 +163,12 @@ class CostDevRs(Cost):
         final_l += l
         final_lx += ls
         final_lxx += lss
+
+
+        cmp_l, cmp_lx, cmp_lu, cmp_lxx, cmp_luu, cmp_lux = self.costfk.eval(sample)
+
+        print(np.linalg.norm(cmp_l-final_l), np.linalg.norm(cmp_lx-final_lx),
+            np.linalg.norm(cmp_lu-final_lu), np.linalg.norm(cmp_lxx-final_lxx),
+            np.linalg.norm(cmp_luu - final_luu), np.linalg.norm(cmp_lux - final_lux))
+
         return final_l, final_lx, final_lu, final_lxx, final_luu, final_lux
