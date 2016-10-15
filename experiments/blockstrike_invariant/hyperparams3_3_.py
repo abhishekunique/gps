@@ -44,16 +44,16 @@ SENSOR_DIMS = [{
     RGB_IMAGE_SIZE: 3,
 },
 {
-    JOINT_ANGLES: 5,
-    JOINT_VELOCITIES: 5,
+    JOINT_ANGLES: 4,
+    JOINT_VELOCITIES: 4,
     END_EFFECTOR_POINTS: 9,
     END_EFFECTOR_POINT_VELOCITIES: 9,
-    ACTION: 4,
+    ACTION: 3,
     RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
     RGB_IMAGE_SIZE: 3,
 }]
 
-PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
+PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/blockstrike_invariant/'
@@ -152,8 +152,8 @@ agent = [{
          },
          {
     'type': AgentMuJoCo,
-    'filename': './mjc_models/4link_gripper_strike.xml',
-    'x0': np.zeros((10,)),
+    'filename': './mjc_models/3link_gripper_strike.xml',
+    'x0': np.zeros((8,)),
     'dt': 0.05,
     'substeps': 5,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
@@ -168,7 +168,7 @@ agent = [{
                         # [np.array([-0.3, 0.0, 0.6]),np.array([0.6, 0.0, 0.85])],
                         # [np.array([-0.4, 0.0, -0.6]),np.array([0.45, 0.0, -0.95])],
                         ],
-    'pos_body_idx': np.array([7,9]),
+    'pos_body_idx': np.array([6,8]),
     'conditions': 4,
     'train_conditions': [0, 1],
     'test_conditions': [2, 3],
@@ -176,7 +176,7 @@ agent = [{
     'image_height': IMAGE_HEIGHT,
     'image_channels': IMAGE_CHANNELS,
     'T': 100,
-    'sensor_dims': SENSOR_DIMS[1],
+    'sensor_dims': SENSOR_DIMS[0],
     'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
                       END_EFFECTOR_POINT_VELOCITIES],
                       #include the camera images appropriately here
@@ -292,6 +292,9 @@ fk_cost_2 = [{
 
 test_cost = [{
     'type': CostDevRs,
+
+    # for testing purposes
+    'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
@@ -380,7 +383,7 @@ config = {
     'robot0_file': BASE_DIR + '/../experiments/blockstrike/data_files/traj_sample_itr_07_rn_00.pkl',
     'robot1_file': BASE_DIR + '/../gps/experiments/4link_blockstrike/data_files/traj_sample_itr_13_rn_00.pkl',
     'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
-    'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
+    'r1_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
 }
 
 common['info'] = generate_experiment_info(config)

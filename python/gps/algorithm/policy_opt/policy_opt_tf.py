@@ -124,7 +124,7 @@ class PolicyOptTf(PolicyOpt):
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver = TfSolver(loss_scalar=self.loss_scalars[0] + 1000*self.other['gen_loss'],#self.combined_loss,
+        self.solver = TfSolver(loss_scalar=self.loss_scalars[0] + 100*self.other['gen_loss'],#self.combined_loss,
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=0.001,#self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],

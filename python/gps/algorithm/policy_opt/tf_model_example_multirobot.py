@@ -1057,11 +1057,15 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
 
 
     robot_number = 1
+    w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_' + str(robot_number))
+    b1 = init_bias((dim_hidden[1],), name='b1_' + str(robot_number))
+    w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_' + str(robot_number))
+    b2 = init_bias((dim_hidden[2],), name='b2_' + str(robot_number))
     w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_' + str(robot_number))
     b3 = init_bias((dim_hidden[3],), name='b3_' + str(robot_number))
     w_output = init_weights((dim_hidden[3], 1), name='w_output'+str(robot_number))
     b_output = init_bias((1,), name = 'b_output'+str(robot_number))
-    gen_vars += [w3, b3, w_output, b_output]
+    gen_vars += [w1, b1, w2, b2, w3, b3, w_output, b_output]
     
     dc_output = []
 
@@ -1073,25 +1077,21 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
         ### Variable declaration ####
         w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
         b_input = init_bias((dim_hidden[0],), name='b_input'+str(robot_number))
-        w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_' + str(robot_number))
-        b1 = init_bias((dim_hidden[1],), name='b1_' + str(robot_number))
-        w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_' + str(robot_number))
-        b2 = init_bias((dim_hidden[2],), name='b2_' + str(robot_number))
-        gen_vars += [w_input, b_input, w1, b1, w2, b2]
+        gen_vars += [w_input, b_input]
         ### End variable declaration ####
 
         ### Start net forward computation ####
         layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
         layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
         layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
-        feature_layers.append(layer2)
+        feature_layers.append(layer0)
         layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
         output = tf.matmul(layer3, w_output) + b_output
         ### End net forward computation ####
 
 
         ### Computation of discriminator ###
-        disc0 = tf.nn.relu(tf.matmul(layer2, wdisc1) + bdisc1)
+        disc0 = tf.nn.relu(tf.matmul(layer0, wdisc1) + bdisc1)
         disc1 = tf.nn.relu(tf.matmul(disc0, wdisc2) + bdisc2)
         disc2 = tf.matmul(disc1, wdisc3) + bdisc3
         ### End computation of discriminator ###
