@@ -124,9 +124,9 @@ class PolicyOptTf(PolicyOpt):
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver = TfSolver(loss_scalar=self.loss_scalars[0],#self.combined_loss,
+        self.solver = TfSolver(loss_scalar=self.loss_scalars[0] + 1000*self.other['gen_loss'],#self.combined_loss,
                               solver_name=self._hyperparams['solver_type'],
-                              base_lr=self._hyperparams['lr'],
+                              base_lr=0.001,#self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
                               momentum=self._hyperparams['momentum'],
                               weight_decay=self._hyperparams['weight_decay'],
@@ -134,7 +134,7 @@ class PolicyOptTf(PolicyOpt):
 
         self.dc_solver = TfSolver(loss_scalar=tf.add_n(self.other['dc_loss']),
                       solver_name=self._hyperparams['solver_type'],
-                      base_lr=self._hyperparams['lr'],
+                      base_lr=0.00001,#self._hyperparams['lr'],
                       lr_policy=self._hyperparams['lr_policy'],
                       momentum=self._hyperparams['momentum'],
                       weight_decay=self._hyperparams['weight_decay'],
@@ -183,6 +183,7 @@ class PolicyOptTf(PolicyOpt):
         average_loss = 0
         average_dc_acc = 0
         average_dc_loss = 0
+        should_disc = True
         for i in range(self._hyperparams['iterations']):
             feed_dict = {}
             for robot_number in range(self.num_robots):
@@ -194,6 +195,9 @@ class PolicyOptTf(PolicyOpt):
                     feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
+            if np.isnan(train_loss):
+                import IPython
+                IPython.embed()
             average_loss += train_loss
             if i % 100 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
@@ -214,8 +218,8 @@ class PolicyOptTf(PolicyOpt):
                 dc_feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                 if robot_number == 0:
                     dc_feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
+            # if should_disc:
             dc_loss = self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
-
             average_dc_loss += dc_loss
             prediction = self.sess.run(self.other['dc_output'], feed_dict)
             p0 = prediction[0][:, 0]
@@ -229,6 +233,7 @@ class PolicyOptTf(PolicyOpt):
                 print 'supervised dc loss is '
                 print (average_dc_loss/100)
                 print (average_dc_acc/100)
+                should_disc = average_dc_acc < 80
                 average_dc_loss = 0
                 average_dc_acc = 0
 

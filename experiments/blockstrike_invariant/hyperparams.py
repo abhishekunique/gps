@@ -152,7 +152,7 @@ agent = [{
          },
          {
     'type': AgentMuJoCo,
-    'filename': './mjc_models/3link_gripper_strike_long.xml',
+    'filename': './mjc_models/3link_gripper_strike.xml',
     'x0': np.zeros((8,)),
     'dt': 0.05,
     'substeps': 5,

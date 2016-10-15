@@ -180,9 +180,11 @@ class CostDevRs(Cost):
         O = np.reshape(O, (-1))
         # import IPython
         # IPython.embed()
-        final_lxx = Lxx
         final_l = O
         final_lx = G
+        final_lxx = Lxx
+        # final_lx = np.zeros((T, Dx))
+        # final_lxx = np.zeros((T, Dx, Dx))
         print(np.linalg.norm(cmp_l-final_l)/sqT, np.linalg.norm(cmp_lx-final_lx)/sqT,
             np.linalg.norm(cmp_lu-final_lu)/sqT, np.linalg.norm(cmp_lxx-final_lxx)/sqT,
             np.linalg.norm(cmp_luu - final_luu)/sqT, np.linalg.norm(cmp_lux - final_lux)/sqT)

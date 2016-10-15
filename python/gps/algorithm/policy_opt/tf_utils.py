@@ -70,6 +70,8 @@ class TfSolver:
         self.momentum = momentum
         self.solver_name = solver_name
         self.loss_scalar = loss_scalar
+        self.orig_loss = loss_scalar
+        print weight_decay
         if self.lr_policy != 'fixed':
             raise NotImplementedError('learning rate policies other than fixed are not implemented')
 
