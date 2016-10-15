@@ -59,6 +59,7 @@ class CostDevRs(Cost):
             layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
             output = tf.matmul(layer3, w_output) + b_output
             # gradients = tf.gradients(layer2, nn_input)
+            self.lxx = None
             gradients = tf.gradients(output, nn_input)
             init_op = tf.initialize_local_variables()
             self.feature_layers = feature_layers
@@ -164,19 +165,26 @@ class CostDevRs(Cost):
         final_lx += ls
         final_lxx += lss
 
+        if self.lxx is None:
+            def j(f, x, T, x_dim):
+                #TODO(andrew): kinda hacky, document this
+                sep_grads = [tf.reshape(tf.gradients(f[:, i], x)[0], (T, 1, x_dim)) for i in range(x_dim)]
+                combined_grads = tf.concat(1, sep_grads)
+                return tf.transpose(combined_grads, perm=[0, 2, 1])
+            self.lxx = j(self.gradients, self.input, T, Dx)
 
         cmp_l, cmp_lx, cmp_lu, cmp_lxx, cmp_luu, cmp_lux = self.costfk.eval(sample)
 
         sqT = np.sqrt(T)
-        O, G = self.session.run([self.output, self.gradients], feed_dict=feed_dict)
+        O, G, Lxx = self.session.run([self.output, self.gradients, self.lxx], feed_dict=feed_dict)
         O = np.reshape(O, (-1))
         # import IPython
         # IPython.embed()
-        final_lxx = np.zeros((T, Dx, Dx))
+        final_lxx = Lxx
         final_l = O
         final_lx = G
         print(np.linalg.norm(cmp_l-final_l)/sqT, np.linalg.norm(cmp_lx-final_lx)/sqT,
             np.linalg.norm(cmp_lu-final_lu)/sqT, np.linalg.norm(cmp_lxx-final_lxx)/sqT,
             np.linalg.norm(cmp_luu - final_luu)/sqT, np.linalg.norm(cmp_lux - final_lux)/sqT)
-        print final_l
+        # print final_l
         return final_l, final_lx, final_lu, final_lxx, final_luu, final_lux
