@@ -181,6 +181,7 @@ class PolicyOptTf(PolicyOpt):
             batches_per_epoch_reshaped.append(batches_per_epoch)
 
         average_loss = 0
+        average_dc_acc = 0
         average_dc_loss = 0
         for i in range(self._hyperparams['iterations']):
             feed_dict = {}
@@ -205,23 +206,31 @@ class PolicyOptTf(PolicyOpt):
                 #IPython.embed()
                 print np.linalg.norm(self.reward_forward(obs_full[0], 0)  -
                     shaped_cost_reshaped[0])/np.sqrt(shaped_cost_reshaped[0].shape[0])
-#            dc_feed_dict = {}
-#            for robot_number in range(self.num_robots):
-#                start_idx = int(i * self.batch_size %
-#                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-#                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-#                dc_feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-#                if robot_number == 0:
-#                    dc_feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
-#            dc_loss = self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
-#
-#            average_dc_loss += dc_loss
-#            if i % 100 == 0 and i != 0:
-#                LOGGER.debug('tensorflow iteration %d, average loss %f',
-#                             i, average_dc_loss / 100)
-#                print 'supervised dc loss is '
-#                print (average_dc_loss/100)
-#                average_dc_loss = 0
+            dc_feed_dict = {}
+            for robot_number in range(self.num_robots):
+                start_idx = int(i * self.batch_size %
+                               (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+                dc_feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                if robot_number == 0:
+                    dc_feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
+            dc_loss = self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
+
+            average_dc_loss += dc_loss
+            prediction = self.sess.run(self.other['dc_output'], feed_dict)
+            p0 = prediction[0][:, 0]
+            p1 = prediction[1][:, 1]
+            tot = p0.shape[0] + p1.shape[0]
+            correct = np.sum(p0 > 0.5) + np.sum(p1 > 0.5)
+            average_dc_acc += correct / float(tot)
+            if i % 100 == 0 and i != 0:
+                LOGGER.debug('tensorflow iteration %d, average loss %f',
+                             i, average_dc_loss / 100)
+                print 'supervised dc loss is '
+                print (average_dc_loss/100)
+                print (average_dc_acc/100)
+                average_dc_loss = 0
+                average_dc_acc = 0
 
 
         var_dict = {}

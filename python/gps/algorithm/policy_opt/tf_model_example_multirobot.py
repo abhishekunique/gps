@@ -1044,7 +1044,9 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     bdisc1 = init_bias((dim_hidden_disc[0],), name='bdisc1')
     wdisc2 = init_weights((dim_hidden_disc[0], dim_hidden_disc[1]), name='wdisc2')
     bdisc2 = init_bias((dim_hidden_disc[1],), name='bdisc2')
-    dc_vars = [wdisc1, bdisc1, wdisc2, bdisc2]
+    wdisc3 = init_weights((dim_hidden_disc[1], 2), name='wdisc3')
+    bdisc3 = init_bias((2,), name='bdisc3')
+    dc_vars = [wdisc1, bdisc1, wdisc2, bdisc2, wdisc3, bdisc3]
     dc_var_dict = {}
     for var in dc_vars:
         dc_var_dict[var.name] = var
@@ -1068,7 +1070,7 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     b_output = init_bias((1,), name = 'b_output'+str(robot_number))
     gen_vars += [w_input, b_input, w1, b1, w2, b2, w3, b3, w_output, b_output]
     ### End variable declaration ####
-
+    dc_output = []
 
     for robot_number, robot_params in enumerate(network_config):
         indiv_losses = []
@@ -1087,7 +1089,8 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
 
         ### Computation of discriminator ###
         disc0 = tf.nn.relu(tf.matmul(layer2, wdisc1) + bdisc1)
-        disc1 = tf.matmul(disc0, wdisc2) + bdisc2
+        disc1 = tf.nn.relu(tf.matmul(disc0, wdisc2) + bdisc2)
+        disc2 = tf.matmul(disc1, wdisc3) + bdisc3
         ### End computation of discriminator ###
 
         ### l2 autoencoder loss function ####
@@ -1100,7 +1103,9 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
         ### end l2 autoencoder loss function ####
 
         ### Terms for unsupervised domain confusion ###
-        dc_softmax =  tf.log(tf.nn.softmax(disc1))
+        dc_softmax = tf.nn.softmax(disc2)
+        dc_output.append(dc_softmax)
+        dc_softmax =  tf.log(dc_softmax)
         dc_entropy = -1.0/num_robots*tf.reduce_sum(dc_softmax)
         dc_currrobot_loss = -tf.reduce_sum(dc_softmax[:,robot_number])
         dc_loss.append(dc_currrobot_loss)
@@ -1114,6 +1119,7 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
         weight_dict[var.name] = var
 
     other = {}
+    other['dc_output'] = dc_output
     other['dc_loss'] = dc_loss
     other['dc_vars'] = dc_vars
     return nnets, weight_dict, other
