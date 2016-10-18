@@ -51,14 +51,17 @@ agent_funs =[ reach_3link_red, reach_3link_green,
               reach_3link_red_shortjoint, reach_3link_green_shortjoint,
               reach_3link_yellow_shortjoint, reach_3link_black_shortjoint,
               reach_4link_red, reach_4link_green,
-              reach_4link_yellow
+              reach_4link_yellow,reach_4link_black,
           ]
-task_values = [0,1,2,3,0,1,2,3,0,1,2]
-robot_values =[0,0,0,0,1,1,1,1,2,2,2]
+leave_one_out = 0
+task_values = [0,1,2,3,0,1,2,3,0,1,2,3]
+robot_values =[0,0,0,0,1,1,1,1,2,2,2,2]
+task_values = task_values[:leave_one_out]+task_values[leave_one_out+1:]
+robot_values = robot_values[:leave_one_out]+robot_values[leave_one_out+1:]
+agent_funs =agent_funs[:leave_one_out]+agent_funs[leave_one_out+1:]
 
-
-# agent_funs = [reach_4link_black]
-# task_values = [3]
+# agent_funs = [reach_4link_red]
+# task_values = [0]
 # robot_values = [2]
 
 agents = []
@@ -92,7 +95,7 @@ common = {
             'agent_params':[a['network_params'] for a in agents],
         },
         #'val_agents': [1],
-        'iterations': 5000,
+        'iterations': 20000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
@@ -117,7 +120,7 @@ config = {
     'iterations': 25,
     'num_samples': 10,
     'verbose_trials': 10,
-    'verbose_policy_trials': 10,
+    'verbose_policy_trials': 0,
     'save_wts': True,
     'common': common,
     'agent': agent,
