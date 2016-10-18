@@ -89,8 +89,8 @@ class CostDevRs(Cost):
         with self.graph.as_default():
             for k,v in self.var_list_feat.items():
                 if k in self.nn_weights:   
-                    print("COST LOAD")
-                    print(k)         
+                    # print("COST LOAD")
+                    # print(k)         
                     assign_op = v.assign(self.nn_weights[k])
                     self.session.run(assign_op)
 
@@ -114,7 +114,7 @@ class CostDevRs(Cost):
         final_lxx = np.zeros((T, Dx, Dx))
         final_lux = np.zeros((T, Du, Dx))
 
-        tgt = self.traj_feats
+        # tgt = self.traj_feats
         x = sample.get_obs()
         # x = np.concatenate([x[:, 0:4], x[:, 5:9], x[:, 10:13], x[:, 19:22]], axis=1)
         feed_dict = {self.input: x}
@@ -125,22 +125,22 @@ class CostDevRs(Cost):
         grad_vals = self.session.run(self.grad_ops, feed_dict=feed_dict)
         for j, gv in enumerate(grad_vals):
             gradients_all[:, j, :] = gv
-        print("next")
+        # print("next")
         #TODO(andrew): make this variable
         size_ls = 28
         l = np.zeros((T,))
         ls = np.zeros((T,size_ls))
         lss = np.zeros((T, size_ls, size_ls))
-        for t in range(T):
-            l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(60)/(2.0)).dot(feat_forward[t] - tgt[t])
-            grad_mult = (feat_forward[t] - tgt[t]).dot(gradients_all[t])
-            ls[t] = grad_mult
+        # for t in range(T):
+            # l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(60)/(2.0)).dot(feat_forward[t] - tgt[t])
+            # grad_mult = (feat_forward[t] - tgt[t]).dot(gradients_all[t])
+            # ls[t] = grad_mult
             # ls[t, 0:4] = grad_mult[0:4]
             # ls[t, 5:9] = grad_mult[4:8]
             # ls[t, 10:13] = grad_mult[8:11]
             # ls[t, 19:22] = grad_mult[11:14]
-            hess_mult = gradients_all[t].T.dot(gradients_all[t])
-            lss[t] = hess_mult
+            # hess_mult = gradients_all[t].T.dot(gradients_all[t])
+            # lss[t] = hess_mult
             # lss[t,0:4,0:4] = hess_mult[0:4, 0:4]
             # lss[t,5:9,0:4] = hess_mult[4:8, 0:4]
             # lss[t,10:13,0:4] = hess_mult[8:11, 0:4]

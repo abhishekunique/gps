@@ -73,6 +73,7 @@ common = {
     'test_conditions': [2,3],
     'num_robots':2,
     'policy_opt': {
+        'ncond': 2,
         'type': PolicyOptTf,
         'network_model': unsup_domain_confusion,
         'network_model_feat': unsup_domain_confusion,

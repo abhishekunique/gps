@@ -282,30 +282,33 @@ class GPSMain(object):
         obs_full = [None]*self.num_robots
         shaped_full = [None]*self.num_robots
         for robot_number in range(self.num_robots):
-            obs_data = np.zeros((0, self.algorithm[robot_number].T,  self.algorithm[robot_number].dO))
-            shaped_cost = np.zeros((0, self.algorithm[robot_number].T))
+            obs_data = []
+            shaped_cost = []
             for m in self._train_idx[robot_number]:
                 samples = traj_sample_lists[robot_number][m]
-                obs_data = np.concatenate((obs_data, samples.get_obs()))
+                shaped_concat = np.zeros((0, self.algorithm[robot_number].T))
+                obs_data.append(samples.get_obs())
                 for sample in samples._samples:
                     if robot_number == 0:
-                        shaped_cost = np.concatenate((shaped_cost, np.asarray([self.algorithm[robot_number].cost[m]._costs[-1].eval(sample)[0]])))
+                        # print shaped_concat.shape,  self.algorithm[robot_number].cost[m]._costs[-1].eval(sample)[0][None,:].shape
+                        shaped_concat = np.concatenate((shaped_concat, self.algorithm[robot_number].cost[m]._costs[-1].eval(sample)[0][None, :]))
                     else:
-                        shaped_cost = np.concatenate((shaped_cost, np.zeros((1, self.algorithm[robot_number].T))))
+                        shaped_concat = np.concatenate((shaped_concat, np.zeros((1, self.algorithm[robot_number].T))))
+                shaped_cost.append(shaped_concat)
             obs_full[robot_number] = obs_data
             shaped_full[robot_number] = shaped_cost
         traj_feats, nn_weights = self.policy_opt.train_invariant_autoencoder(obs_full, shaped_full, "temp.pkl")
         #setting feature trajectories and nn weights in the cost function
-        num_conds = len(self._train_idx[0])
-        N = traj_feats.shape[0]
-        T = traj_feats.shape[1]
-        dO = traj_feats.shape[2]
-        traj_feats = np.reshape(traj_feats, (num_conds, int(N/num_conds), T, dO))
+        # num_conds = len(self._train_idx[0])
+        # N = traj_feats.shape[0]
+        # T = traj_feats.shape[1]
+        # dO = traj_feats.shape[2]
+        # traj_feats = np.reshape(traj_feats, (num_conds, int(N/num_conds), T, dO))
         # import IPython
         # IPython.embed()
-        traj_feats = np.mean(traj_feats, axis=1)
+        # traj_feats = np.mean(traj_feats, axis=1)
         for m in self._train_idx[robot_number]:
-            self.algorithm[1].cost[m]._costs[-1].traj_feats = traj_feats[m]
+            # self.algorithm[1].cost[m]._costs[-1].traj_feats = traj_feats[m]
             self.algorithm[1].cost[m]._costs[-1].nn_weights = nn_weights
 
 

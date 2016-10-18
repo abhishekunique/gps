@@ -36,6 +36,7 @@ class PolicyOptTf(PolicyOpt):
         self.action_tensors = []
         self.solver = None
         self.var = []
+        self.ncond = self._hyperparams['ncond']
         for i, dU_ind in enumerate(dU):
             self.act_ops.append(None)
             self.loss_scalars.append(None)
@@ -102,7 +103,7 @@ class PolicyOptTf(PolicyOpt):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
         tf_maps, var_list, other = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
-                             network_config=self._hyperparams['network_params'])
+                             network_config=self._hyperparams['network_params'], ncond=self.ncond)
         self.obs_tensors = []
         self.action_tensors = []
         self.precision_tensors = []
@@ -124,7 +125,8 @@ class PolicyOptTf(PolicyOpt):
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver = TfSolver(loss_scalar=self.loss_scalars[0] + 100*self.other['gen_loss'],#self.combined_loss,
+        self.solver = TfSolver(loss_scalar=tf.add_n(self.other['indiv_losses']) + 
+                                            tf.add_n(self.other['gen_loss']),#self.combined_loss,
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=0.001,#self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
@@ -153,32 +155,35 @@ class PolicyOptTf(PolicyOpt):
         Returns:
             A tensorflow object with updated weights.
         """
-        N_reshaped = []
-        T_reshaped = []
-        obs_reshaped = []
-        shaped_cost_reshaped = []
-        idx_reshaped = []
-        batches_per_epoch_reshaped = []
+        nconds = len(obs_full[0])
+        N_reshaped = [[] for c in range(nconds)]
+        T_reshaped = [[] for c in range(nconds)]
+        obs_reshaped = [[] for c in range(nconds)]
+        shaped_cost_reshaped = [[] for c in range(nconds)]
+        idx_reshaped = [[] for c in range(nconds)]
+        batches_per_epoch_reshaped = [[] for c in range(nconds)]
         for robot_number in range(self.num_robots):
-            obs = obs_full[robot_number]
-            shaped_cost = shaped_full[robot_number]
-            N, T = obs.shape[:2]
-            dU, dO = self._dU[robot_number], self._dO[robot_number]
+            for c in range(nconds):
+                obs = obs_full[robot_number][c]
+                shaped_cost = shaped_full[robot_number][c]
+                N, T = obs.shape[:2]
+                dU, dO = self._dU[robot_number], self._dO[robot_number]
 
-            # Reshape inputs.
-            obs = np.reshape(obs, (N*T, dO))
-            shaped_cost = np.reshape(shaped_cost, (N*T,))
-            # Assuming that N*T >= self.batch_size.
-            batches_per_epoch = np.floor(N*T / self.batch_size)
-            idx = range(N*T)
+                # Reshape inputs.
+                obs = np.reshape(obs, (N*T, dO))
+                print N, T, shaped_cost.shape, obs.shape
+                shaped_cost = np.reshape(shaped_cost, (N*T,))
+                # Assuming that N*T >= self.batch_size.
+                batches_per_epoch = np.floor(N*T / self.batch_size)
+                idx = range(N*T)
 
-            np.random.shuffle(idx)
-            obs_reshaped.append(obs)
-            shaped_cost_reshaped.append(shaped_cost)
-            N_reshaped.append(N)
-            T_reshaped.append(T)
-            idx_reshaped.append(idx)
-            batches_per_epoch_reshaped.append(batches_per_epoch)
+                np.random.shuffle(idx)
+                obs_reshaped[c].append(obs)
+                shaped_cost_reshaped[c].append(shaped_cost)
+                N_reshaped[c].append(N)
+                T_reshaped[c].append(T)
+                idx_reshaped[c].append(idx)
+                batches_per_epoch_reshaped[c].append(batches_per_epoch)
 
         average_loss = 0
         average_dc_acc = 0
@@ -187,12 +192,13 @@ class PolicyOptTf(PolicyOpt):
         for i in range(self._hyperparams['iterations']):
             feed_dict = {}
             for robot_number in range(self.num_robots):
-                start_idx = int(i * self.batch_size %
-                                (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                if robot_number == 0:
-                    feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
+                for c in range(nconds):
+                    start_idx = int(i * self.batch_size %
+                                    (batches_per_epoch_reshaped[c][robot_number] * self.batch_size))
+                    idx_i = idx_reshaped[c][robot_number][start_idx:start_idx+self.batch_size]
+                    feed_dict[self.other['nn_inputs'][robot_number][c][0]] = obs_reshaped[c][robot_number][idx_i]
+                    if robot_number == 0:
+                        feed_dict[self.other['nn_inputs'][robot_number][c][1]] = shaped_cost_reshaped[c][robot_number][idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
             if np.isnan(train_loss):
@@ -208,32 +214,33 @@ class PolicyOptTf(PolicyOpt):
 
                 #import IPython
                 #IPython.embed()
-                print np.linalg.norm(self.reward_forward(obs_full[0], 0)  -
-                    shaped_cost_reshaped[0])/np.sqrt(shaped_cost_reshaped[0].shape[0])
+                # print np.linalg.norm(self.reward_forward(obs_full[0][0], 0)  -
+                #     shaped_cost_reshaped[0][0])/np.sqrt(shaped_cost_reshaped[0][0].shape[0])
             dc_feed_dict = {}
-            for robot_number in range(self.num_robots):
-                start_idx = int(i * self.batch_size %
-                               (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-                idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                dc_feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-                if robot_number == 0:
-                    dc_feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
-            # if should_disc:
-            dc_loss = self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
+            # for robot_number in range(self.num_robots):
+            #     start_idx = int(i * self.batch_size %
+            #                    (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+            #     idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+            #     dc_feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+            #     if robot_number == 0:
+            #         dc_feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
+            # # if should_disc:
+            dc_loss = self.dc_solver(feed_dict, self.sess, device_string=self.device_string)
             average_dc_loss += dc_loss
             prediction = self.sess.run(self.other['dc_output'], feed_dict)
-            p0 = prediction[0][:, 0]
-            p1 = prediction[1][:, 1]
-            tot = p0.shape[0] + p1.shape[0]
-            correct = np.sum(p0 > 0.5) + np.sum(p1 > 0.5)
-            average_dc_acc += correct / float(tot)
+            for c in range(nconds):
+                p0 = prediction[c][0][:, 0]
+                p1 = prediction[c][1][:, 1]
+                tot = p0.shape[0] + p1.shape[0]
+                correct = np.sum(p0 > 0.5) + np.sum(p1 > 0.5)
+                average_dc_acc += correct / float(tot)
             if i % 100 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_dc_loss / 100)
                 print 'supervised dc loss is '
                 print (average_dc_loss/100)
-                print (average_dc_acc/100)
-                should_disc = average_dc_acc < 80
+                print (average_dc_acc/200)
+                # should_disc = average_dc_acc < 80
                 average_dc_loss = 0
                 average_dc_acc = 0
 
@@ -252,7 +259,8 @@ class PolicyOptTf(PolicyOpt):
         #y_pred = A.dot(x)
         # import IPython
         # IPython.embed()
-        traj_feats = self.run_features_forward(obs_full[0], 0)
+        # traj_feats = self.run_features_forward(obs_full[0][0], 0)
+        traj_feats = None
         #need to take mean here
         # np.save("fps_r0.npy", traj_feats)
         print("done training invariant autoencoder and saving weights")
