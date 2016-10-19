@@ -126,7 +126,7 @@ class PolicyOptTf(PolicyOpt):
     def init_solver(self):
         """ Helper method to initialize the solver. """
         self.solver = TfSolver(loss_scalar=tf.add_n(self.other['indiv_losses']) + 
-                                            10*tf.add_n(self.other['gen_loss']),#self.combined_loss,
+                                            tf.add_n(self.other['gen_loss']),#self.combined_loss,
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=0.001,#self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
@@ -136,7 +136,7 @@ class PolicyOptTf(PolicyOpt):
 
         self.dc_solver = TfSolver(loss_scalar=tf.add_n(self.other['dc_loss']),
                       solver_name=self._hyperparams['solver_type'],
-                      base_lr=0.000001,#self._hyperparams['lr'],
+                      base_lr=0.001,#self._hyperparams['lr'],
                       lr_policy=self._hyperparams['lr_policy'],
                       momentum=self._hyperparams['momentum'],
                       weight_decay=self._hyperparams['weight_decay'],
@@ -189,7 +189,7 @@ class PolicyOptTf(PolicyOpt):
         average_dc_acc = np.zeros((nconds, 5))
         average_dc_loss = 0
         should_disc = True
-        for i in range(10*self._hyperparams['iterations']):
+        for i in range(self._hyperparams['iterations']):
             feed_dict = {}
             for robot_number in range(self.num_robots):
                 for c in range(nconds):
@@ -233,8 +233,17 @@ class PolicyOptTf(PolicyOpt):
             #     if robot_number == 0:
             #         dc_feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
             # # if should_disc:
-            dc_loss = self.dc_solver(feed_dict, self.sess, device_string=self.device_string)
-            average_dc_loss += dc_loss
+            for j in range(1):
+                for robot_number in range(self.num_robots):
+                    for c in range(nconds):
+                        start_idx = int((i+j*31) * self.batch_size %
+                                        (batches_per_epoch_reshaped[c][robot_number] * self.batch_size))
+                        idx_i = idx_reshaped[c][robot_number][start_idx:start_idx+self.batch_size]
+                        feed_dict[self.other['nn_inputs'][robot_number][c][0]] = obs_reshaped[c][robot_number][idx_i]
+                        if robot_number == 0:
+                            feed_dict[self.other['nn_inputs'][robot_number][c][1]] = shaped_cost_reshaped[c][robot_number][idx_i]
+                dc_loss = self.dc_solver(feed_dict, self.sess, device_string=self.device_string)
+                average_dc_loss += dc_loss
             prediction = self.sess.run(self.other['dc_output'], feed_dict)
 
             for c in range(nconds):

@@ -1100,7 +1100,7 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
             wdisc1, bdisc1, wdisc2, bdisc2, wdisc3, bdisc3 = cond_dc_vars[c]
 
             ### Computation of discriminator ###
-            disc0 = tf.nn.relu(tf.matmul(layer0, wdisc1) + bdisc1)
+            disc0 = tf.nn.relu(tf.matmul(layer3, wdisc1) + bdisc1)
             disc1 = tf.nn.relu(tf.matmul(disc0, wdisc2) + bdisc2)
             disc2 = tf.matmul(disc1, wdisc3) + bdisc3
             ### End computation of discriminator ###
@@ -1124,7 +1124,7 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
             dc_currrobot_loss = -tf.reduce_sum(dc_softmax[:,robot_number])
             dc_loss.append(dc_currrobot_loss)
             if robot_number == 1:
-                gen_loss.append(-tf.reduce_sum(tf.log(softmax[:,0] + 1e-5)) )
+                gen_loss.append(tf.reduce_sum(tf.log(softmax[:,1] + 1e-5)) )
         #loss = loss + dc_weight*dc_entropy
         ### End terms for unsupervised domain confusion ###
         nn_inputs.append(robot_inputs)

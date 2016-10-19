@@ -133,6 +133,27 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
+        # for itr in range(0, 5):
+        #     traj_sample_lists = {}
+        #     print("SAMPLING")
+        #     robot_number = 0
+        #     for cond in self._train_idx[robot_number]:
+        #         for i in range(self._hyperparams['num_samples']):
+        #             self._take_sample(itr, cond, i, robot_number=robot_number)
+
+        #     traj_sample_lists[robot_number] = [
+        #         self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
+        #         for cond_1 in self._train_idx[robot_number]
+        #     ]
+        #     #import IPython
+        #     #IPython.embed()
+        #     # print("INVARIANT ENCODER")
+        #     # self._take_iteration_invariantautoencoder(traj_sample_lists)
+
+        #     print("TAKE ITERATION")
+        #     # for robot_number in range(self.num_robots):
+        #     self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             print("SAMPLING")
