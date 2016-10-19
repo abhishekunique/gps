@@ -126,7 +126,7 @@ class PolicyOptTf(PolicyOpt):
     def init_solver(self):
         """ Helper method to initialize the solver. """
         self.solver = TfSolver(loss_scalar=tf.add_n(self.other['indiv_losses']) + 
-                                            tf.add_n(self.other['gen_loss']),#self.combined_loss,
+                                            10*tf.add_n(self.other['gen_loss']),#self.combined_loss,
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=0.001,#self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
@@ -136,7 +136,7 @@ class PolicyOptTf(PolicyOpt):
 
         self.dc_solver = TfSolver(loss_scalar=tf.add_n(self.other['dc_loss']),
                       solver_name=self._hyperparams['solver_type'],
-                      base_lr=0.0001,#self._hyperparams['lr'],
+                      base_lr=0.000001,#self._hyperparams['lr'],
                       lr_policy=self._hyperparams['lr_policy'],
                       momentum=self._hyperparams['momentum'],
                       weight_decay=self._hyperparams['weight_decay'],
@@ -189,7 +189,7 @@ class PolicyOptTf(PolicyOpt):
         average_dc_acc = np.zeros((nconds, 5))
         average_dc_loss = 0
         should_disc = True
-        for i in range(self._hyperparams['iterations']):
+        for i in range(10*self._hyperparams['iterations']):
             feed_dict = {}
             for robot_number in range(self.num_robots):
                 for c in range(nconds):
