@@ -293,7 +293,8 @@ class GPSMain(object):
                         # print shaped_concat.shape,  self.algorithm[robot_number].cost[m]._costs[-1].eval(sample)[0][None,:].shape
                         shaped_concat = np.concatenate((shaped_concat, self.algorithm[robot_number].cost[m]._costs[-1].eval(sample)[0][None, :]))
                     else:
-                        shaped_concat = np.concatenate((shaped_concat, np.zeros((1, self.algorithm[robot_number].T))))
+                        # shaped_concat = np.concatenate((shaped_concat, np.zeros((1, self.algorithm[robot_number].T))))
+                        shaped_concat = np.concatenate((shaped_concat, self.algorithm[robot_number].cost[m]._costs[-1].costfk.eval(sample)[0][None, :]))
                 shaped_cost.append(shaped_concat)
             obs_full[robot_number] = obs_data
             shaped_full[robot_number] = shaped_cost

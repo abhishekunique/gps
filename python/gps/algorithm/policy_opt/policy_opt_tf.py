@@ -136,7 +136,7 @@ class PolicyOptTf(PolicyOpt):
 
         self.dc_solver = TfSolver(loss_scalar=tf.add_n(self.other['dc_loss']),
                       solver_name=self._hyperparams['solver_type'],
-                      base_lr=0.00001,#self._hyperparams['lr'],
+                      base_lr=0.0001,#self._hyperparams['lr'],
                       lr_policy=self._hyperparams['lr_policy'],
                       momentum=self._hyperparams['momentum'],
                       weight_decay=self._hyperparams['weight_decay'],
@@ -186,7 +186,7 @@ class PolicyOptTf(PolicyOpt):
                 batches_per_epoch_reshaped[c].append(batches_per_epoch)
 
         average_loss = 0
-        average_dc_acc = 0
+        average_dc_acc = np.zeros((nconds, 5))
         average_dc_loss = 0
         should_disc = True
         for i in range(self._hyperparams['iterations']):
@@ -212,6 +212,14 @@ class PolicyOptTf(PolicyOpt):
                 print (average_loss/100)
                 average_loss = 0
 
+                r = self.reward_forward(obs_reshaped, nconds)
+                for rb in range(self.num_robots):
+                    for cc in range(nconds):
+                        pred = np.reshape(r[cc][rb], (-1))
+                        # print pred.shape, shaped_cost_reshaped[cc][rb].shape, (pred - shaped_cost_reshaped[cc][rb]).shape
+                        norm = np.linalg.norm(pred - shaped_cost_reshaped[cc][rb])/np.sqrt(pred.shape[0])
+                        print "r" + str(rb) + " c" + str(cc) + " " + str(norm)
+
                 #import IPython
                 #IPython.embed()
                 # print np.linalg.norm(self.reward_forward(obs_full[0][0], 0)  -
@@ -228,21 +236,31 @@ class PolicyOptTf(PolicyOpt):
             dc_loss = self.dc_solver(feed_dict, self.sess, device_string=self.device_string)
             average_dc_loss += dc_loss
             prediction = self.sess.run(self.other['dc_output'], feed_dict)
+
             for c in range(nconds):
                 p0 = prediction[c][0][:, 0]
                 p1 = prediction[c][1][:, 1]
                 tot = p0.shape[0] + p1.shape[0]
                 correct = np.sum(p0 > 0.5) + np.sum(p1 > 0.5)
-                average_dc_acc += correct / float(tot)
+                average_dc_acc[c][0] += correct / float(tot)
+                average_dc_acc[c][1] += np.mean(p0)
+                average_dc_acc[c][2] += np.std(p0)
+                average_dc_acc[c][3] += np.mean(p1)
+                average_dc_acc[c][4] += np.std(p1)
+
             if i % 100 == 0 and i != 0:
+                np.set_printoptions(suppress=True)
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_dc_loss / 100)
                 print 'supervised dc loss is '
                 print (average_dc_loss/100)
-                print (average_dc_acc/200)
+                print (average_dc_acc/100)
                 # should_disc = average_dc_acc < 80
                 average_dc_loss = 0
-                average_dc_acc = 0
+                average_dc_acc = np.zeros((nconds, 5))
+                # if i == 1000:
+                #     import IPython
+                #     IPython.embed()
 
 
         var_dict = {}
@@ -266,15 +284,12 @@ class PolicyOptTf(PolicyOpt):
         print("done training invariant autoencoder and saving weights")
         return traj_feats, var_dict
 
-    def reward_forward(self, obs, robot_number):
+    def reward_forward(self, obs_reshaped, nconds):
         feed_dict = {}
-        N, T = obs.shape[:2]
-        dO = obs.shape[2]
-        dU = self._dU[robot_number]
-        obs = np.reshape(obs, (N*T, dO))
-        feed_dict[self.obs_tensors[robot_number]] = obs
-        output = self.sess.run(self.act_ops[robot_number], feed_dict=feed_dict)
-        output = np.reshape(output, (N*T))
+        for robot_number in range(self.num_robots):
+                for c in range(nconds):
+                    feed_dict[self.other['nn_inputs'][robot_number][c][0]] = obs_reshaped[c][robot_number]
+        output = self.sess.run(self.other['nn_output'], feed_dict=feed_dict)
         return output
 
     def run_features_forward(self, obs, robot_number):

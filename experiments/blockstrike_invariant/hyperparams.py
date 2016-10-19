@@ -69,8 +69,8 @@ common = {
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
     'conditions': 4,
-    'train_conditions': [0,1],
-    'test_conditions': [2,3],
+    'train_conditions': [0, 1],
+    'test_conditions': [2, 3],
     'num_robots':2,
     'policy_opt': {
         'ncond': 2,

@@ -1073,7 +1073,7 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     gen_vars += [w1, b1, w2, b2, w3, b3, w_output, b_output]
     
     dc_output = [[] for c in range(ncond)]
-
+    nn_output = [[] for c in range(ncond)]
     nn_inputs = []
     gen_loss = []
     other = {}
@@ -1096,7 +1096,7 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
             layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
             output = tf.matmul(layer3, w_output) + b_output
             ### End net forward computation ####
-
+            nn_output[c].append(output)
             wdisc1, bdisc1, wdisc2, bdisc2, wdisc3, bdisc3 = cond_dc_vars[c]
 
             ### Computation of discriminator ###
@@ -1140,6 +1140,7 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     other['nn_inputs'] = nn_inputs
     other['gen_loss'] = gen_loss
     other['dc_vars'] = all_dc_vars
+    other['nn_output'] = nn_output
     return nnets, weight_dict, other
 
 
