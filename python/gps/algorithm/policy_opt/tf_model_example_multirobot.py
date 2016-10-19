@@ -1038,14 +1038,13 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     weight_dict = {}
     gen_vars = []
 
-
     ### creating discriminator variables ###
     wdisc1 = init_weights((dim_hidden[2], dim_hidden_disc[0]), name='wdisc1')
     bdisc1 = init_bias((dim_hidden_disc[0],), name='bdisc1')
     wdisc2 = init_weights((dim_hidden_disc[0], dim_hidden_disc[1]), name='wdisc2')
     bdisc2 = init_bias((dim_hidden_disc[1],), name='bdisc2')
-    wdisc3 = init_weights((dim_hidden_disc[1], 2), name='wdisc3')
-    bdisc3 = init_bias((2,), name='bdisc3')
+    wdisc3 = init_weights((dim_hidden_disc[1], 2), name='wdisc2')
+    bdisc3 = init_bias((2,), name='bdisc2')
     dc_vars = [wdisc1, bdisc1, wdisc2, bdisc2, wdisc3, bdisc3]
     dc_var_dict = {}
     for var in dc_vars:
@@ -1054,18 +1053,6 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     dc_weight = 1.0
     dc_loss = []
     ### end discriminator variables ###
-
-
-    robot_number = 1
-    w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_' + str(robot_number))
-    b1 = init_bias((dim_hidden[1],), name='b1_' + str(robot_number))
-    w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_' + str(robot_number))
-    b2 = init_bias((dim_hidden[2],), name='b2_' + str(robot_number))
-    w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_' + str(robot_number))
-    b3 = init_bias((dim_hidden[3],), name='b3_' + str(robot_number))
-    w_output = init_weights((dim_hidden[3], 1), name='w_output'+str(robot_number))
-    b_output = init_bias((1,), name = 'b_output'+str(robot_number))
-    gen_vars += [w1, b1, w2, b2, w3, b3, w_output, b_output]
     
     dc_output = []
 
@@ -1077,21 +1064,33 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
         ### Variable declaration ####
         w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
         b_input = init_bias((dim_hidden[0],), name='b_input'+str(robot_number))
-        gen_vars += [w_input, b_input]
+        w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_' + str(robot_number))
+        b1 = init_bias((dim_hidden[1],), name='b1_' + str(robot_number))
+        w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_' + str(robot_number))
+        b2 = init_bias((dim_hidden[2],), name='b2_' + str(robot_number))
+        w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_' + str(robot_number))
+        b3 = init_bias((dim_hidden[3],), name='b3_' + str(robot_number))
+        w_output = init_weights((dim_hidden[3], 1), name='w_output'+str(robot_number))
+        b_output = init_bias((1,), name = 'b_output'+str(robot_number))
+        if robot_number == 0:
+            gen_vars += [w_input, b_input, w1, b1, w2, b2, w3, b3, w_output, b_output]
+        elif robot_number == 1:
+            gen_vars += [w_input, b_input, w1, b1, w2, b2, w3, b3, w_output, b_output]
+
         ### End variable declaration ####
 
         ### Start net forward computation ####
         layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
         layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
         layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
-        feature_layers.append(layer0)
+        feature_layers.append(layer2)
         layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
         output = tf.matmul(layer3, w_output) + b_output
         ### End net forward computation ####
 
 
         ### Computation of discriminator ###
-        disc0 = tf.nn.relu(tf.matmul(layer0, wdisc1) + bdisc1)
+        disc0 = tf.nn.relu(tf.matmul(layer2, wdisc1) + bdisc1)
         disc1 = tf.nn.relu(tf.matmul(disc0, wdisc2) + bdisc2)
         disc2 = tf.matmul(disc1, wdisc3) + bdisc3
         ### End computation of discriminator ###
@@ -1106,15 +1105,16 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
         ### end l2 autoencoder loss function ####
 
         ### Terms for unsupervised domain confusion ###
+
+        #Figure out this loss 
         softmax = tf.nn.softmax(disc2)
         dc_output.append(softmax)
         dc_softmax =  tf.log(softmax + 1e-5)
-        dc_entropy = -1.0/num_robots*tf.reduce_sum(dc_softmax)
+        #dc_entropy = -1.0/num_robots*tf.reduce_sum(dc_softmax)
         dc_currrobot_loss = -tf.reduce_sum(dc_softmax[:,robot_number])
         dc_loss.append(dc_currrobot_loss)
         if robot_number == 1:
             other['gen_loss'] = -tf.reduce_sum(tf.log(softmax[:,0] + 1e-5))
-        #loss = loss + dc_weight*dc_entropy
         ### End terms for unsupervised domain confusion ###
 
         ### Creating TfMap object with appropriate losses ###
