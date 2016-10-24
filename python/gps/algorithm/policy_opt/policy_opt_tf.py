@@ -127,7 +127,7 @@ class PolicyOptTf(PolicyOpt):
         """ Helper method to initialize the solver. """
         self.solver = TfSolver(loss_scalar=tf.add_n(self.other['indiv_losses']) + 
                                             tf.add_n(self.other['gen_loss']) 
-                                            + self.other['contrast_loss'] ,#self.combined_loss,
+                                            + self.other['contrast_loss'] * 0.01,#self.combined_loss,
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=0.001,#self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
@@ -191,11 +191,11 @@ class PolicyOptTf(PolicyOpt):
             dU, dO = self._dU[robot_number], self._dO[robot_number]
             matched_data = np.zeros((0, dO))
             for c in range(nconds):
-                # import IPython
-                # IPython.embed()
                 obs = matched_full[robot_number][c].get_X()
                 N, T = obs.shape[:2]
                 obs = np.reshape(obs, (N*T, dO))
+                # import IPython
+                # IPython.embed()
                 matched_data = np.concatenate((matched_data, obs), axis = 0)
             matched_reshaped.append(matched_data)
 

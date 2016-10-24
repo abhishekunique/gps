@@ -53,6 +53,9 @@ SENSOR_DIMS = [{
     RGB_IMAGE_SIZE: 3,
 }]
 
+train_conds = [0]
+test_conds = [1, 2, 3]
+
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
@@ -69,11 +72,11 @@ common = {
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
     'conditions': 4,
-    'train_conditions': [0, 1],
-    'test_conditions': [2, 3],
-    'num_robots':2,
+    'train_conditions': train_conds,
+    'test_conditions': test_conds,
+    'num_robots': 2,
     'policy_opt': {
-        'ncond': 2,
+        'ncond': len(train_conds),
         'type': PolicyOptTf,
         'network_model': unsup_domain_confusion,
         'network_model_feat': unsup_domain_confusion,
@@ -136,8 +139,8 @@ agent = [{
                         ],
     'pos_body_idx': np.array([6,8]),
     'conditions': 4,
-    'train_conditions': [0, 1],
-    'test_conditions': [2, 3],
+    'train_conditions': train_conds,
+    'test_conditions': test_conds,
     'image_width': IMAGE_WIDTH,
     'image_height': IMAGE_HEIGHT,
     'image_channels': IMAGE_CHANNELS,
@@ -171,8 +174,8 @@ agent = [{
                         ],
     'pos_body_idx': np.array([7,9]),
     'conditions': 4,
-    'train_conditions': [0, 1],
-    'test_conditions': [2, 3],
+    'train_conditions': train_conds,
+    'test_conditions': test_conds,
     'image_width': IMAGE_WIDTH,
     'image_height': IMAGE_HEIGHT,
     'image_channels': IMAGE_CHANNELS,
