@@ -1077,6 +1077,8 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     nn_inputs = []
     gen_loss = []
     other = {}
+    contrast_layer = []
+    contrast_input = []
     for robot_number, robot_params in enumerate(network_config):
         ### Variable declaration ####
         w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
@@ -1085,6 +1087,15 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
         ### End variable declaration ####
         robot_inputs = []
         indiv_losses = []
+
+        nn_input = tf.placeholder("float", [None, dim_input[robot_number]], name='nn_input' + str(robot_number)+"_contrast")
+
+        ### Start net forward computation ####
+        layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
+        layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
+        layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
+        contrast_layer.append(layer0)
+        contrast_input.append(nn_input)
         for c in range(ncond):
             nn_input = tf.placeholder("float", [None, dim_input[robot_number]], name='nn_input' + str(robot_number)+"_"+str(c))
 
@@ -1135,6 +1146,9 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     for var in gen_vars:
         weight_dict[var.name] = var
 
+    other['contrast_input'] = contrast_input
+    other['contrast_loss'] = tf.nn.l2_loss(contrast_layer[0] - contrast_layer[1])/tf.to_float(tf.shape(contrast_layer[0])[0])
+    other['contrast_layer'] = contrast_layer
     other['dc_output'] = dc_output
     other['dc_loss'] = dc_loss
     other['nn_inputs'] = nn_inputs

@@ -126,7 +126,8 @@ class PolicyOptTf(PolicyOpt):
     def init_solver(self):
         """ Helper method to initialize the solver. """
         self.solver = TfSolver(loss_scalar=tf.add_n(self.other['indiv_losses']) + 
-                                            tf.add_n(self.other['gen_loss']),#self.combined_loss,
+                                            tf.add_n(self.other['gen_loss']) 
+                                            + self.other['contrast_loss'] ,#self.combined_loss,
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=0.001,#self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
@@ -144,7 +145,7 @@ class PolicyOptTf(PolicyOpt):
 
 
     ### GAN structure for training ###
-    def train_invariant_autoencoder(self, obs_full, shaped_full, weight_save_file):
+    def train_invariant_autoencoder(self, obs_full, shaped_full, matched_full, weight_save_file):
         """
         Update policy.
         Args:
@@ -184,14 +185,29 @@ class PolicyOptTf(PolicyOpt):
                 T_reshaped[c].append(T)
                 idx_reshaped[c].append(idx)
                 batches_per_epoch_reshaped[c].append(batches_per_epoch)
+        matched_reshaped = []
+
+        for robot_number in range(self.num_robots):
+            dU, dO = self._dU[robot_number], self._dO[robot_number]
+            matched_data = np.zeros((0, dO))
+            for c in range(nconds):
+                # import IPython
+                # IPython.embed()
+                obs = matched_full[robot_number][c].get_X()
+                N, T = obs.shape[:2]
+                obs = np.reshape(obs, (N*T, dO))
+                matched_data = np.concatenate((matched_data, obs), axis = 0)
+            matched_reshaped.append(matched_data)
 
         average_loss = 0
         average_dc_acc = np.zeros((nconds, 5))
         average_dc_loss = 0
+        contrast_loss = 0
         should_disc = True
         for i in range(self._hyperparams['iterations']):
             feed_dict = {}
             for robot_number in range(self.num_robots):
+                feed_dict[self.other['contrast_input'][robot_number]] = matched_reshaped[robot_number]
                 for c in range(nconds):
                     start_idx = int(i * self.batch_size %
                                     (batches_per_epoch_reshaped[c][robot_number] * self.batch_size))
@@ -204,13 +220,16 @@ class PolicyOptTf(PolicyOpt):
             if np.isnan(train_loss):
                 import IPython
                 IPython.embed()
+            contrast_loss += self.sess.run(self.other['contrast_loss'], feed_dict)
             average_loss += train_loss
             if i % 100 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_loss / 100)
                 print 'supervised tf loss is '
                 print (average_loss/100)
+                print (contrast_loss/100.0)
                 average_loss = 0
+                contrast_loss = 0
 
                 r = self.reward_forward(obs_reshaped, nconds)
                 for rb in range(self.num_robots):
