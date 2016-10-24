@@ -34,11 +34,11 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
 from gps.gui.config import generate_experiment_info
 
 SENSOR_DIMS = [{
-    JOINT_ANGLES: 4,
-    JOINT_VELOCITIES: 4,
+    JOINT_ANGLES: 5,
+    JOINT_VELOCITIES: 5,
     END_EFFECTOR_POINTS: 9,
     END_EFFECTOR_POINT_VELOCITIES: 9,
-    ACTION: 3,
+    ACTION: 4,
     RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
     RGB_IMAGE_SIZE: 3,
 }]
@@ -46,7 +46,7 @@ SENSOR_DIMS = [{
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
-EXP_DIR = BASE_DIR + '/../experiments/blockstrike/'
+EXP_DIR = BASE_DIR + '/../experiments/blockstrike4/'
 INIT_POLICY_DIR = '/home/abhigupta/subspace_sandbox/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
@@ -97,8 +97,8 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = [{
     'type': AgentMuJoCo,
-    'filename': './mjc_models/3link_gripper_strike.xml',
-    'x0': np.zeros((8,)),
+    'filename': './mjc_models/4link_gripper_strike.xml',
+    'x0': np.zeros((10,)),
     'dt': 0.05,
     'substeps': 5,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
@@ -112,7 +112,7 @@ agent = [{
                         # [np.array([-0.3, 0.0, 0.6]),np.array([0.6, 0.0, 0.85])],
                         # [np.array([-0.4, 0.0, -0.6]),np.array([0.45, 0.0, -0.95])],
                         ],
-    'pos_body_idx': np.array([6,8]),
+    'pos_body_idx': np.array([7, 9]),
     'conditions': 4,
     'train_conditions': [0, 1],
     'test_conditions': [2, 3],
@@ -172,7 +172,7 @@ algorithm[0]['init_traj_distr'] = {
 
 torque_cost_1 = [{
     'type': CostAction,
-    'wu': 5e-5 / PR2_GAINS[0],
+    'wu': 5e-5 / PR2_GAINS[1],
 } for i in agent[0]['train_conditions']]
 
 fk_cost_1 = [{
@@ -222,7 +222,7 @@ fk_cost_blocktouch = [{
 algorithm[0]['cost'] = [{
     'type': CostSum,
     'costs': [fk_cost_1[i], fk_cost_blocktouch[i]],
-    'weights': [5.0, 1.0],
+    'weights': [2.0, 1.0],
 } for i in agent[0]['train_conditions']]
 
 
