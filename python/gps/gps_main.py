@@ -209,6 +209,11 @@ class GPSMain(object):
         self.policy_opt.train_invariant_autoencoder(obs_full)
         
 
+    def _take_reward_shaping(self):
+        targets = []
+        for condition in self._train_idx[0]:
+            targets.append(self.agent[0].demonstrate_reward_shaping(condition))
+        np.save("demo_waypoints.npy", np.asarray(targets))
        
     def _take_iteration_start(self, itr, sample_lists, robot_number=0):
         """
@@ -491,6 +496,8 @@ def main():
                         help='Train invariant subspace')
     parser.add_argument('-g', '--recordfeats', action='store_true',
                         help='Record features in feature space')
+    parser.add_argument('-s', '--rewardshaping', action='store_true',
+                        help='Record waypoints for reward shaping')
     args = parser.parse_args()
 
     exp_name = args.experiment
@@ -610,6 +617,17 @@ def main():
                 gps.run_subspace_learning(itr_load=resume_training_itr)
 
 
+    elif args.rewardshaping:
+        import random
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        random.seed(1)
+        np.random.seed(1)
+        gps = GPSMain(hyperparams.config)
+        gps._take_reward_shaping()
+
+    
     else:
         import random
         import numpy as np

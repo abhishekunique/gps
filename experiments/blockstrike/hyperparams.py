@@ -62,34 +62,34 @@ common = {
     'train_conditions': [0,1],
     'test_conditions': [2,3],
     'num_robots':1,
-    'policy_opt': {
-        'type': PolicyOptTf,
-        'network_model': example_tf_network_multi,
-        'network_model_feat': invariant_subspace_test,
-        # 'network_model_feat_action': invariant_subspace_test_action,
-        'run_feats': True,
-        'load_weights': '/home/abhigupta/subspace_sandbox/gps/subspace_state.pkl',
-        'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
-        'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
-        # 'load_weights_action': '/home/abhigupta/gps/subspace_action.pkl',
-        'network_params': [{
-            'dim_hidden': [10],
-            'num_filters': [10, 20],
-            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_image_data':[],
-            'image_width': IMAGE_WIDTH,
-            'image_height': IMAGE_HEIGHT,
-            'image_channels': IMAGE_CHANNELS,
-            'sensor_dims': SENSOR_DIMS[0],
-            'batch_size': 25,
-            # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
-        }],
-        'iterations': 4000,
-        'fc_only_iterations': 5000,
-        'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-        # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
-    }
+    # 'policy_opt': {
+    #     'type': PolicyOptTf,
+    #     'network_model': example_tf_network_multi,
+    #     'network_model_feat': invariant_subspace_test,
+    #     # 'network_model_feat_action': invariant_subspace_test_action,
+    #     'run_feats': True,
+    #     'load_weights': '/home/abhigupta/subspace_sandbox/gps/subspace_state.pkl',
+    #     'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
+    #     'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
+    #     # 'load_weights_action': '/home/abhigupta/gps/subspace_action.pkl',
+    #     'network_params': [{
+    #         'dim_hidden': [10],
+    #         'num_filters': [10, 20],
+    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_image_data':[],
+    #         'image_width': IMAGE_WIDTH,
+    #         'image_height': IMAGE_HEIGHT,
+    #         'image_channels': IMAGE_CHANNELS,
+    #         'sensor_dims': SENSOR_DIMS[0],
+    #         'batch_size': 25,
+    #         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
+    #     }],
+    #     'iterations': 4000,
+    #     'fc_only_iterations': 5000,
+    #     'checkpoint_prefix': EXP_DIR + 'data_files/policy',
+    #     # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
+    # }
 }
 
 if not os.path.exists(common['data_files_dir']):
@@ -199,14 +199,26 @@ fk_cost_1 = [{
 #     'ramp_option': RAMP_QUADRATIC
 # } for i in agent[0]['train_conditions']]
 
-
-fk_cost_blocktouch = [{
-    'type': CostFKBlock,
-    'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
+demo_waypoints = np.load("demo_waypoints.npy")
+import IPython
+IPython.embed()
+fk_cost_2 = [{
+    'type': CostFK,
+    'target_end_effector': demo_waypoints[i],
+    'wp': np.array([1, 1, 1, 1, 1, 1, 0, 0, 0,0,0,0]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
+    'ramp_option': RAMP_QUADRATIC
 } for i in agent[0]['train_conditions']]
+
+# fk_cost_blocktouch = [{
+#     'type': CostFKBlock,
+#     'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+# } for i in agent[0]['train_conditions']]
 
 # data_logger = DataLogger()
 # data_traj = data_logger.unpickle('/home/abhigupta/gps/experiments/blockpush_free/data_files_good/traj_sample_itr_24_rn_00.pkl')
@@ -221,7 +233,7 @@ fk_cost_blocktouch = [{
 
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i], fk_cost_blocktouch[i]],
+    'costs': [fk_cost_1[i], fk_cost_2[i]],
     'weights': [5.0, 1.0],
 } for i in agent[0]['train_conditions']]
 
@@ -270,8 +282,8 @@ config = {
     'inner_iterations': 4,
     'to_log': [],
     'robot_iters': [range(25), range(0,25,2)],    
-    'r0_index_list': common['policy_opt']['r0_index_list'],
-    'r1_index_list': common['policy_opt']['r1_index_list'],
+    # 'r0_index_list': common['policy_opt']['r0_index_list'],
+    # 'r1_index_list': common['policy_opt']['r1_index_list'],
 
 }
 

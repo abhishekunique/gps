@@ -2,7 +2,7 @@
 import copy
 
 import numpy as np
-
+import time
 import mjcpy
 
 from gps.agent.agent import Agent
@@ -49,17 +49,17 @@ class AgentMuJoCo(Agent):
 
         # Initialize Mujoco worlds. If there's only one xml file, create a single world object,
         # otherwise create a different world for each condition.
-        if not isinstance(filename, list):
-            self._world = mjcpy.MJCWorld(filename)
-            self._model = self._world.get_model()
-            self._world = [self._world
-                           for _ in range(self._hyperparams['conditions'])]
-            self._model = [copy.deepcopy(self._model)
-                           for _ in range(self._hyperparams['conditions'])]
-        else:
-            for i in range(self._hyperparams['conditions']):
-                self._world.append(mjcpy.MJCWorld(self._hyperparams['filename'][i]))
-                self._model.append(self._world[i].get_model())
+        # if not isinstance(filename, list):
+        #     self._world = mjcpy.MJCWorld(filename)
+        #     self._model = self._world.get_model()
+        #     self._world = [self._world
+        #                    for _ in range(self._hyperparams['conditions'])]
+        #     self._model = [copy.deepcopy(self._model)
+        #                    for _ in range(self._hyperparams['conditions'])]
+        # else:
+        for i in range(self._hyperparams['conditions']):
+            self._world.append(mjcpy.MJCWorld(self._hyperparams['filename'][i]))
+            self._model.append(self._world[i].get_model())
 
         for i in range(self._hyperparams['conditions']):
             for j in range(len(self._hyperparams['pos_body_idx'][i])):
@@ -94,6 +94,52 @@ class AgentMuJoCo(Agent):
                                        AGENT_MUJOCO['image_height'],
                                        cam_pos[0], cam_pos[1], cam_pos[2],
                                        cam_pos[3], cam_pos[4], cam_pos[5])
+
+    def demonstrate_reward_shaping(self, condition):
+        """
+        Run training by iteratively sampling and taking an iteration.
+        Args:
+            itr_load: If specified, loads algorithm state from that
+                iteration, and resumes training at the next iteration.
+        Returns: None
+        """
+        marker_idx = [-3, -2, -1]
+        mj_X = self._hyperparams['x0'][condition]
+        self._world[condition].plot(mj_X)
+        init_key=None
+        waypoint_list = []
+        self._world[condition].plot(mj_X)
+        temp_data = self._world[condition].get_data()
+        init_pos = temp_data['site_xpos'][-1]
+        while (init_key!="q"):
+            offset = np.zeros((3,))
+            init_key = raw_input("w/a/s/d for up, left, down, right. r for record point. q for end.")
+            if init_key == "w":
+                offset = np.array([0.1, 0, 0])
+            elif init_key == "a":
+                offset = np.array([0, 0, -0.1])
+            elif init_key == "s":
+                offset = np.array([-0.1, 0, 0])
+            elif init_key == "d":
+                offset = np.array([0, 0, 0.1])
+            init_pos += offset
+            if init_key == "r":
+                print("RECORDED")
+                waypoint_list.append(copy.copy(init_pos))
+            self._model[condition]['body_pos'][-2, :] += offset
+            self._world[condition].set_model(self._model[condition])
+            self._world[condition].plot(mj_X)
+            time.sleep(0.01)
+        
+        num_waypoints = len(waypoint_list)
+        waypoint_dist = self.T/num_waypoints
+        target = np.zeros((self.T, 9))
+        curr_start = 0
+        for waypoint in waypoint_list:
+            target[curr_start:curr_start + waypoint_dist, 0:3] = waypoint
+            curr_start = curr_start + waypoint_dist
+        print(waypoint_list)
+        return target
 
     def sample(self, policy, condition, verbose=True, save=True):
         """
