@@ -7,6 +7,7 @@ from gps.algorithm.cost.config import COST_STATE
 from gps.algorithm.cost.cost import Cost
 from gps.algorithm.cost.cost_utils import evall1l2term, get_ramp_multiplier
 import tensorflow as tf
+import pickle
 def init_weights(shape, name=None):
     return tf.Variable(tf.random_normal(shape, stddev=0.01), name=name)
 
@@ -25,34 +26,29 @@ class CostDevRs(Cost):
 
     def init_feature_space(self):
         """ Helper method to initialize the tf networks used """
-        import pickle
+        
         val_vars = pickle.load(open(self._hyperparams['load_file'], 'rb'))
         g = tf.Graph()
         self.graph = g
         n_layers = 5
-        layer_size = 60
+        layer_size = 30
         dim_hidden = (n_layers - 1)*[layer_size]
         feature_layers = []
         dim_input = 14
-        num_feats = 60
+        num_feats = 30
         with g.as_default():
-            nn_input = tf.placeholder("float", [None, dim_input], name='nn_input1')
-            w_input = init_weights((dim_input ,dim_hidden[0]), name='w_input1')
-            b_input = init_bias((dim_hidden[0],), name='b_input1')
-            w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_1' )
-            b1 = init_bias((dim_hidden[1],), name='b1_1')
-            w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_1')
-            b2 = init_bias((dim_hidden[2],), name='b2_1')
-            w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_1')
-            b3 = init_bias((dim_hidden[3],), name='b3_1')
-            w_output = init_weights((dim_hidden[3], dim_input), name='w_output1')
-            b_output = init_bias((dim_input,), name = 'b_output1')
-            layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
+            nn_input = tf.placeholder("float", [None, dim_input], name='nn_input_state1')
+            w0 = init_weights((dim_input ,dim_hidden[0]), name='w0_state1')
+            b0 = init_bias((dim_hidden[0],), name='b0_state1')
+            w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_state1' )
+            b1 = init_bias((dim_hidden[1],), name='b1_state1')
+            w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_state1')
+            b2 = init_bias((dim_hidden[2],), name='b2_state1')
+
+            layer0 = tf.nn.relu(tf.matmul(nn_input, w0) + b0)
             layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
             layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
             feature_layers = layer2
-            layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
-            output = tf.matmul(layer3, w_output) + b_output
             gradients = tf.gradients(layer2, nn_input)
             init_op = tf.initialize_local_variables()
             self.feature_layers = feature_layers
@@ -83,6 +79,16 @@ class CostDevRs(Cost):
         Args:
             sample:  A single sample
         """
+        val_vars = pickle.load(open(self._hyperparams['load_file'], 'rb'))
+        with self.graph.as_default():
+            self.var_list_feat = {}
+            for v in tf.trainable_variables():
+                self.var_list_feat[v.name] = v
+            for k,v in self.var_list_feat.items():
+                if k in val_vars:       
+                    assign_op = v.assign(val_vars[k])
+                    self.session.run(assign_op)
+
         T = sample.T
         Du = sample.dU
         Dx = sample.dX
@@ -111,7 +117,7 @@ class CostDevRs(Cost):
         ls = np.zeros((T,size_ls))
         lss = np.zeros((T, size_ls, size_ls))
         for t in range(T):
-            l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(60)/(2.0)).dot(feat_forward[t] - tgt[t])
+            l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(30)/(2.0)).dot(feat_forward[t] - tgt[t])
             grad_mult = (feat_forward[t] - tgt[t]).dot(gradients_all[t])
 
             ls[t, 0:4] = grad_mult[0:4]

@@ -101,7 +101,13 @@ class PolicyOptTf(PolicyOpt):
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        tf_maps, other = tf_map_generator(dim_input_state=self._dO, dim_input_action=self._dU, batch_size=self.batch_size,
+        if 'r0_index_list' in self._hyperparams:
+            dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])]
+        else:
+            dO = self._dO
+        import IPython
+        IPython.embed()
+        tf_maps, other = tf_map_generator(dim_input_state=dO, dim_input_action=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
@@ -129,19 +135,21 @@ class PolicyOptTf(PolicyOpt):
                               lr_policy=self._hyperparams['lr_policy'],
                               momentum=self._hyperparams['momentum'],
                               weight_decay=self._hyperparams['weight_decay'],
-                              vars_to_opt=self.other['all_variables'])
+                              vars_to_opt=self.other['all_variables'].values())
 
-    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full):
+    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full):
         obs_reshaped = []
         next_obs_reshaped = []
         action_reshaped = []
         #TODO: [SCALE OBSERVATIONS BACK DOWN TO REASONABLE RANGE]
         for robot_number in range(self.num_robots):
-            dO = self._dO[robot_number]
-            dU = self._dU[robot_number]
 
             obs = obs_full[robot_number]
             N, T = obs.shape[:2]
+
+            dO = obs.shape[2]
+            dU = self._dU[robot_number]
+
             obs = np.reshape(obs, (N*T, dO))
 
             next_obs = next_obs_full[robot_number]
@@ -185,9 +193,19 @@ class PolicyOptTf(PolicyOpt):
         import IPython
         IPython.embed()
         var_dict = {}
-        for k, v in self.var_list.items():
+        for k, v in self.other['all_variables'].items():
             var_dict[k] = self.sess.run(v)
         pickle.dump(var_dict, open("subspace_state.pkl", "wb"))
+
+
+
+        num_conds, num_samples, T_extended, dO = obs_extended_full[0].shape
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
+        for cond in range(num_conds):
+            for sample_num in range(num_samples):
+                feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num]}
+                cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+        np.save("3link_feats.npy", np.asarray(cond_feats))
         print("done training invariant autoencoder and saving weights")
 
     def run_features_forward(self, obs, robot_number):
