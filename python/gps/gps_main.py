@@ -236,7 +236,7 @@ class GPSMain(object):
             obs_complete_time_full.append(obs_complete_time)
         import IPython
         IPython.embed()
-        self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)
+        self.policy_opt.train_invariant_dc(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)
         import IPython
         IPython.embed()
         

@@ -129,13 +129,21 @@ class PolicyOptTf(PolicyOpt):
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver =TfSolver(loss_scalar=tf.add_n(self.other['all_losses']),
+        self.solver =TfSolver(loss_scalar=tf.add_n(self.other['all_losses']) + tf.add_n(self.other['gen_loss']),
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
                               momentum=self._hyperparams['momentum'],
                               weight_decay=self._hyperparams['weight_decay'],
                               vars_to_opt=self.other['all_variables'].values())
+
+        self.dc_solver =TfSolver(loss_scalar=tf.add_n(self.other['dc_loss']),
+                              solver_name=self._hyperparams['solver_type'],
+                              base_lr=self._hyperparams['lr'],
+                              lr_policy=self._hyperparams['lr_policy'],
+                              momentum=self._hyperparams['momentum'],
+                              weight_decay=self._hyperparams['weight_decay'],
+                              vars_to_opt=self.other['dc_variables'].values())
 
     def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full):
         obs_reshaped = []
@@ -190,6 +198,97 @@ class PolicyOptTf(PolicyOpt):
                 print("--------------------------")
                 average_loss = 0
                 all_losses = np.zeros((len(self.other['all_losses']),))
+        import IPython
+        IPython.embed()
+        var_dict = {}
+        for k, v in self.other['all_variables'].items():
+            var_dict[k] = self.sess.run(v)
+        pickle.dump(var_dict, open("subspace_state.pkl", "wb"))
+
+
+
+        num_conds, num_samples, T_extended, dO = obs_extended_full[0].shape
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
+        for cond in range(num_conds):
+            for sample_num in range(num_samples):
+                feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num]}
+                cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+        np.save("3link_feats.npy", np.asarray(cond_feats))
+        print("done training invariant autoencoder and saving weights")
+
+    def train_invariant_dc(self, obs_full, next_obs_full, action_full, obs_extended_full):
+        obs_reshaped = []
+        next_obs_reshaped = []
+        action_reshaped = []
+        #TODO: [SCALE OBSERVATIONS BACK DOWN TO REASONABLE RANGE]
+        for robot_number in range(self.num_robots):
+
+            obs = obs_full[robot_number]
+            N, T = obs.shape[:2]
+
+            dO = obs.shape[2]
+            dU = self._dU[robot_number]
+
+            obs = np.reshape(obs, (N*T, dO))
+
+            next_obs = next_obs_full[robot_number]
+            next_obs = np.reshape(next_obs, (N*T, dO))
+            
+
+            action = action_full[robot_number]
+            action = np.reshape(action, (N*T, dU))
+
+            obs_reshaped.append(obs)
+            next_obs_reshaped.append(next_obs)
+            action_reshaped.append(action)
+
+        idx = range(N*T)
+        np.random.shuffle(idx)
+        batches_per_epoch = np.floor(N*T / self.batch_size)
+        average_loss = 0
+        dc_loss = 0
+        all_losses = np.zeros((len(self.other['all_losses']),))
+        all_losses_dc = np.zeros((len(self.other['dc_loss']),))
+        for i in range(self._hyperparams['iterations']):
+            feed_dict = {}
+            start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
+            idx_i = idx[start_idx:start_idx+self.batch_size]
+            for robot_number in range(self.num_robots):
+                feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
+                feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
+                feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
+            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
+            all_losses += self.sess.run(self.other['all_losses'], feed_dict)
+
+            average_loss += train_loss
+            if i % 1000 == 0 and i != 0:
+
+                print 'supervised tensorflow loss is '
+                print (average_loss/1000)
+                print (all_losses/1000)
+                print("--------------------------")
+                average_loss = 0
+                all_losses = np.zeros((len(self.other['all_losses']),))
+
+
+            dc_feed_dict = {}
+            start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
+            idx_i = idx[start_idx:start_idx+self.batch_size]
+            for robot_number in range(self.num_robots):
+                dc_feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
+                dc_feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
+                dc_feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
+            dc_loss += self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
+            all_losses_dc += self.sess.run(self.other['dc_loss'], dc_feed_dict)
+
+            if i % 1000 == 0 and i != 0:
+
+                print 'supervised dc loss is '
+                print (dc_loss/1000)
+                print (all_losses_dc/1000)
+                print("--------------------------")
+                dc_loss = 0
+                all_losses_dc = np.zeros((len(self.other['dc_loss']),))
         import IPython
         IPython.embed()
         var_dict = {}

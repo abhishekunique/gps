@@ -22,7 +22,7 @@ from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd, init_from_fil
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, transition_reward_model
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, transition_reward_model_domainconfusion
 from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
 from gps.utility.data_logger import DataLogger
 
@@ -74,7 +74,7 @@ common = {
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': transition_reward_model,
+        'network_model': transition_reward_model_domainconfusion,
         'run_feats': False,
         'invariant_train': True,
         'load_weights': '/home/abhigupta/gps/subspace_newweights.pkl',
@@ -291,8 +291,6 @@ fk_cost_2 = [{
 # } for i in agent[1]['train_conditions']]
 
 load_trajs = np.load("3link_feats.npy")
-import IPython
-IPython.embed()
 test_cost = [{
     'type': CostDevRs,
     'l1': 0.1,
