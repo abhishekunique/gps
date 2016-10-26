@@ -113,7 +113,7 @@ class GPSMain(object):
                 if rf:
                     np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
 
-            if itr % 16 == 0 and itr > 0:
+            if itr % 8 == 0 and itr > 0:
                 import IPython
                 IPython.embed()
 
@@ -180,33 +180,58 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
-        obs_full = [None]*self.num_robots
+        traj_distr = self.data_logger.unpickle("blockstrike.pkl")
         for robot_number in range(self.num_robots):
+            for cond in  self._train_idx[robot_number]:
+                self.algorithm[robot_number].cur[cond].traj_distr = traj_distr[robot_number][cond]
+
+        for robot_number in range(self.num_robots):
+            itr_start = self._initialize(itr_load, robot_number=robot_number)
+
+        for itr in range(itr_start, self._hyperparams['iterations']):
+            traj_sample_lists = {}
+            for robot_number in range(self.num_robots):
+                for cond in self._train_idx[robot_number]:
+                    for i in range(self._hyperparams['num_samples']):
+                        self._take_sample(itr, cond, i, robot_number=robot_number)
+
+                traj_sample_lists[robot_number] = [
+                    self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
+                    for cond_1 in self._train_idx[robot_number]
+                ]
+
+        dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T - 1
+        # Compute target mean, cov, and weight for each sample.
+        obs_full = []
+        next_obs_full = []
+        tgt_actions_full = []
+        reward_shaping_full = []
+        for robot_number in range(self.num_robots):
+            obs_data, next_obs_data, tgt_actions, reward_shaping = np.zeros((0, T, dO)), np.zeros((0, T, dO)), np.zeros((0, T, dU)), np.zeros((0, T))
+            for m in self._train_idx:
+                samples = self.algorithm.cur[m].sample_list
+                X = samples.get_X()
+                N = len(samples)
+                traj, pol_info = self.algorithm.cur[m].traj_distr, self.algorithm.cur[m].pol_info
+                mu = np.zeros((N, T, dU))
+                for t in range(T):
+                    for i in range(N):
+                        mu[i, t, :] = \
+                                (traj.K[t, :, :].dot(X[i, t, :]) + traj.k[t, :]) 
+                tgt_actions = np.concatenate((tgt_actions, mu))
+                obs_data = np.concatenate((obs_data, samples.get_obs()[:, :-1, :]))
+                next_obs_data = np.concatenate((next_obs_data, samples.get_obs()[:, 1:, :]))
+                if robot_number == 0:
+                    for sample in samples.get_samples():
+                        reward_shaping = np.concatenate((reward_shaping, self.algorithm.costs[0]._costs[-1].eval(sample)[0][:-1]))
+            obs_full.append(obs_data)
+            next_obs_full.append(next_obs_data)
+            tgt_actions_full.append(tgt_actions)
             if robot_number == 0:
-                obs_sample = self.data_logger.unpickle(self._hyperparams['robot0_file'])
-                for slist in obs_sample:
-                    for s in slist._samples:
-                        s.agent = self.agent[0]
-
-            else:
-                obs_sample = self.data_logger.unpickle(self._hyperparams['robot1_file'])
-                for slist in obs_sample:
-                    for s in slist._samples:
-                        s.agent = self.agent[1]
-        
-            dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
-            dO = self.algorithm[robot_number].dX
-            obs_data = np.zeros((0, T, dO))
-            for samples in obs_sample:
-                obs_data = np.concatenate((obs_data, samples.get_X()))
-
-            if robot_number == 0:
-                obs_data = obs_data[:, :, self._hyperparams['r0_index_list']]
-
-            else:
-                obs_data = obs_data[:, :, self._hyperparams['r1_index_list']]
-            obs_full[robot_number] = obs_data
-        self.policy_opt.train_invariant_autoencoder(obs_full)
+                reward_shaping_full.append(reward_shaping)
+        self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, reward_shaping_full)
+        import IPython
+        IPython.embed()
         
 
     def _take_reward_shaping(self):

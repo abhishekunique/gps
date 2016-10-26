@@ -172,7 +172,7 @@ algorithm[0]['init_traj_distr'] = {
 
 torque_cost_1 = [{
     'type': CostAction,
-    'wu': 5e-5 / PR2_GAINS[0],
+    'wu': 5e-2 / PR2_GAINS[0],
 } for i in agent[0]['train_conditions']]
 
 fk_cost_1 = [{
@@ -199,26 +199,26 @@ fk_cost_1 = [{
 #     'ramp_option': RAMP_QUADRATIC
 # } for i in agent[0]['train_conditions']]
 
-demo_waypoints = np.load("demo_waypoints.npy")
-import IPython
-IPython.embed()
-fk_cost_2 = [{
-    'type': CostFK,
-    'target_end_effector': demo_waypoints[i],
-    'wp': np.array([1, 1, 1, 1, 1, 1, 0, 0, 0,0,0,0]),
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'ramp_option': RAMP_QUADRATIC
-} for i in agent[0]['train_conditions']]
-
-# fk_cost_blocktouch = [{
-#     'type': CostFKBlock,
-#     'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
+# demo_waypoints = np.load("demo_waypoints.npy")
+# import IPython
+# IPython.embed()
+# fk_cost_2 = [{
+#     'type': CostFK,
+#     'target_end_effector': demo_waypoints[i],
+#     'wp': np.array([1, 1, 1, 1, 1, 1, 0, 0, 0,0,0,0]),
 #     'l1': 0.1,
 #     'l2': 10.0,
 #     'alpha': 1e-5,
+#     'ramp_option': RAMP_QUADRATIC
 # } for i in agent[0]['train_conditions']]
+
+fk_cost_blocktouch = [{
+    'type': CostFKBlock,
+    'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
+    'l1': 0.1,
+    'l2': 10.0,
+    'alpha': 1e-5,
+} for i in agent[0]['train_conditions']]
 
 # data_logger = DataLogger()
 # data_traj = data_logger.unpickle('/home/abhigupta/gps/experiments/blockpush_free/data_files_good/traj_sample_itr_24_rn_00.pkl')
@@ -233,8 +233,8 @@ fk_cost_2 = [{
 
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i], fk_cost_2[i]],
-    'weights': [5.0, 1.0],
+    'costs': [fk_cost_1[i], fk_cost_blocktouch[i], torque_cost_1[i]],
+    'weights': [5.0, 1.0, 0.5],
 } for i in agent[0]['train_conditions']]
 
 

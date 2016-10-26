@@ -101,11 +101,7 @@ class PolicyOptTf(PolicyOpt):
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        if 'r0_index_list' in self._hyperparams and 'r1_index_list' in self._hyperparams:
-            dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])]
-        else:
-            dO = self._dO
-        tf_maps, var_list = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
+        tf_maps, other = tf_map_generator(dim_input_state=self._dO, dim_input_action=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
@@ -123,84 +119,70 @@ class PolicyOptTf(PolicyOpt):
             self.feature_points.append(tf_map.feature_points)
             self.individual_losses.append(tf_map.individual_losses)
         self.combined_loss = tf.add_n(self.loss_scalars)
-        self.var_list= var_list
-
-    def init_feature_space(self):
-        """ Helper method to initialize the tf networks used """
-        tf_map_generator = self._hyperparams['network_model_feat']
-        dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])]
-        tf_maps, var_list = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
-                             network_config=self._hyperparams['network_params'])
-        self.obs_tensors_feat = []
-        self.act_ops_feat = []
-        self.loss_scalars_feat = []
-        self.feature_points_feat = []
-        for tf_map in tf_maps:
-            self.obs_tensors_feat.append(tf_map.get_input_tensor())
-            self.act_ops_feat.append(tf_map.get_output_op())
-            self.loss_scalars_feat.append(tf_map.get_loss_op())
-            self.feature_points_feat.append(tf_map.feature_points)
-        self.combined_loss_feat = tf.add_n(self.loss_scalars_feat)
-        self.var_list_feat = var_list
-
+        self.other= other
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver =TfSolver(loss_scalar=self.combined_loss,
+        self.solver =TfSolver(loss_scalar=tf.add_n(self.other['all_losses']),
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
                               momentum=self._hyperparams['momentum'],
                               weight_decay=self._hyperparams['weight_decay'],
-                              vars_to_opt=self.var_list.values())
+                              vars_to_opt=self.other['all_variables'])
 
-    def train_invariant_autoencoder(self, obs_full):
+    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, rs_full):
         obs_reshaped = []
+        next_obs_reshaped = []
+        action_reshaped = []
+        reward_shaped = []
+
         for robot_number in range(self.num_robots):
+            dO = self._dO[robot_number]
+            dU = self._dU[robot_number]
+
             obs = obs_full[robot_number]
             N, T = obs.shape[:2]
-            dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])][robot_number]
-            dU = self._dU[robot_number]
             obs = np.reshape(obs, (N*T, dO))
+
+            next_obs = next_obs_full[robot_number]
+            next_obs = np.reshape(next_obs, (N*T, dO))
+            
+
+            action = action_full[robot_number]
+            action = np.reshape(action, (N*T, dU))
+
             obs_reshaped.append(obs)
+            next_obs_reshaped.append(next_obs)
+            action_reshaped.append(action)
+            if robot_number == 0:
+                rs = rs_full[robot_number]
+                rs = np.reshape(rs, (N*T,))
+                reward_shaped.append(rs)
 
         idx = range(N*T)
         np.random.shuffle(idx)
         batches_per_epoch = np.floor(N*T / self.batch_size)
         average_loss = 0
-        average_loss_1 = 0
-        average_loss_2 = 0
-        average_loss_3 = 0
         for i in range(self._hyperparams['iterations']):
             feed_dict = {}
             start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
             idx_i = idx[start_idx:start_idx+self.batch_size]
             for robot_number in range(self.num_robots):
-                feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+                feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
+                feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
+                feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
+            feed_dict[self.other['rs_input']] = reward_shaped[idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
-            train_loss_1 = self.sess.run(self.individual_losses[0][0], feed_dict)
-            train_loss_2 = self.sess.run(self.individual_losses[1][0], feed_dict)
-            train_loss_3 = self.sess.run(self.individual_losses[1][1], feed_dict)
             average_loss += train_loss
-            average_loss_1 += train_loss_1
-            average_loss_2 += train_loss_2
-            average_loss_3 += train_loss_3
+
             if i % 1000 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_loss / 100)
                 print 'supervised tf loss is '
                 print (average_loss/100)
-                print 'robot1 loss is '
-                print (average_loss_1/100)
-                print 'robot2 loss is '
-                print (average_loss_2/100)
-                print 'contrastive loss is '
-                print (average_loss_3/100)
                 print("--------------------------")
                 average_loss = 0
-                average_loss_1 = 0
-                average_loss_2 = 0
-                average_loss_3 = 0
         import IPython
         IPython.embed()
         var_dict = {}
