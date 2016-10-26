@@ -1033,7 +1033,7 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
     next_state_inputs = []
     action_inputs = []
     nnets = []
-
+    other = {}
     #defining layer sizes [TOOD: Get from hyperparams]
     num_hidden = 4
     num_hidden_action = 4
@@ -1044,14 +1044,14 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
     dim_hidden_transition = [layer_size]*num_hidden_transition
 
     #Defining the transition variables
-    w0_transition = init_weights((dim_hidden[2] + dim_hidden_action[2], dim_hidden_transition[0]), name='w0_transition' + str(robot_number))
-    b0_transition = init_bias((dim_hidden_transition[0],), name='b0_transition'+str(robot_number))
-    w1_transition = init_weights((dim_hidden_transition[0], dim_hidden_transition[1]), name='w1_transition' + str(robot_number))
-    b1_transition = init_bias((dim_hidden_transition[1],), name='b1_transition' + str(robot_number))
-    w2_transition = init_weights((dim_hidden_transition[1], dim_hidden_transition[2]), name='w2_transition' + str(robot_number))
-    b2_transition = init_bias((dim_hidden_transition[2],), name='b2_transition' + str(robot_number))
-    w3_transition = init_weights((dim_hidden_transition[2], dim_hidden[2]), name='w3_transition' + str(robot_number))
-    b3_transition = init_bias((dim_hidden[2],), name='b3_transition' + str(robot_number))
+    w0_transition = init_weights((dim_hidden[2] + dim_hidden_action[2], dim_hidden_transition[0]), name='w0_transition')
+    b0_transition = init_bias((dim_hidden_transition[0],), name='b0_transition')
+    w1_transition = init_weights((dim_hidden_transition[0], dim_hidden_transition[1]), name='w1_transition')
+    b1_transition = init_bias((dim_hidden_transition[1],), name='b1_transition')
+    w2_transition = init_weights((dim_hidden_transition[1], dim_hidden_transition[2]), name='w2_transition')
+    b2_transition = init_bias((dim_hidden_transition[2],), name='b2_transition')
+    w3_transition = init_weights((dim_hidden_transition[2], dim_hidden[2]), name='w3_transition')
+    b3_transition = init_bias((dim_hidden[2],), name='b3_transition')
     all_losses = []
     all_variables = []
     all_variables += [w0_transition, b0_transition]
@@ -1061,9 +1061,9 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
 
     for robot_number, robot_params in enumerate(network_config):
         #defining input placeholders
-        state_input = tf.placeholder("float", [None, dim_input_state[robot_number]], name='nn_input_state' + str(robot_number)+"_"+str(c))
-        next_state_input = tf.placeholder("float", [None, dim_input_state[robot_number]], name='next_input_state' + str(robot_number)+"_"+str(c))
-        action_input = tf.placeholder("float", [None, dim_input_action[robot_number]], name='nn_input_action' + str(robot_number)+"_"+str(c))
+        state_input = tf.placeholder("float", [None, dim_input_state[robot_number]], name='nn_input_state' + str(robot_number))
+        next_state_input = tf.placeholder("float", [None, dim_input_state[robot_number]], name='next_input_state' + str(robot_number))
+        action_input = tf.placeholder("float", [None, dim_input_action[robot_number]], name='nn_input_action' + str(robot_number))
         
         #appending into lists
         state_inputs.append(state_input)
@@ -1078,11 +1078,6 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
         w2_state = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_state' + str(robot_number))
         b2_state = init_bias((dim_hidden[2],), name='b2_state' + str(robot_number))
 
-        w3_state_rs = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_state_rs' + str(robot_number))
-        b3_state_rs = init_bias((dim_hidden[3],), name='b3_state_rs' + str(robot_number))
-        w4_state_rs = init_weights((dim_hidden[3], 1), name='w4_state_rs' + str(robot_number))
-        b4_state_rs = init_bias((1,), name='b4_state_rs' + str(robot_number))
-
         w3_state_ae = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_state_ae' + str(robot_number))
         b3_state_ae = init_bias((dim_hidden[3],), name='b3_state_ae' + str(robot_number))
         w4_state_ae = init_weights((dim_hidden[3], dim_input_state[robot_number]), name='w4_state_ae' + str(robot_number))
@@ -1091,8 +1086,6 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
         all_variables += [w0_state, b0_state]
         all_variables += [w1_state, b1_state]
         all_variables += [w2_state, b2_state]
-        all_variables += [w3_state_rs, b3_state_rs]
-        all_variables += [w4_state_rs, b4_state_rs]
         all_variables += [w3_state_ae, b3_state_ae]
         all_variables += [w4_state_ae, b4_state_ae]
         #END DEFINING STATE VARIABLES
@@ -1103,12 +1096,9 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
         layer2_state = tf.matmul(layer1_state, w2_state) + b2_state
         state_features = layer2_state
         state_features_list.append(state_features)
-        #reward shaping output#
-        layer3_state_rs = tf.nn.relu(tf.matmul(layer2_state, w3_state_rs) + b3_state_rs)
-        output_state_rs = tf.matmul(layer3_state, w4_state_rs) + b4_state_rs
         #autoencoding output#
         layer3_state_ae = tf.nn.relu(tf.matmul(layer2_state, w3_state_ae) + b3_state_ae)
-        output_state_ae = tf.matmul(layer3_state, w4_state_ae) + b4_state_ae
+        output_state_ae = tf.matmul(layer3_state_ae, w4_state_ae) + b4_state_ae
         ### END STATE EMBEDDING ###
 
         #DEFINING ACTION VARIABLES
@@ -1146,9 +1136,9 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
         ### START TRANSITION NET ###
         transition_input = tf.concat(concat_dim=1, values=[state_features, action_features])
         layer0_transition = tf.nn.relu(tf.matmul(transition_input, w0_transition) + b0_transition)
-        layer1_transition = tf.nn.relu(tf.matmul(layer0_state, w1_transition) + b1_transition)
-        layer2_transition = tf.nn.relu(tf.matmul(layer1_state, w2_transition) + b2_transition)
-        output_transition = tf.matmul(layer2_state, w3_transition) + b3_transition
+        layer1_transition = tf.nn.relu(tf.matmul(layer0_transition, w1_transition) + b1_transition)
+        layer2_transition = tf.nn.relu(tf.matmul(layer1_transition, w2_transition) + b2_transition)
+        output_transition = tf.matmul(layer2_transition, w3_transition) + b3_transition
         transition_out_list.append(output_transition)
         ### END TRANSITION NET ###
 
@@ -1159,15 +1149,10 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
         next_state_features = layer2_nextstate
         ### END NEXT STATE EMBEDDING ###
 
-        loss_transition = tf.nn.l2_loss(output_transition - output_nextstate)
+        loss_transition = tf.nn.l2_loss(output_transition - next_state_features)
         loss_ae_action = tf.nn.l2_loss(output_action - action_input)
         loss_ae_state = tf.nn.l2_loss(output_state_ae - state_input)
         all_losses += [loss_transition, loss_ae_action, loss_ae_state]
-        if robot_number == 0:
-            rs = tf.placeholder("float", [None], name='rs' + str(robot_number) + '_' + str(c))
-            loss_rs_state = tf.nn.l2_loss(rs - tf.reshape(output_state_rs, [-1])) 
-            all_losses += [loss_rs_state]
-        all_losses += [loss_transition, loss_ae_action, loss_ae_state], loss_rs_state, loss_contrastive_state, loss_contrastive_action, loss_contrastiv
         #contrastive loss version
         if robot_number == 1:
             loss_contrastive_state = tf.nn.l2_loss(state_features_list[0] - state_features_list[1])
@@ -1182,7 +1167,6 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
     other['state_inputs'] = state_inputs
     other['next_state_inputs'] = next_state_inputs
     other['action_inputs'] = action_inputs
-    other['rs_input'] = rs
 
     return nnets, other
 

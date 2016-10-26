@@ -155,7 +155,7 @@ algorithm[0]['init_traj_distr'] = {
 
 torque_cost_1 = [{
     'type': CostAction,
-    'wu': 5e-5 / PR2_GAINS[1],
+    'wu': 5e-2 / PR2_GAINS[1],
 } for i in agent[0]['train_conditions']]
 
 fk_cost_1 = [{
@@ -205,17 +205,17 @@ fk_cost_blocktouch = [{
 # } for i in common['train_conditions']]
 
 
-load_trajs = np.load('/home/abhigupta/subspace_sandbox/gps/experiments/blockstrike/data_files/fps_16_rn_00.pkl.npy')
-# import IPython
-# IPython.embed()
-test_cost = [{
-    'type': CostDevRs,
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'target_feats': load_trajs[0][i],
-    'load_file': '/home/abhigupta/subspace_sandbox/gps/subspace_state.pkl'
-} for i in agent[0]['train_conditions']]
+# load_trajs = np.load('/home/abhigupta/subspace_sandbox/gps/experiments/blockstrike/data_files/fps_16_rn_00.pkl.npy')
+# # import IPython
+# # IPython.embed()
+# test_cost = [{
+#     'type': CostDevRs,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'target_feats': load_trajs[0][i],
+#     'load_file': '/home/abhigupta/subspace_sandbox/gps/subspace_state.pkl'
+# } for i in agent[0]['train_conditions']]
 
 # load_trajs_act = np.load('/home/abhigupta/gps/experiments/blockstrike/data_files/actionfps_16_rn_00.pkl.npy')
 # # import IPython
@@ -232,11 +232,18 @@ test_cost = [{
 
 
 
+# algorithm[0]['cost'] = [{
+#     'type': CostSumDecrease,
+#     'costs': [fk_cost_1[i],test_cost[i]],
+#     'weights': [1.0, 0.5],
+# } for i in agent[0]['train_conditions']]
+
 algorithm[0]['cost'] = [{
-    'type': CostSumDecrease,
-    'costs': [fk_cost_1[i],test_cost[i]],
-    'weights': [1.0, 0.5],
+    'type': CostSum,
+    'costs': [fk_cost_1[i], fk_cost_blocktouch[i], torque_cost_1[i]],
+    'weights': [5.0, 1.0, 0.5],
 } for i in agent[0]['train_conditions']]
+
 
 
 algorithm[0]['dynamics'] = {

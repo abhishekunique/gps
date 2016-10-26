@@ -180,7 +180,9 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
-        traj_distr = self.data_logger.unpickle("blockstrike.pkl")
+        traj_distr = []
+        traj_distr.append(self.data_logger.unpickle("3link_blockstrike.pkl"))
+        traj_distr.append(self.data_logger.unpickle("4link_blockstrike.pkl"))
         for robot_number in range(self.num_robots):
             for cond in  self._train_idx[robot_number]:
                 self.algorithm[robot_number].cur[cond].traj_distr = traj_distr[robot_number][cond]
@@ -188,31 +190,30 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-        for itr in range(itr_start, self._hyperparams['iterations']):
-            traj_sample_lists = {}
-            for robot_number in range(self.num_robots):
-                for cond in self._train_idx[robot_number]:
-                    for i in range(self._hyperparams['num_samples']):
-                        self._take_sample(itr, cond, i, robot_number=robot_number)
+        traj_sample_lists = {}
+        for robot_number in range(self.num_robots):
+            for cond in self._train_idx[robot_number]:
+                for i in range(self._hyperparams['num_samples']):
+                    self._take_sample(0, cond, i, robot_number=robot_number)
 
-                traj_sample_lists[robot_number] = [
-                    self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
-                    for cond_1 in self._train_idx[robot_number]
-                ]
+            traj_sample_lists[robot_number] = [
+                self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
+                for cond_1 in self._train_idx[robot_number]
+            ]
 
-        dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T - 1
+        
         # Compute target mean, cov, and weight for each sample.
         obs_full = []
         next_obs_full = []
         tgt_actions_full = []
-        reward_shaping_full = []
         for robot_number in range(self.num_robots):
-            obs_data, next_obs_data, tgt_actions, reward_shaping = np.zeros((0, T, dO)), np.zeros((0, T, dO)), np.zeros((0, T, dU)), np.zeros((0, T))
-            for m in self._train_idx:
-                samples = self.algorithm.cur[m].sample_list
+            dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T - 1
+            obs_data, next_obs_data, tgt_actions = np.zeros((0, T, dO)), np.zeros((0, T, dO)), np.zeros((0, T, dU))
+            for m in self._train_idx[robot_number]:
+                samples = traj_sample_lists[robot_number][m]
                 X = samples.get_X()
                 N = len(samples)
-                traj, pol_info = self.algorithm.cur[m].traj_distr, self.algorithm.cur[m].pol_info
+                traj = self.algorithm[robot_number].cur[m].traj_distr
                 mu = np.zeros((N, T, dU))
                 for t in range(T):
                     for i in range(N):
@@ -221,15 +222,12 @@ class GPSMain(object):
                 tgt_actions = np.concatenate((tgt_actions, mu))
                 obs_data = np.concatenate((obs_data, samples.get_obs()[:, :-1, :]))
                 next_obs_data = np.concatenate((next_obs_data, samples.get_obs()[:, 1:, :]))
-                if robot_number == 0:
-                    for sample in samples.get_samples():
-                        reward_shaping = np.concatenate((reward_shaping, self.algorithm.costs[0]._costs[-1].eval(sample)[0][:-1]))
             obs_full.append(obs_data)
             next_obs_full.append(next_obs_data)
             tgt_actions_full.append(tgt_actions)
-            if robot_number == 0:
-                reward_shaping_full.append(reward_shaping)
-        self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, reward_shaping_full)
+        import IPython
+        IPython.embed()
+        self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full)
         import IPython
         IPython.embed()
         

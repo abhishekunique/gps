@@ -118,7 +118,7 @@ class PolicyOptTf(PolicyOpt):
             self.loss_scalars.append(tf_map.get_loss_op())
             self.feature_points.append(tf_map.feature_points)
             self.individual_losses.append(tf_map.individual_losses)
-        self.combined_loss = tf.add_n(self.loss_scalars)
+        # self.combined_loss = tf.add_n(self.loss_scalars)
         self.other= other
 
     def init_solver(self):
@@ -131,12 +131,11 @@ class PolicyOptTf(PolicyOpt):
                               weight_decay=self._hyperparams['weight_decay'],
                               vars_to_opt=self.other['all_variables'])
 
-    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, rs_full):
+    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full):
         obs_reshaped = []
         next_obs_reshaped = []
         action_reshaped = []
-        reward_shaped = []
-
+        #TODO: [SCALE OBSERVATIONS BACK DOWN TO REASONABLE RANGE]
         for robot_number in range(self.num_robots):
             dO = self._dO[robot_number]
             dU = self._dU[robot_number]
@@ -155,15 +154,12 @@ class PolicyOptTf(PolicyOpt):
             obs_reshaped.append(obs)
             next_obs_reshaped.append(next_obs)
             action_reshaped.append(action)
-            if robot_number == 0:
-                rs = rs_full[robot_number]
-                rs = np.reshape(rs, (N*T,))
-                reward_shaped.append(rs)
 
         idx = range(N*T)
         np.random.shuffle(idx)
         batches_per_epoch = np.floor(N*T / self.batch_size)
         average_loss = 0
+        all_losses = np.zeros((len(self.other['all_losses']),))
         for i in range(self._hyperparams['iterations']):
             feed_dict = {}
             start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
@@ -172,17 +168,20 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
                 feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
                 feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
-            feed_dict[self.other['rs_input']] = reward_shaped[idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
+            all_losses += self.sess.run(self.other['all_losses'], feed_dict)
+
             average_loss += train_loss
 
             if i % 1000 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
                              i, average_loss / 100)
                 print 'supervised tf loss is '
-                print (average_loss/100)
+                print (average_loss/1000)
+                print (all_losses/1000)
                 print("--------------------------")
                 average_loss = 0
+                all_losses = np.zeros((len(self.other['all_losses']),))
         import IPython
         IPython.embed()
         var_dict = {}
