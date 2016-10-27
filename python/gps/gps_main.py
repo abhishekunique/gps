@@ -12,6 +12,8 @@ import copy
 import argparse
 import threading
 import time
+import random
+import cPickle as pickle
 import tensorflow as tf
 # Add gps/python to path so that imports work.
 sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
@@ -121,7 +123,7 @@ class GPSMain(object):
         self._end()
 
 
-    def run_unsup_domainconfusion(self, itr_load=None, rf=False):
+    def run_unsup_domainconfusion(self, itr_load=None, rf=False, seed=None):
         """
         Run training by iteratively sampling and taking an iteration.
         Args:
@@ -129,6 +131,8 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
+        random.seed(seed)
+        np.random.seed(seed)
         print("starting unsupervised domain confusion")
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
@@ -153,7 +157,7 @@ class GPSMain(object):
         #     print("TAKE ITERATION")
         #     # for robot_number in range(self.num_robots):
         #     self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
-
+        all_costs = []
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             print("SAMPLING")
@@ -183,7 +187,13 @@ class GPSMain(object):
             #import IPython
             #IPython.embed()
             print("INVARIANT ENCODER")
-            self._take_iteration_invariantautoencoder(traj_sample_lists, obs_full)
+            robot_costs = self._take_iteration_invariantautoencoder(traj_sample_lists, obs_full)
+
+            print robot_costs
+            all_costs.append(robot_costs)
+            import cPickle as pickle
+            with open('contrast_data' + str(seed), 'wb') as cfile:
+                pickle.dump(all_costs, cfile)
 
             print("TAKE ITERATION")
             for robot_number in range(self.num_robots):
@@ -193,9 +203,9 @@ class GPSMain(object):
                 pol_sample_lists = None #self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
 
-            if itr % 10 == 0 and itr > 0:
-                import IPython
-                IPython.embed()
+            # if itr % 10 == 0 and itr > 0:
+            #     import IPython
+            #     IPython.embed()
 
         self._end()
 
@@ -317,15 +327,18 @@ class GPSMain(object):
         obs_full = [None]*self.num_robots
         shaped_full = [None]*self.num_robots
         matched_full = [None]*self.num_robots
+        mean_costs = []
         for robot_number in range(self.num_robots):
             obs_data = []
             shaped_cost = []
             matched_data = []
+            costs = []
             for m in self._train_idx[robot_number]:
                 samples = traj_sample_lists[robot_number][m]
                 shaped_concat = np.zeros((0, self.algorithm[robot_number].T))
                 obs_data.append(samples.get_obs())
                 for sample in samples._samples:
+                    costs.append( np.mean(self.algorithm[robot_number].cost[m]._costs[0].eval(sample)[0]) )
                     if robot_number == 0:
                         # print shaped_concat.shape,  self.algorithm[robot_number].cost[m]._costs[-1].eval(sample)[0][None,:].shape
                         shaped_concat = np.concatenate((shaped_concat, self.algorithm[robot_number].cost[m]._costs[-1].eval(sample)[0][None, :]))
@@ -337,6 +350,7 @@ class GPSMain(object):
             obs_full[robot_number] = obs_data
             shaped_full[robot_number] = shaped_cost
             matched_full[robot_number] = matched_data
+            mean_costs.append(np.mean(costs))
         traj_feats, nn_weights = self.policy_opt.train_invariant_autoencoder(obs_full, shaped_full, matched_full, "temp.pkl")
         #setting feature trajectories and nn weights in the cost function
         # num_conds = len(self._train_idx[0])
@@ -351,6 +365,7 @@ class GPSMain(object):
             # self.algorithm[1].cost[m]._costs[-1].traj_feats = traj_feats[m]
             self.algorithm[1].cost[m]._costs[-1].nn_weights = nn_weights
 
+        return mean_costs
 
     def test_policy(self, itr, N):
         """
@@ -670,21 +685,26 @@ def main():
 
         random.seed(1)
         np.random.seed(1)
+        seeds = [111,222,333,444]
 
-        gps = GPSMain(hyperparams.config)
+        for seed in seeds:
+            gps = GPSMain(hyperparams.config)
+            gps.run_unsup_domainconfusion(itr_load=resume_training_itr, seed=seed)
+
+        return
         if hyperparams.config['gui_on']:
             if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
                 run_gps = threading.Thread(
-                    target=lambda: gps.run_unsup_domainconfusion(itr_load=resume_training_itr)
+                    target=lambda: gps.run_unsup_domainconfusion(itr_load=resume_training_itr, seeds=seeds)
                 )
             else:
                 if args.multithread:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_unsup_domainconfusion(itr_load=resume_training_itr)
+                        target=lambda: gps.run_unsup_domainconfusion(itr_load=resume_training_itr, seeds=seeds)
                     )
                 else:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_unsup_domainconfusion(itr_load=resume_training_itr)
+                        target=lambda: gps.run_unsup_domainconfusion(itr_load=resume_training_itr, seeds=seeds)
                     )
             run_gps.daemon = True
             run_gps.start()
