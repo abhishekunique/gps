@@ -125,9 +125,10 @@ class PolicyOptTf(PolicyOpt):
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver = TfSolver(loss_scalar=tf.add_n(self.other['indiv_losses']) + 
-                                            tf.add_n(self.other['gen_loss']) 
-                                            + self.other['contrast_loss'] * 0.01,#self.combined_loss,
+        self.solver = TfSolver(loss_scalar=#tf.add_n(self.other['indiv_losses']) + 
+                                            #tf.add_n(self.other['gen_loss']) 
+                                            tf.add_n(self.other['ae_loss'])
+                                            + self.other['contrast_loss'],#self.combined_loss,
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=0.001,#self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
@@ -156,6 +157,9 @@ class PolicyOptTf(PolicyOpt):
         Returns:
             A tensorflow object with updated weights.
         """
+        traj_feats = self.run_features_forward(obs_full[0][0][0], 0)
+        import IPython
+        IPython.ebmed()
         nconds = len(obs_full[0])
         N_reshaped = [[] for c in range(nconds)]
         T_reshaped = [[] for c in range(nconds)]
@@ -203,6 +207,7 @@ class PolicyOptTf(PolicyOpt):
         average_dc_acc = np.zeros((nconds, 5))
         average_dc_loss = 0
         contrast_loss = 0
+        ae_loss = 0
         should_disc = True
         for i in range(self._hyperparams['iterations']):
             feed_dict = {}
@@ -221,6 +226,7 @@ class PolicyOptTf(PolicyOpt):
                 import IPython
                 IPython.embed()
             contrast_loss += self.sess.run(self.other['contrast_loss'], feed_dict)
+            ae_loss += self.sess.run(tf.add_n(self.other['ae_loss']), feed_dict)
             average_loss += train_loss
             if i % 100 == 0 and i != 0:
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
@@ -228,16 +234,18 @@ class PolicyOptTf(PolicyOpt):
                 print 'supervised tf loss is '
                 print (average_loss/100)
                 print (contrast_loss/100.0)
+                print (ae_loss/100.0)
                 average_loss = 0
                 contrast_loss = 0
+                ae_loss = 0
 
-                r = self.reward_forward(obs_reshaped, nconds)
-                for rb in range(self.num_robots):
-                    for cc in range(nconds):
-                        pred = np.reshape(r[cc][rb], (-1))
-                        # print pred.shape, shaped_cost_reshaped[cc][rb].shape, (pred - shaped_cost_reshaped[cc][rb]).shape
-                        norm = np.linalg.norm(pred - shaped_cost_reshaped[cc][rb])/np.sqrt(pred.shape[0])
-                        print "r" + str(rb) + " c" + str(cc) + " " + str(norm)
+                # r = self.reward_forward(obs_reshaped, nconds)
+                # for rb in range(self.num_robots):
+                #     for cc in range(nconds):
+                #         pred = np.reshape(r[cc][rb], (-1))
+                #         # print pred.shape, shaped_cost_reshaped[cc][rb].shape, (pred - shaped_cost_reshaped[cc][rb]).shape
+                #         norm = np.linalg.norm(pred - shaped_cost_reshaped[cc][rb])/np.sqrt(pred.shape[0])
+                #         print "r" + str(rb) + " c" + str(cc) + " " + str(norm)
 
                 #import IPython
                 #IPython.embed()
@@ -261,8 +269,8 @@ class PolicyOptTf(PolicyOpt):
                         feed_dict[self.other['nn_inputs'][robot_number][c][0]] = obs_reshaped[c][robot_number][idx_i]
                         if robot_number == 0:
                             feed_dict[self.other['nn_inputs'][robot_number][c][1]] = shaped_cost_reshaped[c][robot_number][idx_i]
-                dc_loss = self.dc_solver(feed_dict, self.sess, device_string=self.device_string)
-                average_dc_loss += dc_loss
+                # dc_loss = self.dc_solver(feed_dict, self.sess, device_string=self.device_string)
+                # average_dc_loss += dc_loss
             prediction = self.sess.run(self.other['dc_output'], feed_dict)
 
             for c in range(nconds):
@@ -305,8 +313,7 @@ class PolicyOptTf(PolicyOpt):
         #y_pred = A.dot(x)
         # import IPython
         # IPython.embed()
-        # traj_feats = self.run_features_forward(obs_full[0][0], 0)
-        traj_feats = None
+        # traj_feats = None
         #need to take mean here
         # np.save("fps_r0.npy", traj_feats)
         print("done training invariant autoencoder and saving weights")

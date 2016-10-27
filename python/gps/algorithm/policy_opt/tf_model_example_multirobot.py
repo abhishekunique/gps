@@ -1029,15 +1029,15 @@ def double_contrastive_invariance(dim_input=[27, 27], dim_output=[7, 7], batch_s
 def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None, ncond=0):
     num_robots = len(dim_input)
     nnets = []
-    n_layers = 5
+    n_layers = 6
     n_disc_layers = 3
-    layer_size = 60
-    dim_hidden = (n_layers - 1)*[layer_size]
+    layer_size = 20
+    dim_hidden = [25, 20, 20, 25, 123123]
     dim_hidden_disc = (n_disc_layers - 1)*[layer_size]
     feature_layers = []
     weight_dict = {}
     gen_vars = []
-    print ncond
+    # print ncond
 
     ### creating discriminator variables ###
     cond_dc_vars = []
@@ -1060,17 +1060,6 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     dc_loss = []
     ### end discriminator variables ###
 
-
-    robot_number = 1
-    w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_' + str(robot_number))
-    b1 = init_bias((dim_hidden[1],), name='b1_' + str(robot_number))
-    w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_' + str(robot_number))
-    b2 = init_bias((dim_hidden[2],), name='b2_' + str(robot_number))
-    w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_' + str(robot_number))
-    b3 = init_bias((dim_hidden[3],), name='b3_' + str(robot_number))
-    w_output = init_weights((dim_hidden[3], 1), name='w_output'+str(robot_number))
-    b_output = init_bias((1,), name = 'b_output'+str(robot_number))
-    gen_vars += [w1, b1, w2, b2, w3, b3, w_output, b_output]
     
     dc_output = [[] for c in range(ncond)]
     nn_output = [[] for c in range(ncond)]
@@ -1079,10 +1068,21 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     other = {}
     contrast_layer = []
     contrast_input = []
+    ae_loss = []
     for robot_number, robot_params in enumerate(network_config):
         ### Variable declaration ####
         w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
         b_input = init_bias((dim_hidden[0],), name='b_input'+str(robot_number))
+
+        w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_' + str(robot_number))
+        b1 = init_bias((dim_hidden[1],), name='b1_' + str(robot_number))
+        w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_' + str(robot_number))
+        b2 = init_bias((dim_hidden[2],), name='b2_' + str(robot_number))
+        w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_' + str(robot_number))
+        b3 = init_bias((dim_hidden[3],), name='b3_' + str(robot_number))
+        w_output = init_weights((dim_hidden[3], dim_input[robot_number]), name='w_output'+str(robot_number))
+        b_output = init_bias((dim_input[robot_number],), name = 'b_output'+str(robot_number))
+        gen_vars += [w1, b1, w2, b2, w3, b3, w_output, b_output]
         gen_vars += [w_input, b_input]
         ### End variable declaration ####
         robot_inputs = []
@@ -1094,6 +1094,9 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
         layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
         layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
         layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
+        layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
+        layer_output = tf.nn.relu(tf.matmul(layer3, w_output) + b_output)
+        ae_loss.append( tf.nn.l2_loss(layer_output - nn_input) )
         contrast_layer.append(layer2)
         contrast_input.append(nn_input)
         for c in range(ncond):
@@ -1111,7 +1114,7 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
             wdisc1, bdisc1, wdisc2, bdisc2, wdisc3, bdisc3 = cond_dc_vars[c]
 
             ### Computation of discriminator ###
-            disc0 = tf.nn.relu(tf.matmul(layer3, wdisc1) + bdisc1)
+            disc0 = tf.nn.relu(tf.matmul(layer2, wdisc1) + bdisc1)
             disc1 = tf.nn.relu(tf.matmul(disc0, wdisc2) + bdisc2)
             disc2 = tf.matmul(disc1, wdisc3) + bdisc3
             ### End computation of discriminator ###
@@ -1154,6 +1157,8 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     other['gen_loss'] = gen_loss
     other['dc_vars'] = all_dc_vars
     other['nn_output'] = nn_output
+    other['ae_loss'] = ae_loss
+
     return nnets, weight_dict, other
 
 

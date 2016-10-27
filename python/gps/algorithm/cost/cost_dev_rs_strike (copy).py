@@ -6,7 +6,6 @@ import numpy as np
 from gps.algorithm.cost.config import COST_STATE
 from gps.algorithm.cost.cost import Cost
 from gps.algorithm.cost.cost_utils import evall1l2term, get_ramp_multiplier
-from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 import tensorflow as tf
 def init_weights(shape, name=None):
     return tf.Variable(tf.random_normal(shape, stddev=0.01), name=name)
@@ -25,7 +24,6 @@ class CostDevRs(Cost):
         self.init_feature_space()
         self.nn_weights = None
         self.traj_feats = None
-        self.costfk = CostFKBlock(hyperparams)
 
     def init_feature_space(self):
         """ Helper method to initialize the tf networks used """
@@ -33,12 +31,12 @@ class CostDevRs(Cost):
         # val_vars = pickle.load(open(self._hyperparams['load_file'], 'rb'))
         g = tf.Graph()
         self.graph = g
-        n_layers = 6
-        n_disc_layers = 3
-        layer_size = 15
-        dim_hidden = [25, 20, 20, 25, 123123]
+        n_layers = 5
+        layer_size = 60
+        dim_hidden = (n_layers - 1)*[layer_size]
+        feature_layers = []
         dim_input = 28
-        num_feats = 20
+        num_feats = 60
         with g.as_default():
             nn_input = tf.placeholder("float", [None, dim_input], name='nn_input1')
             w_input = init_weights((dim_input ,dim_hidden[0]), name='w_input1')
@@ -49,8 +47,8 @@ class CostDevRs(Cost):
             b2 = init_bias((dim_hidden[2],), name='b2_1')
             w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_1')
             b3 = init_bias((dim_hidden[3],), name='b3_1')
-            w_output = init_weights((dim_hidden[3], dim_input), name='w_output1')
-            b_output = init_bias((dim_input,), name = 'b_output1')
+            w_output = init_weights((dim_hidden[3], 1), name='w_output1')
+            b_output = init_bias((1,), name = 'b_output1')
             layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
             layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
             layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
@@ -125,7 +123,7 @@ class CostDevRs(Cost):
         ls = np.zeros((T,size_ls))
         lss = np.zeros((T, size_ls, size_ls))
         for t in range(T):
-            l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(20)/(2.0)).dot(feat_forward[t] - tgt[t])
+            l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(60)/(2.0)).dot(feat_forward[t] - tgt[t])
             grad_mult = (feat_forward[t] - tgt[t]).dot(gradients_all[t])
             ls[t] = grad_mult
             # ls[t, 0:4] = grad_mult[0:4]

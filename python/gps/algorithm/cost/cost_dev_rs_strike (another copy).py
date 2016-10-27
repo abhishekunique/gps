@@ -33,12 +33,13 @@ class CostDevRs(Cost):
         # val_vars = pickle.load(open(self._hyperparams['load_file'], 'rb'))
         g = tf.Graph()
         self.graph = g
-        n_layers = 6
-        n_disc_layers = 3
-        layer_size = 15
-        dim_hidden = [25, 20, 20, 25, 123123]
+        n_layers = 5
+        layer_size = 60
+        dim_hidden = (n_layers - 1)*[layer_size]
+        feature_layers = []
+        #TODO(andrew): make this variable
         dim_input = 28
-        num_feats = 20
+        num_feats = 60
         with g.as_default():
             nn_input = tf.placeholder("float", [None, dim_input], name='nn_input1')
             w_input = init_weights((dim_input ,dim_hidden[0]), name='w_input1')
@@ -49,19 +50,22 @@ class CostDevRs(Cost):
             b2 = init_bias((dim_hidden[2],), name='b2_1')
             w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_1')
             b3 = init_bias((dim_hidden[3],), name='b3_1')
-            w_output = init_weights((dim_hidden[3], dim_input), name='w_output1')
-            b_output = init_bias((dim_input,), name = 'b_output1')
+            w_output = init_weights((dim_hidden[3], 1), name='w_output1')
+            b_output = init_bias((1,), name = 'b_output1')
             layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
             layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
             layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
             feature_layers = layer2
             layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
             output = tf.matmul(layer3, w_output) + b_output
-            gradients = tf.gradients(layer2, nn_input)
+            # gradients = tf.gradients(layer2, nn_input)
+            self.lxx = None
+            gradients = tf.gradients(output, nn_input)
             init_op = tf.initialize_local_variables()
             self.feature_layers = feature_layers
-            self.gradients = gradients
+            self.gradients = gradients[0]
             self.input = nn_input
+            self.output = output
             col_sum = tf.reduce_sum(self.feature_layers, 0)
             split_feats = tf.split(0, num_feats, col_sum)
             grad_ops = []
@@ -85,8 +89,8 @@ class CostDevRs(Cost):
         with self.graph.as_default():
             for k,v in self.var_list_feat.items():
                 if k in self.nn_weights:   
-                    print("COST LOAD")
-                    print(k)         
+                    # print("COST LOAD")
+                    # print(k)         
                     assign_op = v.assign(self.nn_weights[k])
                     self.session.run(assign_op)
 
@@ -97,6 +101,8 @@ class CostDevRs(Cost):
             sample:  A single sample
         """
         self.load_weights()
+
+
         T = sample.T
         Du = sample.dU
         Dx = sample.dX
@@ -108,7 +114,7 @@ class CostDevRs(Cost):
         final_lxx = np.zeros((T, Dx, Dx))
         final_lux = np.zeros((T, Du, Dx))
 
-        tgt = self.traj_feats
+        # tgt = self.traj_feats
         x = sample.get_obs()
         # x = np.concatenate([x[:, 0:4], x[:, 5:9], x[:, 10:13], x[:, 19:22]], axis=1)
         feed_dict = {self.input: x}
@@ -119,21 +125,22 @@ class CostDevRs(Cost):
         grad_vals = self.session.run(self.grad_ops, feed_dict=feed_dict)
         for j, gv in enumerate(grad_vals):
             gradients_all[:, j, :] = gv
-        print("next")
+        # print("next")
+        #TODO(andrew): make this variable
         size_ls = 28
         l = np.zeros((T,))
         ls = np.zeros((T,size_ls))
         lss = np.zeros((T, size_ls, size_ls))
-        for t in range(T):
-            l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(20)/(2.0)).dot(feat_forward[t] - tgt[t])
-            grad_mult = (feat_forward[t] - tgt[t]).dot(gradients_all[t])
-            ls[t] = grad_mult
+        # for t in range(T):
+            # l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(60)/(2.0)).dot(feat_forward[t] - tgt[t])
+            # grad_mult = (feat_forward[t] - tgt[t]).dot(gradients_all[t])
+            # ls[t] = grad_mult
             # ls[t, 0:4] = grad_mult[0:4]
             # ls[t, 5:9] = grad_mult[4:8]
             # ls[t, 10:13] = grad_mult[8:11]
             # ls[t, 19:22] = grad_mult[11:14]
-            hess_mult = gradients_all[t].T.dot(gradients_all[t])
-            lss[t] = hess_mult
+            # hess_mult = gradients_all[t].T.dot(gradients_all[t])
+            # lss[t] = hess_mult
             # lss[t,0:4,0:4] = hess_mult[0:4, 0:4]
             # lss[t,5:9,0:4] = hess_mult[4:8, 0:4]
             # lss[t,10:13,0:4] = hess_mult[8:11, 0:4]
@@ -157,4 +164,29 @@ class CostDevRs(Cost):
         final_l += l
         final_lx += ls
         final_lxx += lss
+
+        if self.lxx is None:
+            def j(f, x, T, x_dim):
+                #TODO(andrew): kinda hacky, document this
+                sep_grads = [tf.reshape(tf.gradients(f[:, i], x)[0], (T, 1, x_dim)) for i in range(x_dim)]
+                combined_grads = tf.concat(1, sep_grads)
+                return tf.transpose(combined_grads, perm=[0, 2, 1])
+            self.lxx = j(self.gradients, self.input, T, Dx)
+
+        cmp_l, cmp_lx, cmp_lu, cmp_lxx, cmp_luu, cmp_lux = self.costfk.eval(sample)
+
+        sqT = np.sqrt(T)
+        O, G, Lxx = self.session.run([self.output, self.gradients, self.lxx], feed_dict=feed_dict)
+        O = np.reshape(O, (-1))
+        # import IPython
+        # IPython.embed()
+        final_l = O
+        final_lx = G
+        final_lxx = Lxx
+        # final_lx = np.zeros((T, Dx))
+        # final_lxx = np.zeros((T, Dx, Dx))
+        print(np.linalg.norm(cmp_l-final_l)/sqT, np.linalg.norm(cmp_lx-final_lx)/sqT,
+            np.linalg.norm(cmp_lu-final_lu)/sqT, np.linalg.norm(cmp_lxx-final_lxx)/sqT,
+            np.linalg.norm(cmp_luu - final_luu)/sqT, np.linalg.norm(cmp_lux - final_lux)/sqT)
+        # print final_l
         return final_l, final_lx, final_lu, final_lxx, final_luu, final_lux
