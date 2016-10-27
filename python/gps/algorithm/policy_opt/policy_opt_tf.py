@@ -159,6 +159,7 @@ class PolicyOptTf(PolicyOpt):
         for robot_number in range(self.num_robots):
             obs = obs_full[robot_number]
             N, T = obs.shape[:2]
+            print self._hyperparams
             dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])][robot_number]
             dU = self._dU[robot_number]
             obs = np.reshape(obs, (N*T, dO))

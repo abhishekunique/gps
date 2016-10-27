@@ -77,7 +77,9 @@ common = {
         'network_model_feat': invariant_subspace_test,
         'run_feats': False,
         'invariant_train': True,
-        'load_weights': '/home/abhigupta/gps/subspace_newweights.pkl',
+        'load_weights': 'subspace_newweights.pkl',
+        'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
+        'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
         'network_params': [{
             'dim_hidden': [10],
             'num_filters': [10, 20],
@@ -367,8 +369,8 @@ config = {
     'inner_iterations': 4,
     'to_log': [],
     'robot_iters': [range(25), range(0,25,2)],
-    'robot0_file': '/home/abhigupta/gps/experiments/blockstrike/data_files/traj_sample_itr_07_rn_00.pkl',
-    'robot1_file': '/home/abhigupta/gps/experiments/4link_blockstrike/data_files/traj_sample_itr_13_rn_00.pkl',
+    'robot0_file': '/home/andrewliu/research/gps/experiments/blockstrike/data_files/traj_sample_itr_16_rn_00.pkl',
+    'robot1_file': '/home/andrewliu/research/gps/experiments/blockstrike4/data_files/traj_sample_itr_16_rn_00.pkl',
     'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
     'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
 }
