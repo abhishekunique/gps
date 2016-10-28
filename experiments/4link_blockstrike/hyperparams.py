@@ -205,7 +205,7 @@ fk_cost_blocktouch = [{
 # } for i in common['train_conditions']]
 
 
-load_trajs = np.load('/home/abhigupta/subspace_sandbox/gps/experiments/blockstrike/data_files/fps_16_rn_00.pkl.npy')
+# load_trajs = np.load('fps_16_rn_00.pkl.npy')
 # import IPython
 # IPython.embed()
 test_cost = [{
@@ -213,8 +213,9 @@ test_cost = [{
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
-    'target_feats': load_trajs[0][i],
-    'load_file': '/home/abhigupta/subspace_sandbox/gps/subspace_state.pkl'
+    'cond_id': i,
+    'load_file': 'subspace_state_new.pkl',
+    'robot0_file': '/home/andrewliu/research/gps/experiments/blockstrike/data_files/traj_sample_itr_16_rn_00.pkl'
 } for i in agent[0]['train_conditions']]
 
 # load_trajs_act = np.load('/home/abhigupta/gps/experiments/blockstrike/data_files/actionfps_16_rn_00.pkl.npy')

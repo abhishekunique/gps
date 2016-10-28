@@ -27,42 +27,65 @@ class CostDevRs(Cost):
         """ Helper method to initialize the tf networks used """
         import pickle
         val_vars = pickle.load(open(self._hyperparams['load_file'], 'rb'))
+        samples = pickle.load(open(self._hyperparams['robot0_file'], 'rb'))[self._hyperparams['cond_id']]
         g = tf.Graph()
         self.graph = g
         n_layers = 5
         layer_size = 60
         dim_hidden = (n_layers - 1)*[layer_size]
         feature_layers = []
-        dim_input = 14
+        dim_input = [12, 14]
         num_feats = 60
         with g.as_default():
-            nn_input = tf.placeholder("float", [None, dim_input], name='nn_input1')
-            w_input = init_weights((dim_input ,dim_hidden[0]), name='w_input1')
-            b_input = init_bias((dim_hidden[0],), name='b_input1')
-            w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_1' )
-            b1 = init_bias((dim_hidden[1],), name='b1_1')
-            w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_1')
-            b2 = init_bias((dim_hidden[2],), name='b2_1')
-            w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_1')
-            b3 = init_bias((dim_hidden[3],), name='b3_1')
-            w_output = init_weights((dim_hidden[3], dim_input), name='w_output1')
-            b_output = init_bias((dim_input,), name = 'b_output1')
-            layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
-            layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
-            layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
-            feature_layers = layer2
-            layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
-            output = tf.matmul(layer3, w_output) + b_output
+            feature_layers = []
+            nn_inputs = []
+            for robot_number in range(2):
+                nn_input = tf.placeholder("float", [None, dim_input[robot_number]], name='nn_input' + str(robot_number))
+                nn_inputs.append(nn_input)
+                w_input = init_weights((dim_input[robot_number], dim_hidden[0]), name='w_input' + str(robot_number))
+                b_input = init_bias((dim_hidden[0],), name='b_input'+str(robot_number))
+                w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_' + str(robot_number))
+                b1 = init_bias((dim_hidden[1],), name='b1_' + str(robot_number))
+                w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_' + str(robot_number))
+                b2 = init_bias((dim_hidden[2],), name='b2_' + str(robot_number))
+                w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_' + str(robot_number))
+                b3 = init_bias((dim_hidden[3],), name='b3_' + str(robot_number))
+                w_output = init_weights((dim_hidden[3], dim_input[robot_number]), name='w_output'+str(robot_number))
+                b_output = init_bias((dim_input[robot_number],), name = 'b_output'+str(robot_number))
+                layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
+                layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
+                layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
+                feature_layers.append(layer2)
+                layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
+                output = tf.matmul(layer3, w_output) + b_output
+            # nn_input = tf.placeholder("float", [None, dim_input], name='nn_input1')
+            # w_input = init_weights((dim_input ,dim_hidden[0]), name='w_input1')
+            # b_input = init_bias((dim_hidden[0],), name='b_input1')
+            # w1 = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_1' )
+            # b1 = init_bias((dim_hidden[1],), name='b1_1')
+            # w2 = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_1')
+            # b2 = init_bias((dim_hidden[2],), name='b2_1')
+            # w3 = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_1')
+            # b3 = init_bias((dim_hidden[3],), name='b3_1')
+            # w_output = init_weights((dim_hidden[3], dim_input), name='w_output1')
+            # b_output = init_bias((dim_input,), name = 'b_output1')
+            # layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
+            # layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
+            # layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
+            # feature_layers = layer2
+            # layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
+            # output = tf.matmul(layer3, w_output) + b_output
+
             gradients = tf.gradients(layer2, nn_input)
             init_op = tf.initialize_local_variables()
             self.feature_layers = feature_layers
             self.gradients = gradients
-            self.input = nn_input
-            col_sum = tf.reduce_sum(self.feature_layers, 0)
+            self.input = nn_inputs
+            col_sum = tf.reduce_sum(self.feature_layers[1], 0)
             split_feats = tf.split(0, num_feats, col_sum)
             grad_ops = []
             for j in range(num_feats):
-                grad_ops += tf.gradients(split_feats[j], self.input)
+                grad_ops += tf.gradients(split_feats[j], self.input[1])
             self.grad_ops = grad_ops
         self.session = tf.Session(graph=g)
         self.session.run(init_op)
@@ -72,10 +95,20 @@ class CostDevRs(Cost):
                 self.var_list_feat[v.name] = v
             for k,v in self.var_list_feat.items():
                 if k in val_vars:   
-                    print("COST LOAD")
-                    print(k)         
+                    # print("COST LOAD")
+                    # print(k)         
                     assign_op = v.assign(val_vars[k])
                     self.session.run(assign_op)
+
+        x = samples[0].get_X()
+        x = np.concatenate([x[:, 0:3], x[:, 4:7], x[:, 8:11], x[:, 17:20]], axis=1)
+        # print x.shape
+        feed_dict = {self.input[0]: x}
+        feat_forward = self.session.run(self.feature_layers[0], feed_dict=feed_dict)
+        # import IPython
+        # IPython.embed()
+        self.tgt = feat_forward
+
 
     def eval(self, sample):
         """
@@ -94,11 +127,13 @@ class CostDevRs(Cost):
         final_lxx = np.zeros((T, Dx, Dx))
         final_lux = np.zeros((T, Du, Dx))
 
-        tgt = self._hyperparams['target_feats']
+        tgt = self.tgt#self._hyperparams['target_feats']
         x = sample.get_obs()
         x = np.concatenate([x[:, 0:4], x[:, 5:9], x[:, 10:13], x[:, 19:22]], axis=1)
-        feed_dict = {self.input: x}
-        feat_forward = self.session.run(self.feature_layers, feed_dict=feed_dict)
+        # import IPython
+        # IPython.embed()
+        feed_dict = {self.input[1]: x}
+        feat_forward = self.session.run(self.feature_layers[1], feed_dict=feed_dict)
         num_feats = feat_forward.shape[1]
         num_inputs = x.shape[1]
         gradients_all = np.zeros((T, num_feats, num_inputs))
