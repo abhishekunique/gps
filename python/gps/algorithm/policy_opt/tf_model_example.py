@@ -90,7 +90,7 @@ def example_tf_network(dim_input=27, dim_output=7, batch_size=25, network_config
 
 def multi_modal_network(dim_input=27, dim_output=7, batch_size=25, network_config=None):
     """
-    An example a network in theano that has both state and image inputs.
+    An example a network in tf that has both state and image inputs.
 
     Args:
         dim_input: Dimensionality of input.
@@ -164,7 +164,7 @@ def multi_modal_network(dim_input=27, dim_output=7, batch_size=25, network_confi
 
 def multi_modal_network_fp(dim_input=27, dim_output=7, batch_size=25, network_config=None):
     """
-    An example a network in theano that has both state and image inputs, with the feature
+    An example a network in tf that has both state and image inputs, with the feature
     point architecture (spatial softmax + expectation).
     Args:
         dim_input: Dimensionality of input.
