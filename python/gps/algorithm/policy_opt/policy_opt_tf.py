@@ -389,10 +389,16 @@ class PolicyOptTf(PolicyOpt):
 
         num_conds, num_samples, T_extended, dO = obs_extended_full[0].shape
         cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
+        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 30))
+        l2_loss = 0
         for cond in range(num_conds):
             for sample_num in range(num_samples):
-                feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num]}
+                feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num], 
+                            self.other['state_inputs'][1]: obs_extended_full[1][cond][sample_num]}
                 cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+                cond_feats_other[cond, sample_num] = self.sess.run(self.other['state_features_list'][1], feed_dict=feed_dict)
+                l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
+        print(l2_loss)
         np.save("3link_feats.npy", np.asarray(cond_feats))
         print("done training invariant autoencoder and saving weights")
 
