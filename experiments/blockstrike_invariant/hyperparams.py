@@ -22,7 +22,7 @@ from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd, init_from_fil
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, transition_reward_model_domainconfusion
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, transition_reward_model_domainconfusion, transition_reward_model
 from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
 from gps.utility.data_logger import DataLogger
 
@@ -104,7 +104,7 @@ common = {
             'batch_size': 25,
             # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
         }],
-        'iterations': 60000,
+        'iterations': 30000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
@@ -372,7 +372,7 @@ config = {
     'save_wts': True,
     'common': common,
     'agent': agent,
-    'gui_on': True,
+    'gui_on': False,
     'algorithm': algorithm,
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],

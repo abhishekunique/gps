@@ -12,6 +12,72 @@ from gps.algorithm.policy_opt.config import POLICY_OPT_TF
 from gps.algorithm.policy_opt.tf_utils import TfSolver
 LOGGER = logging.getLogger(__name__)
 import pickle
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import plot, ion, show
+from matplotlib.backends.backend_pdf import PdfPages
+
+class MLPlotter:
+    """
+    Plot/save machine learning data
+    """
+    def __init__(self, title):
+        self.error_generator = []
+        self.error_discriminator = []
+        self.error_generator_only = []
+        ### setup plot figure
+        self.f, self.axes = plt.subplots(1, 3, figsize=(15,7))
+        mng = plt.get_current_fig_manager()
+        plt.suptitle(title)
+        plt.show(block=False)
+
+    def plot(self):
+        f, axes = self.f, self.axes
+
+        for ax in axes:
+                ax.clear()
+
+        axes[0].plot(*zip(*self.error_generator), color='k', linestyle='-', label='Train')
+        axes[1].plot(*zip(*self.error_discriminator), color='r', linestyle='--', label='Val')
+        axes[2].plot(*zip(*self.error_generator_only), color='r', linestyle='--', label='Val')
+
+        axes[0].set_title('Error')
+        axes[0].set_ylabel('Percentage')
+        axes[0].set_xlabel('Epoch')
+
+        axes[1].set_title('Error')
+        axes[1].set_ylabel('Percentage')
+        axes[1].set_xlabel('Epoch')
+
+        axes[2].set_title('Error')
+        axes[2].set_ylabel('Percentage')
+        axes[2].set_xlabel('Epoch')
+
+        f.canvas.draw()
+
+        plt.legend()
+        plt.pause(0.01)
+
+    def add_generator(self, itr, err):
+        self.error_generator.append((itr, err))
+
+    def add_discriminator(self, itr, err):
+        self.error_discriminator.append((itr, err))
+
+    def add_generator_only(self, itr, err):
+        self.error_generator_only.append((itr, err))
+
+    def save(self, save_dir):
+        with open(os.path.join(save_dir, 'plotter.pkl'), 'w') as f:
+            pickle.dump({'error_generator':self.error_generator,
+                         'error_discriminator':self.error_discriminator,
+                         'error_generator_only':self.error_generator_only},
+                        f)
+
+        self.f.savefig(os.path.join(save_dir, 'training.png'))
+
+    def close(self):
+        plt.close(self.f)
 
 class PolicyOptTf(PolicyOpt):
     """ Policy optimization using tensor flow for DAG computations/nonlinear function approximation. """
@@ -105,8 +171,6 @@ class PolicyOptTf(PolicyOpt):
             dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])]
         else:
             dO = self._dO
-        import IPython
-        IPython.embed()
         tf_maps, other = tf_map_generator(dim_input_state=dO, dim_input_action=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
@@ -129,7 +193,7 @@ class PolicyOptTf(PolicyOpt):
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver =TfSolver(loss_scalar=tf.add_n(self.other['all_losses']) + tf.add_n(self.other['gen_loss']),
+        self.solver =TfSolver(loss_scalar=tf.add_n(self.other['all_losses']) + 10*tf.add_n(self.other['gen_loss']),
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
@@ -139,7 +203,7 @@ class PolicyOptTf(PolicyOpt):
 
         self.dc_solver =TfSolver(loss_scalar=tf.add_n(self.other['dc_loss']),
                               solver_name=self._hyperparams['solver_type'],
-                              base_lr=self._hyperparams['lr'],
+                              base_lr=0.0001,
                               lr_policy=self._hyperparams['lr_policy'],
                               momentum=self._hyperparams['momentum'],
                               weight_decay=self._hyperparams['weight_decay'],
@@ -245,10 +309,19 @@ class PolicyOptTf(PolicyOpt):
         idx = range(N*T)
         np.random.shuffle(idx)
         batches_per_epoch = np.floor(N*T / self.batch_size)
-        average_loss = 0
+
+
+
+
         dc_loss = 0
+        pred_error = 0
+        average_loss = 0
         all_losses = np.zeros((len(self.other['all_losses']),))
+        gen_loss = np.zeros((len(self.other['gen_loss']),))
         all_losses_dc = np.zeros((len(self.other['dc_loss']),))
+        mlplt = MLPlotter("Learning curves")
+        robot0_classification = np.zeros((self.batch_size,))
+        robot1_classification = np.ones((self.batch_size,))
         for i in range(self._hyperparams['iterations']):
             feed_dict = {}
             start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
@@ -259,16 +332,28 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
             all_losses += self.sess.run(self.other['all_losses'], feed_dict)
-
+            gen_loss += self.sess.run(self.other['gen_loss'], feed_dict)
+            predictions_full = self.sess.run(self.other['predictions_full'], feed_dict)
+            for robot_number in range(self.num_robots):
+                for pred in predictions_full[robot_number]:
+                    pred_error += np.sum(pred != [robot0_classification, robot1_classification][robot_number])
             average_loss += train_loss
-            if i % 1000 == 0 and i != 0:
+            if i % 200 == 0 and i != 0:
 
                 print 'supervised tensorflow loss is '
-                print (average_loss/1000)
-                print (all_losses/1000)
+                print (average_loss/200)
+                print (all_losses/200)
+                print (gen_loss/200)
+
+                mlplt.add_generator(i, average_loss / 200)
+                mlplt.add_generator_only(i, np.sum(all_losses) / 200)
+                print("PREDICTION ERROR:")
+                print(pred_error/(2.0*self.batch_size*200))
+                pred_error = 0
                 print("--------------------------")
                 average_loss = 0
                 all_losses = np.zeros((len(self.other['all_losses']),))
+                gen_loss = np.zeros((len(self.other['gen_loss']),))
 
 
             dc_feed_dict = {}
@@ -281,14 +366,18 @@ class PolicyOptTf(PolicyOpt):
             dc_loss += self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
             all_losses_dc += self.sess.run(self.other['dc_loss'], dc_feed_dict)
 
-            if i % 1000 == 0 and i != 0:
+            if i % 200 == 0 and i != 0:
 
                 print 'supervised dc loss is '
-                print (dc_loss/1000)
-                print (all_losses_dc/1000)
+                print (dc_loss/200)
+                print (all_losses_dc/200)
+                mlplt.add_discriminator(i, dc_loss / 200)
                 print("--------------------------")
                 dc_loss = 0
                 all_losses_dc = np.zeros((len(self.other['dc_loss']),))
+        mlplt.plot()
+        raw_input()
+        mlplt.close()
         import IPython
         IPython.embed()
         var_dict = {}

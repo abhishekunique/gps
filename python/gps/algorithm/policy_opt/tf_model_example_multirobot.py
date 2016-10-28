@@ -1175,10 +1175,242 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
 
     return nnets, other
 
+# def transition_reward_model_domainconfusion(dim_input_state=[27, 27], dim_input_action=[27, 27], batch_size=25, network_config=None, ncond=0):
+#     state_features_list = []
+#     action_features_list = []
+#     transition_out_list = []
+#     state_inputs = []
+#     next_state_inputs = []
+#     action_inputs = []
+#     nnets = []
+#     other = {}
+#     gen_loss = []
+#     dc_loss = []
+#     all_losses = []
+#     all_variables = []
+#     dc_variables = []
+#     #defining layer sizes [TOOD: Get from hyperparams]
+#     num_hidden = 4
+#     num_hidden_action = 4
+#     num_hidden_transition = 3
+#     num_disc_layers = 3
+#     layer_size = 30
+#     dim_hidden = [layer_size]*num_hidden
+#     dim_hidden_action = [layer_size]*num_hidden_action
+#     dim_hidden_transition = [layer_size]*num_hidden_transition
+#     dim_hidden_disc = [layer_size]*num_disc_layers
+
+#     #Defining the transition variables
+#     w0_transition = init_weights((dim_hidden[2] + dim_hidden_action[2], dim_hidden_transition[0]), name='w0_transition')
+#     b0_transition = init_bias((dim_hidden_transition[0],), name='b0_transition')
+#     w1_transition = init_weights((dim_hidden_transition[0], dim_hidden_transition[1]), name='w1_transition')
+#     b1_transition = init_bias((dim_hidden_transition[1],), name='b1_transition')
+#     w2_transition = init_weights((dim_hidden_transition[1], dim_hidden_transition[2]), name='w2_transition')
+#     b2_transition = init_bias((dim_hidden_transition[2],), name='b2_transition')
+#     w3_transition = init_weights((dim_hidden_transition[2], dim_hidden[2]), name='w3_transition')
+#     b3_transition = init_bias((dim_hidden[2],), name='b3_transition')
+
+#     all_variables += [w0_transition, b0_transition]
+#     all_variables += [w1_transition, b1_transition]
+#     all_variables += [w2_transition, b2_transition]
+#     all_variables += [w3_transition, b3_transition]
+
+#     wdisc0_1 = init_weights((dim_hidden[2], dim_hidden_disc[0]), name='wdisc0_1')
+#     bdisc0_1 = init_bias((dim_hidden_disc[0],), name='bdisc0_1')
+#     wdisc1_1 = init_weights((dim_hidden_disc[0], dim_hidden_disc[1]), name='wdisc1_1')
+#     bdisc1_1 = init_bias((dim_hidden_disc[1],), name='bdisc1_1')
+#     wdisc2_1 = init_weights((dim_hidden_disc[1], 2), name='wdisc2_1')
+#     bdisc2_1 = init_bias((2,), name='bdisc2_1')
+
+#     dc_variables += [wdisc0_1, bdisc0_1]
+#     dc_variables += [wdisc1_1, bdisc1_1]
+#     dc_variables += [wdisc2_1, bdisc2_1]
+
+
+#     wdisc0_2 = init_weights((dim_hidden_action[2], dim_hidden_disc[0]), name='wdisc0_2')
+#     bdisc0_2 = init_bias((dim_hidden_disc[0],), name='bdisc0_2')
+#     wdisc1_2 = init_weights((dim_hidden_disc[0], dim_hidden_disc[1]), name='wdisc1_2')
+#     bdisc1_2 = init_bias((dim_hidden_disc[1],), name='bdisc1_2')
+#     wdisc2_2 = init_weights((dim_hidden_disc[1], 2), name='wdisc2_2')
+#     bdisc2_2 = init_bias((2,), name='bdisc2_2')
+
+#     dc_variables += [wdisc0_2, bdisc0_2]
+#     dc_variables += [wdisc1_2, bdisc1_2]
+#     dc_variables += [wdisc2_2, bdisc2_2]
+
+
+#     wdisc0_3 = init_weights((dim_hidden[2], dim_hidden_disc[0]), name='wdisc0_3')
+#     bdisc0_3 = init_bias((dim_hidden_disc[0],), name='bdisc0_3')
+#     wdisc1_3 = init_weights((dim_hidden_disc[0], dim_hidden_disc[1]), name='wdisc1_3')
+#     bdisc1_3 = init_bias((dim_hidden_disc[1],), name='bdisc1_3')
+#     wdisc2_3 = init_weights((dim_hidden_disc[1], 2), name='wdisc2_3')
+#     bdisc2_3 = init_bias((2,), name='bdisc2_3')
+
+#     dc_variables += [wdisc0_3, bdisc0_3]
+#     dc_variables += [wdisc1_3, bdisc1_3]
+#     dc_variables += [wdisc2_3, bdisc2_3]
+
+#     predictions_full = []
+#     for robot_number, robot_params in enumerate(network_config):
+#         #defining input placeholders
+#         predictions_list = []
+#         state_input = tf.placeholder("float", [None, dim_input_state[robot_number]], name='nn_input_state' + str(robot_number))
+#         next_state_input = tf.placeholder("float", [None, dim_input_state[robot_number]], name='next_input_state' + str(robot_number))
+#         action_input = tf.placeholder("float", [None, dim_input_action[robot_number]], name='nn_input_action' + str(robot_number))
+
+        
+#         #appending into lists
+#         state_inputs.append(state_input)
+#         next_state_inputs.append(next_state_input)
+#         action_inputs.append(action_input)
+
+#         #DEFINING STATE VARIABLES
+#         w0_state = init_weights((dim_input_state[robot_number], dim_hidden[0]), name='w0_state' + str(robot_number))
+#         b0_state = init_bias((dim_hidden[0],), name='b0_state'+str(robot_number))
+#         w1_state = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_state' + str(robot_number))
+#         b1_state = init_bias((dim_hidden[1],), name='b1_state' + str(robot_number))
+#         w2_state = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_state' + str(robot_number))
+#         b2_state = init_bias((dim_hidden[2],), name='b2_state' + str(robot_number))
+
+#         w3_state_ae = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_state_ae' + str(robot_number))
+#         b3_state_ae = init_bias((dim_hidden[3],), name='b3_state_ae' + str(robot_number))
+#         w4_state_ae = init_weights((dim_hidden[3], dim_input_state[robot_number]), name='w4_state_ae' + str(robot_number))
+#         b4_state_ae = init_bias((dim_input_state[robot_number],), name='b4_state_ae' + str(robot_number))
+
+#         all_variables += [w0_state, b0_state]
+#         all_variables += [w1_state, b1_state]
+#         all_variables += [w2_state, b2_state]
+#         all_variables += [w3_state_ae, b3_state_ae]
+#         all_variables += [w4_state_ae, b4_state_ae]
+#         #END DEFINING STATE VARIABLES
+
+#         ### STATE EMBEDDING ###
+#         layer0_state = tf.nn.relu(tf.matmul(state_input, w0_state) + b0_state)
+#         layer1_state = tf.nn.relu(tf.matmul(layer0_state, w1_state) + b1_state)
+#         layer2_state = tf.matmul(layer1_state, w2_state) + b2_state
+#         state_features = layer2_state
+#         state_features_list.append(state_features)
+#         #autoencoding output#
+#         layer3_state_ae = tf.nn.relu(tf.matmul(layer2_state, w3_state_ae) + b3_state_ae)
+#         output_state_ae = tf.matmul(layer3_state_ae, w4_state_ae) + b4_state_ae
+#         ### END STATE EMBEDDING ###
+
+#         #DEFINING ACTION VARIABLES
+#         w0_action = init_weights((dim_input_action[robot_number], dim_hidden_action[0]), name='w0_action' + str(robot_number))
+#         b0_action = init_bias((dim_hidden_action[0],), name='b0_action'+str(robot_number))
+#         w1_action = init_weights((dim_hidden_action[0], dim_hidden_action[1]), name='w1_action' + str(robot_number))
+#         b1_action = init_bias((dim_hidden_action[1],), name='b1_action' + str(robot_number))
+#         w2_action = init_weights((dim_hidden_action[1], dim_hidden_action[2]), name='w2_action' + str(robot_number))
+#         b2_action = init_bias((dim_hidden_action[2],), name='b2_action' + str(robot_number))
+
+#         w3_action = init_weights((dim_hidden_action[2], dim_hidden_action[3]), name='w3_action' + str(robot_number))
+#         b3_action = init_bias((dim_hidden_action[3],), name='b3_action' + str(robot_number))
+#         w4_action = init_weights((dim_hidden_action[3], dim_input_action[robot_number]), name='w4_action' + str(robot_number))
+#         b4_action = init_bias((dim_input_action[robot_number],), name='b4_action' + str(robot_number))
+
+#         all_variables += [w0_action, b0_action]
+#         all_variables += [w1_action, b1_action]
+#         all_variables += [w2_action, b2_action]
+#         all_variables += [w3_action, b3_action]
+#         all_variables += [w4_action, b4_action]
+#         #END DEFINING ACTION VARIABLES
+
+
+#         ### ACTION EMBEDDING ###
+#         layer0_action = tf.nn.relu(tf.matmul(action_input, w0_action) + b0_action)
+#         layer1_action = tf.nn.relu(tf.matmul(layer0_action, w1_action) + b1_action)
+#         layer2_action = tf.matmul(layer1_action, w2_action) + b2_action
+#         action_features = layer2_action
+#         action_features_list.append(action_features)
+#         #autoencoding output#
+#         layer3_action = tf.nn.relu(tf.matmul(layer2_action, w3_action) + b3_action)
+#         output_action = tf.matmul(layer3_action, w4_action) + b4_action
+#         ### END ACTION EMBEDDING ###
+
+#         ### START TRANSITION NET ###
+#         transition_input = tf.concat(concat_dim=1, values=[state_features, action_features])
+#         layer0_transition = tf.nn.relu(tf.matmul(transition_input, w0_transition) + b0_transition)
+#         layer1_transition = tf.nn.relu(tf.matmul(layer0_transition, w1_transition) + b1_transition)
+#         layer2_transition = tf.nn.relu(tf.matmul(layer1_transition, w2_transition) + b2_transition)
+#         output_transition = tf.matmul(layer2_transition, w3_transition) + b3_transition
+#         transition_out_list.append(output_transition)
+#         ### END TRANSITION NET ###
+
+#         ### START NEXT STATE EMBEDDING ###
+#         layer0_nextstate = tf.nn.relu(tf.matmul(next_state_input, w0_state) + b0_state)
+#         layer1_nextstate = tf.nn.relu(tf.matmul(layer0_nextstate, w1_state) + b1_state)
+#         layer2_nextstate = tf.matmul(layer1_nextstate, w2_state) + b2_state
+#         next_state_features = layer2_nextstate
+#         ### END NEXT STATE EMBEDDING ###
+
+#         loss_transition = tf.nn.l2_loss(output_transition - next_state_features)
+#         loss_ae_action = tf.nn.l2_loss(output_action - action_input)
+#         loss_ae_state = tf.nn.l2_loss(output_state_ae - state_input)
+#         all_losses += [loss_transition, loss_ae_action, loss_ae_state]
+
+#         ### DISCRIMINATOR 1 ###
+#         disc0_1 = tf.nn.relu(tf.matmul(state_features, wdisc0_1) + bdisc0_1)
+#         disc1_1 = tf.nn.relu(tf.matmul(disc0_1, wdisc1_1) + bdisc1_1)
+#         disc2_1 = tf.matmul(disc1_1, wdisc2_1) + bdisc2_1
+#         predictions_list.append(tf.argmax(disc2_1, 1))
+#         ### Terms for unsupervised domain confusion ###
+#         dc_softmax_1 = tf.log(tf.nn.softmax(disc2_1)+ 1e-5)
+#         dc_currrobot_loss_1 = -tf.reduce_sum(dc_softmax_1[:,robot_number])
+#         dc_loss.append(dc_currrobot_loss_1)
+#         gen_loss.append(-dc_currrobot_loss_1)
+#         # ### END DISCRIMINATOR 1 ###
+
+#         # ### DISCRIMINATOR 2 ###
+#         disc0_2 = tf.nn.relu(tf.matmul(action_features, wdisc0_2) + bdisc0_2)
+#         disc1_2 = tf.nn.relu(tf.matmul(disc0_2, wdisc1_2) + bdisc1_2)
+#         disc2_2 = tf.matmul(disc1_2, wdisc2_2) + bdisc2_2
+#         predictions_list.append(tf.argmax(disc2_2, 1))
+#         ### Terms for unsupervised domain confusion ###
+#         dc_softmax_2 = tf.log(tf.nn.softmax(disc2_2) + 1e-5)
+#         dc_currrobot_loss_2 = -tf.reduce_sum(dc_softmax_2[:,robot_number])
+#         dc_loss.append(dc_currrobot_loss_2)
+#         gen_loss.append(-dc_currrobot_loss_2)
+#         # ### END DISCRIMINATOR 2 ###
+
+#         # ### DISCRIMINATOR 3 ###
+#         disc0_3 = tf.nn.relu(tf.matmul(output_transition, wdisc0_3) + bdisc0_3)
+#         disc1_3 = tf.nn.relu(tf.matmul(disc0_3, wdisc1_3) + bdisc1_3)
+#         disc2_3 = tf.matmul(disc1_3, wdisc2_3) + bdisc2_3
+#         predictions_list.append(tf.argmax(disc2_3, 1))
+#         ### Terms for unsupervised domain confusion ###
+#         dc_softmax_3 = tf.log(tf.nn.softmax(disc2_3) + 1e-5)
+#         dc_currrobot_loss_3 = -tf.reduce_sum(dc_softmax_3[:,robot_number])
+#         dc_loss.append(dc_currrobot_loss_3)
+#         gen_loss.append(-dc_currrobot_loss_3)
+#         # ### END DISCRIMINATOR 3 ###
+#         nnets.append(TfMap.init_from_lists([None, None, None], [None], [None], None, None))
+#         predictions_full.append(predictions_list)
+
+#     all_variables_dict = {}
+#     for v in all_variables:
+#         all_variables_dict[v.name] = v
+#     dc_variables_dict = {}
+#     for v in dc_variables:
+#         dc_variables_dict[v.name] = v
+#     other['all_losses'] = all_losses
+#     other['all_variables'] = all_variables_dict
+#     other['state_inputs'] = state_inputs
+#     other['next_state_inputs'] = next_state_inputs
+#     other['action_inputs'] = action_inputs
+#     other['state_features_list'] = state_features_list
+#     other['action_features_list'] = action_features_list
+#     other['transition_out_list'] = transition_out_list
+#     other['dc_variables'] = dc_variables_dict
+#     other['dc_loss'] = dc_loss
+#     other['gen_loss'] = gen_loss
+#     other['predictions_full'] = predictions_full
+#     import IPython
+#     IPython.embed()
+#     return nnets, other
+
+
 def transition_reward_model_domainconfusion(dim_input_state=[27, 27], dim_input_action=[27, 27], batch_size=25, network_config=None, ncond=0):
     state_features_list = []
-    action_features_list = []
-    transition_out_list = []
     state_inputs = []
     next_state_inputs = []
     action_inputs = []
@@ -1196,24 +1428,7 @@ def transition_reward_model_domainconfusion(dim_input_state=[27, 27], dim_input_
     num_disc_layers = 3
     layer_size = 30
     dim_hidden = [layer_size]*num_hidden
-    dim_hidden_action = [layer_size]*num_hidden_action
-    dim_hidden_transition = [layer_size]*num_hidden_transition
     dim_hidden_disc = [layer_size]*num_disc_layers
-
-    #Defining the transition variables
-    w0_transition = init_weights((dim_hidden[2] + dim_hidden_action[2], dim_hidden_transition[0]), name='w0_transition')
-    b0_transition = init_bias((dim_hidden_transition[0],), name='b0_transition')
-    w1_transition = init_weights((dim_hidden_transition[0], dim_hidden_transition[1]), name='w1_transition')
-    b1_transition = init_bias((dim_hidden_transition[1],), name='b1_transition')
-    w2_transition = init_weights((dim_hidden_transition[1], dim_hidden_transition[2]), name='w2_transition')
-    b2_transition = init_bias((dim_hidden_transition[2],), name='b2_transition')
-    w3_transition = init_weights((dim_hidden_transition[2], dim_hidden[2]), name='w3_transition')
-    b3_transition = init_bias((dim_hidden[2],), name='b3_transition')
-
-    all_variables += [w0_transition, b0_transition]
-    all_variables += [w1_transition, b1_transition]
-    all_variables += [w2_transition, b2_transition]
-    all_variables += [w3_transition, b3_transition]
 
     wdisc0_1 = init_weights((dim_hidden[2], dim_hidden_disc[0]), name='wdisc0_1')
     bdisc0_1 = init_bias((dim_hidden_disc[0],), name='bdisc0_1')
@@ -1227,35 +1442,14 @@ def transition_reward_model_domainconfusion(dim_input_state=[27, 27], dim_input_
     dc_variables += [wdisc2_1, bdisc2_1]
 
 
-    wdisc0_2 = init_weights((dim_hidden_action[2], dim_hidden_disc[0]), name='wdisc0_2')
-    bdisc0_2 = init_bias((dim_hidden_disc[0],), name='bdisc0_2')
-    wdisc1_2 = init_weights((dim_hidden_disc[0], dim_hidden_disc[1]), name='wdisc1_2')
-    bdisc1_2 = init_bias((dim_hidden_disc[1],), name='bdisc1_2')
-    wdisc2_2 = init_weights((dim_hidden_disc[1], 2), name='wdisc2_2')
-    bdisc2_2 = init_bias((2,), name='bdisc2_2')
-
-    dc_variables += [wdisc0_2, bdisc0_2]
-    dc_variables += [wdisc1_2, bdisc1_2]
-    dc_variables += [wdisc2_2, bdisc2_2]
-
-
-    wdisc0_3 = init_weights((dim_hidden[2], dim_hidden_disc[0]), name='wdisc0_3')
-    bdisc0_3 = init_bias((dim_hidden_disc[0],), name='bdisc0_3')
-    wdisc1_3 = init_weights((dim_hidden_disc[0], dim_hidden_disc[1]), name='wdisc1_3')
-    bdisc1_3 = init_bias((dim_hidden_disc[1],), name='bdisc1_3')
-    wdisc2_3 = init_weights((dim_hidden_disc[1], 2), name='wdisc2_3')
-    bdisc2_3 = init_bias((2,), name='bdisc2_3')
-
-    dc_variables += [wdisc0_3, bdisc0_3]
-    dc_variables += [wdisc1_3, bdisc1_3]
-    dc_variables += [wdisc2_3, bdisc2_3]
-
-
+    predictions_full = []
     for robot_number, robot_params in enumerate(network_config):
         #defining input placeholders
+        predictions_list = []
         state_input = tf.placeholder("float", [None, dim_input_state[robot_number]], name='nn_input_state' + str(robot_number))
         next_state_input = tf.placeholder("float", [None, dim_input_state[robot_number]], name='next_input_state' + str(robot_number))
         action_input = tf.placeholder("float", [None, dim_input_action[robot_number]], name='nn_input_action' + str(robot_number))
+
         
         #appending into lists
         state_inputs.append(state_input)
@@ -1293,104 +1487,27 @@ def transition_reward_model_domainconfusion(dim_input_state=[27, 27], dim_input_
         output_state_ae = tf.matmul(layer3_state_ae, w4_state_ae) + b4_state_ae
         ### END STATE EMBEDDING ###
 
-        #DEFINING ACTION VARIABLES
-        w0_action = init_weights((dim_input_action[robot_number], dim_hidden_action[0]), name='w0_action' + str(robot_number))
-        b0_action = init_bias((dim_hidden_action[0],), name='b0_action'+str(robot_number))
-        w1_action = init_weights((dim_hidden_action[0], dim_hidden_action[1]), name='w1_action' + str(robot_number))
-        b1_action = init_bias((dim_hidden_action[1],), name='b1_action' + str(robot_number))
-        w2_action = init_weights((dim_hidden_action[1], dim_hidden_action[2]), name='w2_action' + str(robot_number))
-        b2_action = init_bias((dim_hidden_action[2],), name='b2_action' + str(robot_number))
-
-        w3_action = init_weights((dim_hidden_action[2], dim_hidden_action[3]), name='w3_action' + str(robot_number))
-        b3_action = init_bias((dim_hidden_action[3],), name='b3_action' + str(robot_number))
-        w4_action = init_weights((dim_hidden_action[3], dim_input_action[robot_number]), name='w4_action' + str(robot_number))
-        b4_action = init_bias((dim_input_action[robot_number],), name='b4_action' + str(robot_number))
-
-        all_variables += [w0_action, b0_action]
-        all_variables += [w1_action, b1_action]
-        all_variables += [w2_action, b2_action]
-        all_variables += [w3_action, b3_action]
-        all_variables += [w4_action, b4_action]
-        #END DEFINING ACTION VARIABLES
-
-
-        ### ACTION EMBEDDING ###
-        layer0_action = tf.nn.relu(tf.matmul(action_input, w0_action) + b0_action)
-        layer1_action = tf.nn.relu(tf.matmul(layer0_action, w1_action) + b1_action)
-        layer2_action = tf.matmul(layer1_action, w2_action) + b2_action
-        action_features = layer2_action
-        action_features_list.append(action_features)
-        #autoencoding output#
-        layer3_action = tf.nn.relu(tf.matmul(layer2_action, w3_action) + b3_action)
-        output_action = tf.matmul(layer3_action, w4_action) + b4_action
-        ### END ACTION EMBEDDING ###
-
-        ### START TRANSITION NET ###
-        transition_input = tf.concat(concat_dim=1, values=[state_features, action_features])
-        layer0_transition = tf.nn.relu(tf.matmul(transition_input, w0_transition) + b0_transition)
-        layer1_transition = tf.nn.relu(tf.matmul(layer0_transition, w1_transition) + b1_transition)
-        layer2_transition = tf.nn.relu(tf.matmul(layer1_transition, w2_transition) + b2_transition)
-        output_transition = tf.matmul(layer2_transition, w3_transition) + b3_transition
-        transition_out_list.append(output_transition)
-        ### END TRANSITION NET ###
-
-        ### START NEXT STATE EMBEDDING ###
-        layer0_nextstate = tf.nn.relu(tf.matmul(next_state_input, w0_state) + b0_state)
-        layer1_nextstate = tf.nn.relu(tf.matmul(layer0_nextstate, w1_state) + b1_state)
-        layer2_nextstate = tf.matmul(layer1_nextstate, w2_state) + b2_state
-        next_state_features = layer2_nextstate
-        ### END NEXT STATE EMBEDDING ###
-
-        loss_transition = tf.nn.l2_loss(output_transition - next_state_features)
-        loss_ae_action = tf.nn.l2_loss(output_action - action_input)
         loss_ae_state = tf.nn.l2_loss(output_state_ae - state_input)
-        all_losses += [loss_transition, loss_ae_action, loss_ae_state]
-        #contrastive loss version
-        # if robot_number == 1:
-        #     loss_contrastive_state = tf.nn.l2_loss(state_features_list[0] - state_features_list[1])
-        #     loss_contrastive_action = tf.nn.l2_loss(action_features_list[0] - action_features_list[1])
-        #     loss_contrastive_transition = tf.nn.l2_loss(transition_out_list[0] - transition_out_list[1])
-        #     all_losses += [loss_contrastive_state, loss_contrastive_action, loss_contrastive_transition]
+        all_losses += [loss_ae_state]
 
         ### DISCRIMINATOR 1 ###
         disc0_1 = tf.nn.relu(tf.matmul(state_features, wdisc0_1) + bdisc0_1)
         disc1_1 = tf.nn.relu(tf.matmul(disc0_1, wdisc1_1) + bdisc1_1)
         disc2_1 = tf.matmul(disc1_1, wdisc2_1) + bdisc2_1
+        predictions_list.append(tf.argmax(disc2_1, 1))
         ### Terms for unsupervised domain confusion ###
-        softmax_1 = tf.nn.softmax(disc2_1)
-        dc_softmax_1 =  tf.log(softmax_1 + 1e-5)
+        dc_softmax_1 = tf.log(tf.nn.softmax(disc2_1)+ 1e-5)
         dc_currrobot_loss_1 = -tf.reduce_sum(dc_softmax_1[:,robot_number])
         dc_loss.append(dc_currrobot_loss_1)
         if robot_number == 1:
-            gen_loss.append(tf.reduce_sum(tf.log(softmax_1[:,1] + 1e-5)) )
+            gen_loss.append(-tf.reduce_sum(dc_softmax_1[:,0]))
+        if robot_number == 0:
+            gen_loss.append(-tf.reduce_sum(dc_softmax_1[:,1]))
         # ### END DISCRIMINATOR 1 ###
 
-        # ### DISCRIMINATOR 2 ###
-        disc0_2 = tf.nn.relu(tf.matmul(action_features, wdisc0_2) + bdisc0_2)
-        disc1_2 = tf.nn.relu(tf.matmul(disc0_2, wdisc1_2) + bdisc1_2)
-        disc2_2 = tf.matmul(disc1_2, wdisc2_2) + bdisc2_2
-        ### Terms for unsupervised domain confusion ###
-        softmax_2 = tf.nn.softmax(disc2_2)
-        dc_softmax_2 =  tf.log(softmax_2 + 1e-5)
-        dc_currrobot_loss_2 = -tf.reduce_sum(dc_softmax_2[:,robot_number])
-        dc_loss.append(dc_currrobot_loss_2)
-        if robot_number == 1:
-            gen_loss.append(tf.reduce_sum(tf.log(softmax_2[:,1] + 1e-5)) )
-        # ### END DISCRIMINATOR 2 ###
-
-        # ### DISCRIMINATOR 3 ###
-        disc0_3 = tf.nn.relu(tf.matmul(output_transition, wdisc0_3) + bdisc0_3)
-        disc1_3 = tf.nn.relu(tf.matmul(disc0_3, wdisc1_3) + bdisc1_3)
-        disc2_3 = tf.matmul(disc1_3, wdisc2_3) + bdisc2_3
-        ### Terms for unsupervised domain confusion ###
-        softmax_3 = tf.nn.softmax(disc2_3)
-        dc_softmax_3 =  tf.log(softmax_3 + 1e-5)
-        dc_currrobot_loss_3 = -tf.reduce_sum(dc_softmax_3[:,robot_number])
-        dc_loss.append(dc_currrobot_loss_3)
-        if robot_number == 1:
-            gen_loss.append(tf.reduce_sum(tf.log(softmax_3[:,1] + 1e-5)) )
         # ### END DISCRIMINATOR 3 ###
         nnets.append(TfMap.init_from_lists([None, None, None], [None], [None], None, None))
+        predictions_full.append(predictions_list)
 
     all_variables_dict = {}
     for v in all_variables:
@@ -1404,12 +1521,12 @@ def transition_reward_model_domainconfusion(dim_input_state=[27, 27], dim_input_
     other['next_state_inputs'] = next_state_inputs
     other['action_inputs'] = action_inputs
     other['state_features_list'] = state_features_list
-    other['action_features_list'] = action_features_list
-    other['transition_out_list'] = transition_out_list
     other['dc_variables'] = dc_variables_dict
     other['dc_loss'] = dc_loss
     other['gen_loss'] = gen_loss
+    other['predictions_full'] = predictions_full
     return nnets, other
+
 
 def conv2d(img, w, b):
     #print img.get_shape().dims[3].value

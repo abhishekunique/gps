@@ -234,8 +234,6 @@ class GPSMain(object):
             next_obs_full.append(next_obs_data)
             tgt_actions_full.append(tgt_actions)
             obs_complete_time_full.append(obs_complete_time)
-        import IPython
-        IPython.embed()
         self.policy_opt.train_invariant_dc(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)
         import IPython
         IPython.embed()
