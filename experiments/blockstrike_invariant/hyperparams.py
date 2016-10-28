@@ -53,8 +53,8 @@ SENSOR_DIMS = [{
     RGB_IMAGE_SIZE: 3,
 }]
 
-train_conds = [0]
-test_conds = [1, 2, 3]
+train_conds = [0, 1]
+test_conds = [2, 3]
 
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 

@@ -1069,6 +1069,8 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     contrast_layer = []
     contrast_input = []
     ae_loss = []
+    other['ae_output'] = []
+    other['ae_input'] = []
     for robot_number, robot_params in enumerate(network_config):
         ### Variable declaration ####
         w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
@@ -1082,6 +1084,8 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
         b3 = init_bias((dim_hidden[3],), name='b3_' + str(robot_number))
         w_output = init_weights((dim_hidden[3], dim_input[robot_number]), name='w_output'+str(robot_number))
         b_output = init_bias((dim_input[robot_number],), name = 'b_output'+str(robot_number))
+        
+
         gen_vars += [w1, b1, w2, b2, w3, b3, w_output, b_output]
         gen_vars += [w_input, b_input]
         ### End variable declaration ####
@@ -1091,12 +1095,21 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
         nn_input = tf.placeholder("float", [None, dim_input[robot_number]], name='nn_input' + str(robot_number)+"_contrast")
 
         ### Start net forward computation ####
+
         layer0 = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
         layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
         layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
+        # feature_layers.append(layer2)
+        if robot_number == 0:
+            other['ae_feats'] = layer2
         layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
-        layer_output = tf.nn.relu(tf.matmul(layer3, w_output) + b_output)
+        layer_output = tf.matmul(layer3, w_output) + b_output
+        # loss = tf.nn.l2_loss(nn_input - output)
+
+
         ae_loss.append( tf.nn.l2_loss(layer_output - nn_input) )
+        other['ae_output'].append(layer_output)
+        other['ae_input'].append(nn_input)
         contrast_layer.append(layer2)
         contrast_input.append(nn_input)
         for c in range(ncond):

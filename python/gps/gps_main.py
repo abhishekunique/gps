@@ -183,7 +183,7 @@ class GPSMain(object):
             #import IPython
             #IPython.embed()
             print("INVARIANT ENCODER")
-            self._take_iteration_invariantautoencoder(traj_sample_lists, obs_full)
+            self._take_iteration_invariantautoencoder(itr, traj_sample_lists, obs_full)
 
             print("TAKE ITERATION")
             for robot_number in range(self.num_robots):
@@ -303,7 +303,7 @@ class GPSMain(object):
                 self.gui[robot_number].stop_display_calculating()
 
 
-    def _take_iteration_invariantautoencoder(self, traj_sample_lists, match_sample_lists):
+    def _take_iteration_invariantautoencoder(self, itr, traj_sample_lists, match_sample_lists):
         """
         Take an iteration of the algorithm.
         Args:
@@ -337,7 +337,7 @@ class GPSMain(object):
             obs_full[robot_number] = obs_data
             shaped_full[robot_number] = shaped_cost
             matched_full[robot_number] = matched_data
-        traj_feats, nn_weights = self.policy_opt.train_invariant_autoencoder(obs_full, shaped_full, matched_full, "temp.pkl")
+        traj_feats, nn_weights = self.policy_opt.train_invariant_autoencoder(itr, obs_full, shaped_full, matched_full, "temp.pkl")
         #setting feature trajectories and nn weights in the cost function
         # num_conds = len(self._train_idx[0])
         # N = traj_feats.shape[0]
@@ -346,9 +346,9 @@ class GPSMain(object):
         # traj_feats = np.reshape(traj_feats, (num_conds, int(N/num_conds), T, dO))
         # import IPython
         # IPython.embed()
-        # traj_feats = np.mean(traj_feats, axis=1)
+        traj_feats = np.mean(traj_feats, axis=1)
         for m in self._train_idx[robot_number]:
-            # self.algorithm[1].cost[m]._costs[-1].traj_feats = traj_feats[m]
+            self.algorithm[1].cost[m]._costs[-1].traj_feats = traj_feats[m]
             self.algorithm[1].cost[m]._costs[-1].nn_weights = nn_weights
 
 

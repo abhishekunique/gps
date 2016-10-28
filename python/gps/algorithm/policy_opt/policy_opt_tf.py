@@ -146,7 +146,7 @@ class PolicyOptTf(PolicyOpt):
 
 
     ### GAN structure for training ###
-    def train_invariant_autoencoder(self, obs_full, shaped_full, matched_full, weight_save_file):
+    def train_invariant_autoencoder(self, itr, obs_full, shaped_full, matched_full, weight_save_file):
         """
         Update policy.
         Args:
@@ -157,10 +157,12 @@ class PolicyOptTf(PolicyOpt):
         Returns:
             A tensorflow object with updated weights.
         """
-        traj_feats = self.run_features_forward(obs_full[0][0][0], 0)
-        import IPython
-        IPython.ebmed()
+        # traj_feats = self.run_features_forward(obs_full[0][0][0], 0)
+
         nconds = len(obs_full[0])
+
+        # traj_feats = [self.run_features_forward(obs_full[0][c], 0) for c in range(nconds)]
+
         N_reshaped = [[] for c in range(nconds)]
         T_reshaped = [[] for c in range(nconds)]
         obs_reshaped = [[] for c in range(nconds)]
@@ -209,7 +211,12 @@ class PolicyOptTf(PolicyOpt):
         contrast_loss = 0
         ae_loss = 0
         should_disc = True
-        for i in range(self._hyperparams['iterations']):
+        maxitr = self._hyperparams['iterations']
+        if itr == 0:
+            maxitr = 9000
+        else:
+            maxitr = 1000
+        for i in range(maxitr):
             feed_dict = {}
             for robot_number in range(self.num_robots):
                 feed_dict[self.other['contrast_input'][robot_number]] = matched_reshaped[robot_number]
@@ -251,52 +258,52 @@ class PolicyOptTf(PolicyOpt):
                 #IPython.embed()
                 # print np.linalg.norm(self.reward_forward(obs_full[0][0], 0)  -
                 #     shaped_cost_reshaped[0][0])/np.sqrt(shaped_cost_reshaped[0][0].shape[0])
-            dc_feed_dict = {}
-            # for robot_number in range(self.num_robots):
-            #     start_idx = int(i * self.batch_size %
-            #                    (batches_per_epoch_reshaped[robot_number] * self.batch_size))
-            #     idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-            #     dc_feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
-            #     if robot_number == 0:
-            #         dc_feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
-            # # if should_disc:
-            for j in range(1):
-                for robot_number in range(self.num_robots):
-                    for c in range(nconds):
-                        start_idx = int((i+j*31) * self.batch_size %
-                                        (batches_per_epoch_reshaped[c][robot_number] * self.batch_size))
-                        idx_i = idx_reshaped[c][robot_number][start_idx:start_idx+self.batch_size]
-                        feed_dict[self.other['nn_inputs'][robot_number][c][0]] = obs_reshaped[c][robot_number][idx_i]
-                        if robot_number == 0:
-                            feed_dict[self.other['nn_inputs'][robot_number][c][1]] = shaped_cost_reshaped[c][robot_number][idx_i]
-                # dc_loss = self.dc_solver(feed_dict, self.sess, device_string=self.device_string)
-                # average_dc_loss += dc_loss
-            prediction = self.sess.run(self.other['dc_output'], feed_dict)
+            # dc_feed_dict = {}
+            # # for robot_number in range(self.num_robots):
+            # #     start_idx = int(i * self.batch_size %
+            # #                    (batches_per_epoch_reshaped[robot_number] * self.batch_size))
+            # #     idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
+            # #     dc_feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
+            # #     if robot_number == 0:
+            # #         dc_feed_dict[self.action_tensors[robot_number]] = shaped_cost_reshaped[robot_number][idx_i]
+            # # # if should_disc:
+            # for j in range(1):
+            #     for robot_number in range(self.num_robots):
+            #         for c in range(nconds):
+            #             start_idx = int((i+j*31) * self.batch_size %
+            #                             (batches_per_epoch_reshaped[c][robot_number] * self.batch_size))
+            #             idx_i = idx_reshaped[c][robot_number][start_idx:start_idx+self.batch_size]
+            #             feed_dict[self.other['nn_inputs'][robot_number][c][0]] = obs_reshaped[c][robot_number][idx_i]
+            #             if robot_number == 0:
+            #                 feed_dict[self.other['nn_inputs'][robot_number][c][1]] = shaped_cost_reshaped[c][robot_number][idx_i]
+            #     # dc_loss = self.dc_solver(feed_dict, self.sess, device_string=self.device_string)
+            #     # average_dc_loss += dc_loss
+            # prediction = self.sess.run(self.other['dc_output'], feed_dict)
 
-            for c in range(nconds):
-                p0 = prediction[c][0][:, 0]
-                p1 = prediction[c][1][:, 1]
-                tot = p0.shape[0] + p1.shape[0]
-                correct = np.sum(p0 > 0.5) + np.sum(p1 > 0.5)
-                average_dc_acc[c][0] += correct / float(tot)
-                average_dc_acc[c][1] += np.mean(p0)
-                average_dc_acc[c][2] += np.std(p0)
-                average_dc_acc[c][3] += np.mean(p1)
-                average_dc_acc[c][4] += np.std(p1)
+            # for c in range(nconds):
+            #     p0 = prediction[c][0][:, 0]
+            #     p1 = prediction[c][1][:, 1]
+            #     tot = p0.shape[0] + p1.shape[0]
+            #     correct = np.sum(p0 > 0.5) + np.sum(p1 > 0.5)
+            #     average_dc_acc[c][0] += correct / float(tot)
+            #     average_dc_acc[c][1] += np.mean(p0)
+            #     average_dc_acc[c][2] += np.std(p0)
+            #     average_dc_acc[c][3] += np.mean(p1)
+            #     average_dc_acc[c][4] += np.std(p1)
 
-            if i % 100 == 0 and i != 0:
-                np.set_printoptions(suppress=True)
-                LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_dc_loss / 100)
-                print 'supervised dc loss is '
-                print (average_dc_loss/100)
-                print (average_dc_acc/100)
-                # should_disc = average_dc_acc < 80
-                average_dc_loss = 0
-                average_dc_acc = np.zeros((nconds, 5))
-                # if i == 1000:
-                #     import IPython
-                #     IPython.embed()
+            # if i % 100 == 0 and i != 0:
+            #     np.set_printoptions(suppress=True)
+            #     LOGGER.debug('tensorflow iteration %d, average loss %f',
+            #                  i, average_dc_loss / 100)
+            #     print 'supervised dc loss is '
+            #     print (average_dc_loss/100)
+            #     print (average_dc_acc/100)
+            #     # should_disc = average_dc_acc < 80
+            #     average_dc_loss = 0
+            #     average_dc_acc = np.zeros((nconds, 5))
+            #     # if i == 1000:
+            #     #     import IPython
+            #     #     IPython.embed()
 
 
         var_dict = {}
@@ -317,6 +324,7 @@ class PolicyOptTf(PolicyOpt):
         #need to take mean here
         # np.save("fps_r0.npy", traj_feats)
         print("done training invariant autoencoder and saving weights")
+        traj_feats = np.array([self.run_features_forward(obs_full[0][c], 0) for c in range(nconds)])
         return traj_feats, var_dict
 
     def reward_forward(self, obs_reshaped, nconds):
@@ -334,9 +342,9 @@ class PolicyOptTf(PolicyOpt):
         #dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])][robot_number]
         dU = self._dU[robot_number]
         obs = np.reshape(obs, (N*T, dO))
-        feed_dict[self.obs_tensors[robot_number]] = obs
-        output = self.sess.run(self.feature_points[robot_number], feed_dict=feed_dict)
-        output = np.reshape(output, (N, T, 60))
+        feed_dict[self.other['contrast_input'][robot_number]] = obs
+        output = self.sess.run(self.other['ae_feats'], feed_dict=feed_dict)
+        output = np.reshape(output, (N, T, -1))
         return output
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
