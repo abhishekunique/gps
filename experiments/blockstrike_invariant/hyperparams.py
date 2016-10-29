@@ -76,6 +76,8 @@ common = {
     'test_conditions': test_conds,
     'num_robots': 2,
     'policy_opt': {
+        'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
+        'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
         'ncond': len(train_conds),
         'type': PolicyOptTf,
         'network_model': unsup_domain_confusion,

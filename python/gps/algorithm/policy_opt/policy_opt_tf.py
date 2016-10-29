@@ -102,7 +102,8 @@ class PolicyOptTf(PolicyOpt):
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
-        tf_maps, var_list, other = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
+        dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])]
+        tf_maps, var_list, other = tf_map_generator(dim_input=dO, dim_output=self._dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params'], ncond=self.ncond)
         self.obs_tensors = []
         self.action_tensors = []
@@ -191,19 +192,28 @@ class PolicyOptTf(PolicyOpt):
                 T_reshaped[c].append(T)
                 idx_reshaped[c].append(idx)
                 batches_per_epoch_reshaped[c].append(batches_per_epoch)
-        matched_reshaped = []
+        # matched_reshaped = []
 
+        # for robot_number in range(self.num_robots):
+        #     dU, dO = self._dU[robot_number], self._dO[robot_number]
+        #     matched_data = np.zeros((0, dO))
+        #     for c in range(nconds):
+        #         obs = matched_full[robot_number][c].get_X()
+        #         N, T = obs.shape[:2]
+        #         obs = np.reshape(obs, (N*T, dO))
+        #         # import IPython
+        #         # IPython.embed()
+        #         matched_data = np.concatenate((matched_data, obs), axis = 0)
+        #     matched_reshaped.append(matched_data)
+
+        matched_reshaped = []
         for robot_number in range(self.num_robots):
-            dU, dO = self._dU[robot_number], self._dO[robot_number]
-            matched_data = np.zeros((0, dO))
-            for c in range(nconds):
-                obs = matched_full[robot_number][c].get_X()
-                N, T = obs.shape[:2]
-                obs = np.reshape(obs, (N*T, dO))
-                # import IPython
-                # IPython.embed()
-                matched_data = np.concatenate((matched_data, obs), axis = 0)
-            matched_reshaped.append(matched_data)
+            obs = matched_full[robot_number]
+            N, T = obs.shape[:2]
+            dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])][robot_number]
+            dU = self._dU[robot_number]
+            obs = np.reshape(obs, (N*T, dO))
+            matched_reshaped.append(obs)
 
         average_loss = 0
         average_dc_acc = np.zeros((nconds, 5))
@@ -213,35 +223,41 @@ class PolicyOptTf(PolicyOpt):
         should_disc = True
         maxitr = self._hyperparams['iterations']
         if itr == 0:
-            maxitr = 9000
+            maxitr = 30000
         else:
             maxitr = 1000
         for i in range(maxitr):
             feed_dict = {}
             for robot_number in range(self.num_robots):
-                feed_dict[self.other['contrast_input'][robot_number]] = matched_reshaped[robot_number]
-                for c in range(nconds):
-                    start_idx = int(i * self.batch_size %
-                                    (batches_per_epoch_reshaped[c][robot_number] * self.batch_size))
-                    idx_i = idx_reshaped[c][robot_number][start_idx:start_idx+self.batch_size]
-                    feed_dict[self.other['nn_inputs'][robot_number][c][0]] = obs_reshaped[c][robot_number][idx_i]
-                    if robot_number == 0:
-                        feed_dict[self.other['nn_inputs'][robot_number][c][1]] = shaped_cost_reshaped[c][robot_number][idx_i]
+                idx_i = np.random.choice(len(matched_reshaped[robot_number]), self.batch_size, replace=False)
+                feed_dict[self.other['contrast_input'][robot_number]] = matched_reshaped[robot_number][idx_i]
+                # for c in range(nconds):
+                #     start_idx = int(i * self.batch_size %
+                #                     (batches_per_epoch_reshaped[c][robot_number] * self.batch_size))
+                #     idx_i = idx_reshaped[c][robot_number][start_idx:start_idx+self.batch_size]
+                #     feed_dict[self.other['nn_inputs'][robot_number][c][0]] = obs_reshaped[c][robot_number][idx_i]
+                #     if robot_number == 0:
+                #         feed_dict[self.other['nn_inputs'][robot_number][c][1]] = shaped_cost_reshaped[c][robot_number][idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
 
-            if np.isnan(train_loss):
-                import IPython
-                IPython.embed()
-            contrast_loss += self.sess.run(self.other['contrast_loss'], feed_dict)
-            ae_loss += self.sess.run(tf.add_n(self.other['ae_loss']), feed_dict)
+            # if np.isnan(train_loss):
+            #     import IPython
+            #     IPython.embed()
+            # contrast_loss += self.sess.run(self.other['contrast_loss'], feed_dict)
+            # ae_loss += self.sess.run(tf.add_n(self.other['ae_loss']), feed_dict)
             average_loss += train_loss
             if i % 100 == 0 and i != 0:
-                LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 100)
+                # LOGGER.debug('tensorflow iteration %d, average loss %f',
+                #              i, average_loss / 100)
+                print i, maxitr
                 print 'supervised tf loss is '
                 print (average_loss/100)
-                print (contrast_loss/100.0)
-                print (ae_loss/100.0)
+                # print (contrast_loss/100.0)
+                # print (ae_loss/100.0)
+                feed_dict = {}
+                for robot_number in range(self.num_robots):
+                    feed_dict[self.other['contrast_input'][robot_number]] = matched_reshaped[robot_number]
+                print self.solver(feed_dict, self.sess, device_string=self.device_string)
                 average_loss = 0
                 contrast_loss = 0
                 ae_loss = 0
@@ -318,13 +334,17 @@ class PolicyOptTf(PolicyOpt):
         # A = obs
         # x = np.linalg.lstsq(A, y)
         #y_pred = A.dot(x)
-        # import IPython
-        # IPython.embed()
         # traj_feats = None
         #need to take mean here
         # np.save("fps_r0.npy", traj_feats)
         print("done training invariant autoencoder and saving weights")
         traj_feats = np.array([self.run_features_forward(obs_full[0][c], 0) for c in range(nconds)])
+
+        # import IPython
+        # IPython.embed()
+        traj_feats_one = np.array([self.run_features_forward(obs_full[0][c], 0) for c in range(nconds)])
+        mtraj_feats = np.mean(traj_feats, axis=1)
+        print "err", np.linalg.norm(traj_feats - mtraj_feats[:, None, :, :])
         return traj_feats, var_dict
 
     def reward_forward(self, obs_reshaped, nconds):
@@ -342,8 +362,9 @@ class PolicyOptTf(PolicyOpt):
         #dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])][robot_number]
         dU = self._dU[robot_number]
         obs = np.reshape(obs, (N*T, dO))
+        obs = obs[:, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
         feed_dict[self.other['contrast_input'][robot_number]] = obs
-        output = self.sess.run(self.other['ae_feats'], feed_dict=feed_dict)
+        output = self.sess.run(self.other['ae_feats'][robot_number], feed_dict=feed_dict)
         output = np.reshape(output, (N, T, -1))
         return output
 

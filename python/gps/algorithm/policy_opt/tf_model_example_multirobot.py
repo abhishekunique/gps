@@ -1031,8 +1031,8 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     nnets = []
     n_layers = 6
     n_disc_layers = 3
-    layer_size = 20
-    dim_hidden = [25, 20, 20, 25, 123123]
+    layer_size = 60
+    dim_hidden = [layer_size] * n_layers#[25, 20, 20, 25, 123123]
     dim_hidden_disc = (n_disc_layers - 1)*[layer_size]
     feature_layers = []
     weight_dict = {}
@@ -1071,6 +1071,7 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
     ae_loss = []
     other['ae_output'] = []
     other['ae_input'] = []
+    other['ae_feats'] = []
     for robot_number, robot_params in enumerate(network_config):
         ### Variable declaration ####
         w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
@@ -1100,8 +1101,7 @@ def unsup_domain_confusion(dim_input=[27, 27], dim_output=[7, 7], batch_size=25,
         layer1 = tf.nn.relu(tf.matmul(layer0, w1) + b1)
         layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
         # feature_layers.append(layer2)
-        if robot_number == 0:
-            other['ae_feats'] = layer2
+        other['ae_feats'].append(layer2)
         layer3 = tf.nn.relu(tf.matmul(layer2, w3) + b3)
         layer_output = tf.matmul(layer3, w_output) + b_output
         # loss = tf.nn.l2_loss(nn_input - output)

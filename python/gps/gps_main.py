@@ -154,6 +154,32 @@ class GPSMain(object):
         #     # for robot_number in range(self.num_robots):
         #     self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
+        obs_full = [None]*self.num_robots
+        for robot_number in range(self.num_robots):
+            if robot_number == 0:
+                obs_sample = self.data_logger.unpickle(self._hyperparams['robot0_file'])
+                for slist in obs_sample:
+                    for s in slist._samples:
+                        s.agent = self.agent[0]
+
+            else:
+                obs_sample = self.data_logger.unpickle(self._hyperparams['robot1_file'])
+                for slist in obs_sample:
+                    for s in slist._samples:
+                        s.agent = self.agent[1]
+
+            dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
+            dO = self.algorithm[robot_number].dX
+            obs_data = np.zeros((0, T, dO))
+            for samples in obs_sample:
+                obs_data = np.concatenate((obs_data, samples.get_X()))
+
+            if robot_number == 0:
+                obs_data = obs_data[:, :, self._hyperparams['r0_index_list']]
+            else:
+                obs_data = obs_data[:, :, self._hyperparams['r1_index_list']]
+            obs_full[robot_number] = obs_data
+
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             print("SAMPLING")
@@ -166,20 +192,20 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
-            obs_full = [None]*self.num_robots
-            for robot_number in range(self.num_robots):
-                if robot_number == 0:
-                    obs_sample = self.data_logger.unpickle(self._hyperparams['robot0_file'])
-                    for slist in obs_sample:
-                        for s in slist._samples:
-                            s.agent = self.agent[0]
+            # obs_full = [None]*self.num_robots
+            # for robot_number in range(self.num_robots):
+            #     if robot_number == 0:
+            #         obs_sample = self.data_logger.unpickle(self._hyperparams['robot0_file'])
+            #         for slist in obs_sample:
+            #             for s in slist._samples:
+            #                 s.agent = self.agent[0]
 
-                else:
-                    obs_sample = self.data_logger.unpickle(self._hyperparams['robot1_file'])
-                    for slist in obs_sample:
-                        for s in slist._samples:
-                            s.agent = self.agent[1]
-                obs_full[robot_number] = obs_sample
+            #     else:
+            #         obs_sample = self.data_logger.unpickle(self._hyperparams['robot1_file'])
+            #         for slist in obs_sample:
+            #             for s in slist._samples:
+            #                 s.agent = self.agent[1]
+            #     obs_full[robot_number] = obs_sample
             #import IPython
             #IPython.embed()
             print("INVARIANT ENCODER")
@@ -240,7 +266,6 @@ class GPSMain(object):
 
             if robot_number == 0:
                 obs_data = obs_data[:, :, self._hyperparams['r0_index_list']]
-
             else:
                 obs_data = obs_data[:, :, self._hyperparams['r1_index_list']]
             obs_full[robot_number] = obs_data
@@ -316,7 +341,7 @@ class GPSMain(object):
         # Compute target mean, cov, and weight for each sample.
         obs_full = [None]*self.num_robots
         shaped_full = [None]*self.num_robots
-        matched_full = [None]*self.num_robots
+        # matched_full = [None]*self.num_robots
         for robot_number in range(self.num_robots):
             obs_data = []
             shaped_cost = []
@@ -333,11 +358,11 @@ class GPSMain(object):
                         # shaped_concat = np.concatenate((shaped_concat, np.zeros((1, self.algorithm[robot_number].T))))
                         shaped_concat = np.concatenate((shaped_concat, self.algorithm[robot_number].cost[m]._costs[-1].costfk.eval(sample)[0][None, :]))
                 shaped_cost.append(shaped_concat)
-                matched_data.append(match_sample_lists[robot_number][m])
+                # matched_data.append(match_sample_lists[robot_number][m])
             obs_full[robot_number] = obs_data
             shaped_full[robot_number] = shaped_cost
-            matched_full[robot_number] = matched_data
-        traj_feats, nn_weights = self.policy_opt.train_invariant_autoencoder(itr, obs_full, shaped_full, matched_full, "temp.pkl")
+            # matched_full[robot_number] = matched_data
+        traj_feats, nn_weights = self.policy_opt.train_invariant_autoencoder(itr, obs_full, shaped_full, match_sample_lists, "temp.pkl")
         #setting feature trajectories and nn weights in the cost function
         # num_conds = len(self._train_idx[0])
         # N = traj_feats.shape[0]
