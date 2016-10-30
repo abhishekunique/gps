@@ -56,12 +56,12 @@ class PolicyOptTf(PolicyOpt):
             self.precision_tensors_action.append(None)
             self.action_tensors_action.append(None)
 
-        if not self._hyperparams['run_feats']:
-            self.init_network()
-            self.init_solver()
+        #if not self._hyperparams['run_feats']:
+        self.init_network()
+            #self.init_solver()
         self.tf_vars = tf.trainable_variables()
-        if self._hyperparams['run_feats']:
-            self.init_feature_space()
+        # if self._hyperparams['run_feats']:
+        #     self.init_feature_space()
         self.sess = tf.Session()
         self.policy = []
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
@@ -92,7 +92,7 @@ class PolicyOptTf(PolicyOpt):
         if self._hyperparams['load_weights'] and self._hyperparams['run_feats']:
             import pickle
             val_vars = pickle.load(open(self._hyperparams['load_weights'], 'rb'))
-            for k,v in self.var_list_feat.items():
+            for k,v in self.var_list.items():
                 if k in val_vars:
                     print(k)
                     assign_op = v.assign(val_vars[k])
@@ -120,6 +120,10 @@ class PolicyOptTf(PolicyOpt):
             self.individual_losses.append(tf_map.individual_losses)
         self.combined_loss = tf.add_n(self.loss_scalars)
         self.var_list= var_list
+        vs = {}
+        for v in self.var_list:
+            vs[v.name] = v
+        self.var_list = vs
         self.other = other
 
     def init_solver(self):

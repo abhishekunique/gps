@@ -14,6 +14,7 @@ from gps.algorithm.cost.cost_fk_dev import CostFKDev
 from gps.algorithm.cost.cost_dev_rs_strike import CostDevRs
 from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_action import CostAction
+from gps.algorithm.cost.cost_features import CostFeatures
 from gps.algorithm.cost.cost_sum import CostSum
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
 from gps.algorithm.dynamics.dynamics_prior_gmm import DynamicsPriorGMM
@@ -23,6 +24,7 @@ from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
 from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, invariant_subspace_test, unsup_domain_confusion
+from gps.algorithm.policy_opt.tf_subspace_models import subspace_autoencoder
 from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
 from gps.utility.data_logger import DataLogger
 
@@ -74,11 +76,11 @@ common = {
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': unsup_domain_confusion,
-        'network_model_feat': unsup_domain_confusion,
-        'run_feats': False,
+        'network_model': subspace_autoencoder,
+        'network_model_feat': subspace_autoencoder,
+        'run_feats': True,
         'invariant_train': True,
-        'load_weights': False, #'/home/abhigupta/gps/subspace_newweights.pkl',
+        'load_weights': '/home/coline/code/domain_confusion/justpush_moreiter_contrastive_ae.pkl', #'/home/abhigupta/gps/subspace_newweights.pkl',
         'network_params': [{
             'dim_hidden': [10],
             'num_filters': [10, 20],
@@ -291,10 +293,11 @@ fk_cost_2 = [{
 
 
 test_cost = [{
-    'type': CostDevRs,
+    'type': CostFeatures,
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
+    'weights': '/home/coline/code/domain_confusion/justpush_moreiter_contrastive_ae.pkl',
 } for i in agent[0]['train_conditions']]
 
 
@@ -369,7 +372,7 @@ config = {
     'save_wts': True,
     'common': common,
     'agent': agent,
-    'gui_on': True,
+    'gui_on': False,
     'algorithm': algorithm,
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],

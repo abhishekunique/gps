@@ -18,11 +18,18 @@ sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
 from gps.gui.gps_training_gui import GPSTrainingGUI
 from gps.utility.data_logger import DataLogger
 from gps.sample.sample_list import SampleList
+from gps.sample.sample import Sample
+
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.proto.gps_pb2 import ACTION, RGB_IMAGE
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-
+from sklearn.neighbors import NearestNeighbors
+import matplotlib.pyplot as plt
+from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
+        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, \
+        END_EFFECTOR_POINT_JACOBIANS, ACTION, RGB_IMAGE, RGB_IMAGE_SIZE, \
+        CONTEXT_IMAGE, CONTEXT_IMAGE_SIZE, IMAGE_FEATURES
 
 class GPSMain(object):
     """ Main class to run algorithms and experiments. """
@@ -76,6 +83,9 @@ class GPSMain(object):
         if 'save_wts' in self._hyperparams:
             self.save_wts = self._hyperparams['save_wts']
         else: self.save_wts = False
+        for rn in range(self.num_robots):
+            if IMAGE_FEATURES in self.agent[rn].x_data_types or IMAGE_FEATURES in self.agent[rn].obs_data_types:
+                self.agent[rn].policy_opt = policy_opt
 
 
     def run(self, itr_load=None, rf=False):
@@ -145,8 +155,24 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
-            #import IPython
-            #IPython.embed()
+            # traj_sample_lists = [self.data_logger.unpickle('/home/coline/module_gps/gps/push_3link.pkl'),
+            #                      self.data_logger.unpickle('/home/coline/module_gps/gps/push_4link.pkl')]
+            # traj_sample_lists = self.data_logger.unpickle('/home/coline/abhishek_gps/gps/noimg_push_traj.pkl')
+            # # import IPython
+            # # IPython.embed()
+            # new_list = {0: [], 1:[]}
+            # for r in range(len(traj_sample_lists)):
+            #     for sln in range(len(traj_sample_lists[r])):
+            #         new_sl = []
+            #         for sn in range(len(traj_sample_lists[r][sln])):
+            #             new_s = Sample(self.agent[r])
+            #             for t in range(5):
+            #                 print r, sln,sn,t
+            #                 new_s._data[t] = traj_sample_lists[r][sln][sn]._data[t]
+            #             new_sl.append(new_s)
+            #         new_sl = SampleList(new_sl)
+            #         new_list[r].append(new_sl)
+            # traj_sample_lists = new_list
             print("INVARIANT ENCODER")
             self._take_iteration_invariantautoencoder(traj_sample_lists)
 
@@ -287,14 +313,16 @@ class GPSMain(object):
             for m in self._train_idx[robot_number]:
                 samples = traj_sample_lists[robot_number][m]
                 obs_data = np.concatenate((obs_data, samples.get_obs()))
-                for sample in samples._samples:
-                    if robot_number == 0:
-                        shaped_cost = np.concatenate((shaped_cost, np.asarray([self.algorithm[robot_number].cost[m]._costs[-1].eval(sample)[0]])))
-                    else:
-                        shaped_cost = np.concatenate((shaped_cost, np.zeros((1, self.algorithm[robot_number].T))))
+                # for sample in samples._samples:
+                #     if robot_number == 0:
+                #         shaped_cost = np.concatenate((shaped_cost, np.asarray([self.algorithm[robot_number].cost[m]._costs[-1].eval(sample)[0]])))
+                #     else:
+                #         shaped_cost = np.concatenate((shaped_cost, np.zeros((1, self.algorithm[robot_number].T))))
             obs_full[robot_number] = obs_data
-            shaped_full[robot_number] = shaped_cost
-        traj_feats, nn_weights = self.policy_opt.train_invariant_autoencoder(obs_full, shaped_full, "temp.pkl")
+            #shaped_full[robot_number] = shaped_cost
+        #traj_feats, nn_weights = self.policy_opt.train_invariant_autoencoder(obs_full, shaped_full, "temp.pkl")
+        traj_feats = self.policy_opt.run_features_forward(obs_full[0], 0)
+        #traj_feats_r1 = self.police_opt.run_features_forward(obs_full[1], 1)
         #setting feature trajectories and nn weights in the cost function
         num_conds = len(self._train_idx[0])
         N = traj_feats.shape[0]
@@ -306,7 +334,56 @@ class GPSMain(object):
         traj_feats = np.mean(traj_feats, axis=1)
         for m in self._train_idx[robot_number]:
             self.algorithm[1].cost[m]._costs[-1].traj_feats = traj_feats[m]
-            self.algorithm[1].cost[m]._costs[-1].nn_weights = nn_weights
+            #self.algorithm[1].cost[m]._costs[-1].nn_weights = nn_weights
+
+        num_conds = 2#len(traj_sample_lists[0])
+        num_samples = len(traj_sample_lists[0][0])
+        T = 100
+        cond_feats = np.zeros((num_conds, num_samples, T, 60))
+        cond_feats_other = np.zeros((num_conds, num_samples, T, 60))
+
+        obs_full = [np.reshape(obs_full[i], (num_conds, num_samples, T, -1)) for i in range(2)]
+        l2_loss = 0
+        import IPython
+        IPython.embed()
+
+        self.other = self.policy_opt.other
+        self.sess = self.policy_opt.sess
+        for cond in range(num_conds):
+            for sample_num in range(num_samples):
+                feed_dict = {self.other['input'][0]: obs_full[0][cond][sample_num], 
+                            self.other['input'][1]: obs_full[1][cond][sample_num]}
+                # import IPython
+                # IPython.embed()
+                cond_feats[cond, sample_num] = self.sess.run(self.other['features'][0], feed_dict=feed_dict)
+                cond_feats_other[cond, sample_num] = self.sess.run(self.other['features'][1], feed_dict=feed_dict)
+                l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
+        print(l2_loss)
+        print("RAN THROUGH FEATURES")
+        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T,60))
+        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T,60))
+        nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
+        distances, indices = nbrs.kneighbors(cond_feats_other)
+        indices = np.reshape(indices, (num_conds, num_samples, T))
+        dO_robot0 = obs_full[0].shape[-1]
+        obs_full_reshaped = np.reshape(obs_full[0], (num_conds*num_samples*T,dO_robot0))
+        print("CHECK NN")
+        i = 2
+        for cond in range(num_conds):
+            for s_no in range(num_samples):
+                for t in range(T):
+                    x = obs_full[1][cond, s_no, t, 8+i]
+                    y = obs_full[1][cond, s_no, t, 10+i]
+                    nnbr_currpoint = indices[cond, s_no, t]
+                    x_nbr = obs_full_reshaped[nnbr_currpoint][6+i]
+                    y_nbr = obs_full_reshaped[nnbr_currpoint][8+i]
+                    #print("X: " + str([x,x_nbr]))
+                    #print("Y: " + str([y,y_nbr]))
+                    lines = plt.plot([x,x_nbr], [y,y_nbr])
+        plt.show()
+        #import IPython
+        #IPython.embed()
+        #np.save("3link_feats.npy", np.asarray(cond_feats))
 
 
     def test_policy(self, itr, N):
