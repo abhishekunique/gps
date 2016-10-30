@@ -180,9 +180,7 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
-        traj_distr = []
-        traj_distr.append(self.data_logger.unpickle("3link_blockstrike.pkl"))
-        traj_distr.append(self.data_logger.unpickle("4link_blockstrike.pkl"))
+        traj_distr = self.data_logger.unpickle("blockstrike_controllers.pkl")
         for robot_number in range(self.num_robots):
             for cond in  self._train_idx[robot_number]:
                 self.algorithm[robot_number].cur[cond].traj_distr = traj_distr[robot_number][cond]
@@ -617,8 +615,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(1)
-        np.random.seed(1)
+        random.seed(0)
+        np.random.seed(0)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:

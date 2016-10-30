@@ -1499,10 +1499,10 @@ def transition_reward_model_domainconfusion(dim_input_state=[27, 27], dim_input_
         dc_softmax_1 = tf.log(tf.nn.softmax(disc2_1)+ 1e-5)
         dc_currrobot_loss_1 = -tf.reduce_sum(dc_softmax_1[:,robot_number])
         dc_loss.append(dc_currrobot_loss_1)
-        if robot_number == 1:
-            gen_loss.append(-tf.reduce_sum(dc_softmax_1[:,0]))
-        if robot_number == 0:
-            gen_loss.append(-tf.reduce_sum(dc_softmax_1[:,1]))
+        #if robot_number == 1:
+        gen_loss.append(tf.reduce_sum(dc_softmax_1[:,robot_number]))
+        #if robot_number == 0:
+        #gen_loss.append(-tf.reduce_sum(dc_softmax_1[:,1]))
         # ### END DISCRIMINATOR 1 ###
 
         # ### END DISCRIMINATOR 3 ###
