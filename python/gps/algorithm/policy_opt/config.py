@@ -51,7 +51,8 @@ POLICY_OPT_TF = {
     'restore_shared_wts': False,
     'val_agents': [],
     'copy_param_scope': 'conv_params',
-    'checkpoint_prefix': checkpoint_path
+    'checkpoint_prefix': checkpoint_path,
+    'fc_only_iterations': 0,
 }
 
 POLICY_OPT_TF.update(GENERIC_CONFIG)
