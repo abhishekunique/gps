@@ -2,7 +2,7 @@
 
 import matplotlib as mpl
 mpl.use('Qt4Agg')
-
+import pickle
 import logging
 import imp
 import os
@@ -180,10 +180,23 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
-        traj_distr = self.data_logger.unpickle("blockstrike_controllers.pkl")
-        for robot_number in range(self.num_robots):
-            for cond in  self._train_idx[robot_number]:
-                self.algorithm[robot_number].cur[cond].traj_distr = traj_distr[robot_number][cond]
+
+        traj_distr = self.data_logger.unpickle("pullingtask.pkl")
+        import IPython
+        IPython.embed()
+        for ag in range(self.num_robots):
+            name = self.agent[ag]._hyperparams['filename'][0]
+            print(name)
+            if name in traj_distr:
+                for cond in  self._train_idx[ag]:
+                    print ag, cond
+                    self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+            else:
+                print name, "not in traj_distr"
+        # traj_distr = self.data_logger.unpickle("blockstrike_controllers.pkl")
+        # for robot_number in range(self.num_robots):
+        #     for cond in  self._train_idx[robot_number]:
+        #         self.algorithm[robot_number].cur[cond].traj_distr = traj_distr[robot_number][cond]
 
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
@@ -232,7 +245,27 @@ class GPSMain(object):
             next_obs_full.append(next_obs_data)
             tgt_actions_full.append(tgt_actions)
             obs_complete_time_full.append(obs_complete_time)
-        self.policy_opt.train_invariant_dc(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)
+        full_dict = pickle.load(open("multiproxy_data.pkl", "rb"))
+        tasks = ['reach', 'push', 'peg']
+        obs_full = []
+        next_obs_full = []
+        tgt_actions_full = []
+        for robot_number in range(self.num_robots):
+            obs = []
+            next_obs = []
+            tgt_actions = []
+            for task in tasks:
+                obs.append(full_dict[task]['obs_full'][robot_number])
+                next_obs.append(full_dict[task]['next_obs_full'][robot_number])
+                tgt_actions.append(full_dict[task]['action_full'][robot_number])
+            obs = np.concatenate(obs, axis=0)
+            next_obs = np.concatenate(next_obs, axis=0)
+            tgt_actions = np.concatenate(tgt_actions, axis=0)
+            obs_full.append(obs)
+            next_obs_full.append(next_obs)
+            tgt_actions_full.append(tgt_actions)
+            
+        self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)
         import IPython
         IPython.embed()
         
@@ -615,8 +648,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(0)
-        np.random.seed(0)
+        random.seed(100)
+        np.random.seed(100)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:

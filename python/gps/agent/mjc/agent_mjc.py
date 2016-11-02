@@ -24,6 +24,11 @@ class AgentMuJoCo(Agent):
     def __init__(self, hyperparams):
         config = copy.deepcopy(AGENT_MUJOCO)
         config.update(hyperparams)
+        if 'tendon' in hyperparams:
+            self.tendon_object = hyperparams['tendon']
+        else:
+            self.tendon_object = False
+
         Agent.__init__(self, config)
         self._setup_conditions()
         self._setup_world(hyperparams['filename'])
@@ -46,7 +51,8 @@ class AgentMuJoCo(Agent):
         """
         self._world = []
         self._model = []
-
+        import IPython
+        IPython.embed()
         # Initialize Mujoco worlds. If there's only one xml file, create a single world object,
         # otherwise create a different world for each condition.
         # if not isinstance(filename, list):
@@ -81,7 +87,10 @@ class AgentMuJoCo(Agent):
         self.eepts0 = [None]*self._hyperparams['conditions']
         for i in range(self._hyperparams['conditions']):
             if END_EFFECTOR_POINTS in self.x_data_types:
-                self.eepts0[i] = self._world[i].get_data()['site_xpos'].flatten()
+                if self.tendon_object == False:
+                    self.eepts0[i] = self._world[i].get_data()['site_xpos'].flatten()
+                else:
+                    self.eepts0[i] = self._world[i].get_data()['site_xpos'][self.tendon_object].flatten()
                 self.x0.append(
                     np.concatenate([self._hyperparams['x0'][i], self.eepts0[i], np.zeros_like(self.eepts0[i])])
                 )
@@ -95,51 +104,51 @@ class AgentMuJoCo(Agent):
                                        cam_pos[0], cam_pos[1], cam_pos[2],
                                        cam_pos[3], cam_pos[4], cam_pos[5])
 
-    def demonstrate_reward_shaping(self, condition):
-        """
-        Run training by iteratively sampling and taking an iteration.
-        Args:
-            itr_load: If specified, loads algorithm state from that
-                iteration, and resumes training at the next iteration.
-        Returns: None
-        """
-        marker_idx = [-3, -2, -1]
-        mj_X = self._hyperparams['x0'][condition]
-        self._world[condition].plot(mj_X)
-        init_key=None
-        waypoint_list = []
-        self._world[condition].plot(mj_X)
-        temp_data = self._world[condition].get_data()
-        init_pos = temp_data['site_xpos'][-1]
-        while (init_key!="q"):
-            offset = np.zeros((3,))
-            init_key = raw_input("w/a/s/d for up, left, down, right. r for record point. q for end.")
-            if init_key == "w":
-                offset = np.array([0.1, 0, 0])
-            elif init_key == "a":
-                offset = np.array([0, 0, -0.1])
-            elif init_key == "s":
-                offset = np.array([-0.1, 0, 0])
-            elif init_key == "d":
-                offset = np.array([0, 0, 0.1])
-            init_pos += offset
-            if init_key == "r":
-                print("RECORDED")
-                waypoint_list.append(copy.copy(init_pos))
-            self._model[condition]['body_pos'][-2, :] += offset
-            self._world[condition].set_model(self._model[condition])
-            self._world[condition].plot(mj_X)
-            time.sleep(0.01)
+    # def demonstrate_reward_shaping(self, condition):
+    #     """
+    #     Run training by iteratively sampling and taking an iteration.
+    #     Args:
+    #         itr_load: If specified, loads algorithm state from that
+    #             iteration, and resumes training at the next iteration.
+    #     Returns: None
+    #     """
+    #     marker_idx = [-3, -2, -1]
+    #     mj_X = self._hyperparams['x0'][condition]
+    #     self._world[condition].plot(mj_X)
+    #     init_key=None
+    #     waypoint_list = []
+    #     self._world[condition].plot(mj_X)
+    #     temp_data = self._world[condition].get_data()
+    #     init_pos = temp_data['site_xpos'][-1]
+    #     while (init_key!="q"):
+    #         offset = np.zeros((3,))
+    #         init_key = raw_input("w/a/s/d for up, left, down, right. r for record point. q for end.")
+    #         if init_key == "w":
+    #             offset = np.array([0.1, 0, 0])
+    #         elif init_key == "a":
+    #             offset = np.array([0, 0, -0.1])
+    #         elif init_key == "s":
+    #             offset = np.array([-0.1, 0, 0])
+    #         elif init_key == "d":
+    #             offset = np.array([0, 0, 0.1])
+    #         init_pos += offset
+    #         if init_key == "r":
+    #             print("RECORDED")
+    #             waypoint_list.append(copy.copy(init_pos))
+    #         self._model[condition]['body_pos'][-2, :] += offset
+    #         self._world[condition].set_model(self._model[condition])
+    #         self._world[condition].plot(mj_X)
+    #         time.sleep(0.01)
         
-        num_waypoints = len(waypoint_list)
-        waypoint_dist = self.T/num_waypoints
-        target = np.zeros((self.T, 9))
-        curr_start = 0
-        for waypoint in waypoint_list:
-            target[curr_start:curr_start + waypoint_dist, 0:3] = waypoint
-            curr_start = curr_start + waypoint_dist
-        print(waypoint_list)
-        return target
+    #     num_waypoints = len(waypoint_list)
+    #     waypoint_dist = self.T/num_waypoints
+    #     target = np.zeros((self.T, 9))
+    #     curr_start = 0
+    #     for waypoint in waypoint_list:
+    #         target[curr_start:curr_start + waypoint_dist, 0:3] = waypoint
+    #         curr_start = curr_start + waypoint_dist
+    #     print(waypoint_list)
+    #     return target
 
     def sample(self, policy, condition, verbose=True, save=True):
         """
@@ -201,11 +210,18 @@ class AgentMuJoCo(Agent):
         eepts = self.eepts0[condition] #self._data['site_xpos'].flatten()
         sample.set(END_EFFECTOR_POINTS, eepts, t=0)
         sample.set(END_EFFECTOR_POINT_VELOCITIES, np.zeros_like(eepts), t=0)
-        jac = np.zeros([eepts.shape[0], self._model[condition]['nq']])
-        for site in range(eepts.shape[0] // 3):
-            idx = site * 3
-            jac[idx:(idx+3), :] = self._world[condition].get_jac_site(site)
-        sample.set(END_EFFECTOR_POINT_JACOBIANS, jac, t=0)
+        if self.tendon_object == False:
+            jac = np.zeros([eepts.shape[0], self._model[condition]['nq']])
+            for site in range(eepts.shape[0] // 3):
+                idx = site * 3
+                jac[idx:(idx+3), :] = self._world[condition].get_jac_site(site)
+            sample.set(END_EFFECTOR_POINT_JACOBIANS, jac, t=0)
+        else:
+            jac = np.zeros([eepts.shape[0], self._model[condition]['nq']])
+            for idx_num,site in enumerate(self.tendon_object):
+                idx = idx_num*3
+                jac[idx:(idx+3), :] = self._world[condition].get_jac_site(site)
+            sample.set(END_EFFECTOR_POINT_JACOBIANS, jac, t=0)
 
         # save initial image to meta data
         self._world[condition].plot(self._hyperparams['x0'][condition])
@@ -242,15 +258,26 @@ class AgentMuJoCo(Agent):
         """
         sample.set(JOINT_ANGLES, np.array(mj_X[self._joint_idx]), t=t+1)
         sample.set(JOINT_VELOCITIES, np.array(mj_X[self._vel_idx]), t=t+1)
-        curr_eepts = self._data['site_xpos'].flatten()
+        if self.tendon_object == False:
+            curr_eepts = self._data['site_xpos'].flatten()
+        else:
+            curr_eepts = self._data['site_xpos'][self.tendon_object].flatten()
         sample.set(END_EFFECTOR_POINTS, curr_eepts, t=t+1)
         prev_eepts = sample.get(END_EFFECTOR_POINTS, t=t)
         eept_vels = (curr_eepts - prev_eepts) / self._hyperparams['dt']
         sample.set(END_EFFECTOR_POINT_VELOCITIES, eept_vels, t=t+1)
-        jac = np.zeros([curr_eepts.shape[0], self._model[condition]['nq']])
-        for site in range(curr_eepts.shape[0] // 3):
-            idx = site * 3
-            jac[idx:(idx+3), :] = self._world[condition].get_jac_site(site)
+        if self.tendon_object == False:
+            jac = np.zeros([curr_eepts.shape[0], self._model[condition]['nq']])
+            for site in range(curr_eepts.shape[0] // 3):
+                idx = site * 3
+                jac[idx:(idx+3), :] = self._world[condition].get_jac_site(site)
+            sample.set(END_EFFECTOR_POINT_JACOBIANS, jac, t=0)
+        else:
+            jac = np.zeros([curr_eepts.shape[0], self._model[condition]['nq']])
+            for idx_num,site in enumerate(self.tendon_object):
+                idx = idx_num*3
+                jac[idx:(idx+3), :] = self._world[condition].get_jac_site(site)
+            sample.set(END_EFFECTOR_POINT_JACOBIANS, jac, t=0)
         sample.set(END_EFFECTOR_POINT_JACOBIANS, jac, t=t+1)
         if RGB_IMAGE in self.obs_data_types:
             img = self._world[condition].get_image_scaled(self._hyperparams['image_width'],

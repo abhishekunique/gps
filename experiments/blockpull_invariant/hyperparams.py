@@ -10,6 +10,7 @@ from gps.agent.mjc.agent_mjc import AgentMuJoCo
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.algorithm.cost.cost_fk import CostFK
+from gps.algorithm.cost.cost_state import CostState
 from gps.algorithm.cost.cost_fk_dev import CostFKDev
 from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_action import CostAction
@@ -23,7 +24,7 @@ from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
 from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, transition_reward_model
-from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
+from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC,RAMP_MIDDLE_DRAWER
 from gps.utility.data_logger import DataLogger
 
 IMAGE_WIDTH = 80
@@ -56,7 +57,7 @@ SENSOR_DIMS = [{
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
-EXP_DIR = BASE_DIR + '/../experiments/blockstrike_invariant/'
+EXP_DIR = BASE_DIR + '/../experiments/blockpull_invariant/'
 INIT_POLICY_DIR = '/home/abhigupta/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
@@ -118,16 +119,17 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = [{
     'type': AgentMuJoCo,
-    'filename': './mjc_models/3link_gripper_strike.xml',
-    'x0': np.zeros((8,)),
+    'filename': ['./mjc_models/3link_gripper_pull_left.xml', './mjc_models/3link_gripper_pull_right.xml','./mjc_models/3link_gripper_pull_left.xml', './mjc_models/3link_gripper_pull_right.xml'],
+    'x0': [np.array([0.0, 0.0, 0.0, -0.6, 0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0]), 
+            np.array([0.0, 0.0, 0.0, -0.6, 0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0])],
     'dt': 0.05,
     'substeps': 5,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
     'pos_body_offset': [
-                        [np.array([-0.8, 0.0, 0.75]),np.array([0.0, 0.0, 0.75])],
-                        [np.array([-0.7, 0.0, -0.75]),np.array([0.1, 0.0, -0.75])],
-                        [np.array([-0.9, 0.0, 0.7]),np.array([0.5, 0.0, 1.3])],
-                        [np.array([-0.7, 0.0, -0.6]),np.array([0.8, 0.0, -1.2])],
+                        [np.array([1.2, 0.0, 0.0]), np.array([1.2, 0.0, 0.0])],
+                        [np.array([1.2, 0.0, 0.0]), np.array([1.2, 0.0, 0.0])],
+                        [np.array([1.2, 0.0, 0.0]), np.array([1.2, 0.0, 0.0])],
+                        [np.array([1.2, 0.0, 0.0]), np.array([1.2, 0.0, 0.0])],
 
                         # [np.array([-0.3, 0.0, 0.6]),np.array([0.5, 0.0, 0.9])],
                         # [np.array([-0.4, 0.0, -0.5]),np.array([0.5, 0.0, -0.75])],
@@ -153,16 +155,17 @@ agent = [{
          },
          {
     'type': AgentMuJoCo,
-    'filename': './mjc_models/4link_gripper_strike.xml',
-    'x0': np.zeros((10,)),
+    'filename': ['./mjc_models/4link_gripper_pull_left.xml', './mjc_models/4link_gripper_pull_right.xml','./mjc_models/4link_gripper_pull_left.xml', './mjc_models/4link_gripper_pull_right.xml'],
+    'x0': [np.array([0.0, 0.0, 0.0, 0.0, -0.6, 0.0, 0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0]), 
+            np.array([0.0, 0.0, 0.0, 0.0, -0.6, 0.0, 0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0])],
     'dt': 0.05,
     'substeps': 5,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
     'pos_body_offset': [
-                        [np.array([-0.8, 0.0, 0.75]),np.array([0.0, 0.0, 0.75])],
-                        [np.array([-0.7, 0.0, -0.75]),np.array([0.1, 0.0, -0.75])],
-                        [np.array([-0.9, 0.0, 0.7]),np.array([0.5, 0.0, 1.3])],
-                        [np.array([-0.7, 0.0, -0.6]),np.array([0.8, 0.0, -1.2])],
+                        [np.array([1.2, 0.0, 0.0]),  np.array([1.2, 0.0, 0.0])],
+                        [np.array([1.2, 0.0, 0.0]),  np.array([1.2, 0.0, 0.0])],
+                        [np.array([1.2, 0.0, 0.0]), np.array([1.2, 0.0, 0.0])],
+                        [np.array([1.2, 0.0, 0.0]),  np.array([1.2, 0.0, 0.0])],
 
                         # [np.array([-0.3, 0.0, 0.6]),np.array([0.5, 0.0, 0.9])],
                         # [np.array([-0.4, 0.0, -0.5]),np.array([0.5, 0.0, -0.75])],
@@ -243,44 +246,82 @@ algorithm[1]['init_traj_distr'] = {
     'T': agent[1]['T'],
 }
 
-fk_cost_1 = [{
-    'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0,0,0]), 
-                                           np.array([0.05, 0.05, 0.05]) + agent[0]['pos_body_offset'][i][1],
-                                           np.array([0,0,0])]),
-    'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'ramp_option': RAMP_QUADRATIC
+# fk_cost_1 = [{
+#     'type': CostFK,
+#     'target_end_effector': np.concatenate([np.array([0,0,0]), 
+#                                            np.array([0.05, 0.05, 0.05]) + agent[0]['pos_body_offset'][i][1],
+#                                            np.array([0,0,0])]),
+#     'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'ramp_option': RAMP_QUADRATIC
+# } for i in agent[0]['train_conditions']]
+
+state_cost_1 = [{
+    'type': CostState,
+    'data_types' : {
+        JOINT_ANGLES: {
+            'wp': np.array([0, 0, 0, 1]),
+            'target_state': np.zeros((4,)),
+        },
+    },
 } for i in agent[0]['train_conditions']]
 
-
-fk_cost_blocktouch = [{
-    'type': CostFKBlock,
-    'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-} for i in agent[0]['train_conditions']]
-
-algorithm[0]['cost'] = [{
-    'type': CostSum,
-    'costs': [fk_cost_1[i], fk_cost_blocktouch[i]],
-    'weights': [5.0, 1.0],
-} for i in agent[0]['train_conditions']]
 
 fk_cost_2 = [{
     'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0,0,0]), 
-                                           np.array([0.05, 0.05, 0.05]) + agent[1]['pos_body_offset'][i][1],
+    'target_end_effector': np.concatenate([np.array([0.9, 0.0, -0.6]),
+                                           np.array([0,0,0]), 
                                            np.array([0,0,0])]),
-    'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+    'wp': np.array([1, 1, 1, 0, 0, 0,0,0,0]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
-    'ramp_option': RAMP_QUADRATIC
+    'ramp_option': RAMP_MIDDLE_DRAWER
+},
+{
+    'type': CostFK,
+    'target_end_effector': np.concatenate([np.array([0.9, 0.0, 0.6]),
+                                           np.array([0,0,0]), 
+                                           np.array([0,0,0])]),
+    'wp': np.array([1, 1, 1, 0, 0, 0,0,0,0]),
+    'l1': 0.1,
+    'l2': 10.0,
+    'alpha': 1e-5,
+    'ramp_option': RAMP_MIDDLE_DRAWER
+}]
+
+
+#put a shaping here
+
+algorithm[0]['cost'] = [{
+    'type': CostSum,
+    'costs': [state_cost_1[i], fk_cost_2[i]],
+    'weights': [1.0, 1.0],
+} for i in agent[0]['train_conditions']]
+
+state_cost_2 = [{
+    'type': CostState,
+    'data_types' : {
+        JOINT_ANGLES: {
+            'wp': np.array([0, 0, 0, 0, 1]),
+            'target_state': np.zeros((5,)),
+        },
+    },
 } for i in agent[1]['train_conditions']]
+
+# fk_cost_3 = [{
+#     'type': CostFK,
+#     'target_end_effector': np.concatenate([np.array([0,0,0]), 
+#                                            np.array([0.05, 0.05, 0.05]) + agent[1]['pos_body_offset'][i][1],
+#                                            np.array([0,0,0])]),
+#     'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'ramp_option': RAMP_QUADRATIC
+# } for i in agent[1]['train_conditions']]
 
 # fk_cost_blocktouch2 = [{
 #     'type': CostFKBlock,
@@ -301,12 +342,35 @@ test_cost = [{
     'load_file': 'subspace_state.pkl'
 } for i in agent[0]['train_conditions']]
 
+# fk_cost_4 = [{
+#     'type': CostFK,
+#     'target_end_effector': np.concatenate([np.array([0.9, 0.0, -0.6]),
+#                                            np.array([0,0,0]), 
+#                                            np.array([0,0,0])]),
+#     'wp': np.array([1, 1, 1, 0, 0, 0,0,0,0]),
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'ramp_option': RAMP_MIDDLE_DRAWER
+# },
+# {
+#     'type': CostFK,
+#     'target_end_effector': np.concatenate([np.array([0.9, 0.0, 0.6]),
+#                                            np.array([0,0,0]), 
+#                                            np.array([0,0,0])]),
+#     'wp': np.array([1, 1, 1, 0, 0, 0,0,0,0]),
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'ramp_option': RAMP_MIDDLE_DRAWER
+# }]
+
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_2[i], test_cost[i]],
+    'costs': [state_cost_2[i]],
     'weights': [1.0, 1.0],
-} for i in agent[0]['train_conditions']]
+} for i in agent[1]['train_conditions']]
 
 
 

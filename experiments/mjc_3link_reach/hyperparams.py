@@ -33,7 +33,7 @@ SENSOR_DIMS = [{
     JOINT_VELOCITIES: 3,
     END_EFFECTOR_POINTS: 6,
     END_EFFECTOR_POINT_VELOCITIES: 6,
-    ACTION: 3,
+    ACTION: 4,
 },]
 
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
@@ -96,12 +96,12 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = [ {
     'type': AgentMuJoCo,
-    'filename': './mjc_models/arm_3link_reach.xml',
+    'filename': './mjc_models/finger_weight.xml',
     'x0': np.zeros(6),
     'dt': 0.05,
     'substeps': 5,
     'pos_body_offset': all_offsets,
-    'pos_body_idx': np.array([6]),
+    'pos_body_idx': np.array([4]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
@@ -117,6 +117,7 @@ agent = [ {
                       END_EFFECTOR_POINT_VELOCITIES],
     'meta_include': [],
     'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
+    'tendon': [25, 26]
     }
 ]
 
@@ -159,7 +160,7 @@ algorithm = [{
 
 algorithm[0]['init_traj_distr'] = {
     'type': init_pd,
-    'init_var': 10.0,
+    'init_var': 1.0,
     'pos_gains': 10.0,
     'dQ': SENSOR_DIMS[0][ACTION],
     'dt': agent[0]['dt'],
@@ -171,7 +172,7 @@ algorithm[0]['init_traj_distr'] = {
 
 torque_cost_1 = [{
     'type': CostAction,
-    'wu': 5e-1 / PR2_GAINS[0],
+    'wu': 5e-1 / PR2_GAINS[1],
 } for i in common['train_conditions']]
 
 fk_cost_1 = [{
@@ -220,7 +221,7 @@ algorithm[0]['policy_prior'] = {
 config = {
     'iterations': 25,
     'num_samples': 10,
-    'verbose_trials': 1,
+    'verbose_trials': 10,
     'verbose_policy_trials': 5,
     'common': common,
     'save_wts': True,

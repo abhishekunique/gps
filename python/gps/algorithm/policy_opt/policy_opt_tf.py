@@ -193,7 +193,7 @@ class PolicyOptTf(PolicyOpt):
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver =TfSolver(loss_scalar=tf.add_n(self.other['all_losses']) + 10*tf.add_n(self.other['gen_loss']),
+        self.solver =TfSolver(loss_scalar=tf.add_n(self.other['all_losses']),
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
@@ -201,13 +201,13 @@ class PolicyOptTf(PolicyOpt):
                               weight_decay=self._hyperparams['weight_decay'],
                               vars_to_opt=self.other['all_variables'].values())
 
-        self.dc_solver =TfSolver(loss_scalar=tf.add_n(self.other['dc_loss']),
-                              solver_name=self._hyperparams['solver_type'],
-                              base_lr=0.0005, #self._hyperparams['lr'],
-                              lr_policy=self._hyperparams['lr_policy'],
-                              momentum=self._hyperparams['momentum'],
-                              weight_decay=self._hyperparams['weight_decay'],
-                              vars_to_opt=self.other['dc_variables'].values())
+        # self.dc_solver =TfSolver(loss_scalar=tf.add_n(self.other['dc_loss']),
+        #                       solver_name=self._hyperparams['solver_type'],
+        #                       base_lr=0.0005, #self._hyperparams['lr'],
+        #                       lr_policy=self._hyperparams['lr_policy'],
+        #                       momentum=self._hyperparams['momentum'],
+        #                       weight_decay=self._hyperparams['weight_decay'],
+        #                       vars_to_opt=self.other['dc_variables'].values())
 
     def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full):
         import matplotlib.pyplot as plt
@@ -216,17 +216,17 @@ class PolicyOptTf(PolicyOpt):
         
         for cond in range(num_conds):
             for s_no in range(num_samples):
-                # xs = []
-                # ys = []
+                xs = []
+                ys = []
                 for robot_number in range(self.num_robots):
                     color = ['r', 'b'][robot_number]
                     x = obs_extended_full[robot_number][cond, s_no, :, 6+2*robot_number]
                     y = obs_extended_full[robot_number][cond, s_no, :, 8+2*robot_number]
                     plt.scatter(x, y, c=color)
-                    # xs.append(x)
-                    # ys.append(y)
-                # plt.plot(xs[0], ys[0], xs[1], ys[1])
-        # plt.show()
+                    xs.append(x)
+                    ys.append(y)
+                plt.plot([xs[0], xs[1]], [ys[0], ys[1]])
+        plt.show()
         import IPython
         IPython.embed()
 
