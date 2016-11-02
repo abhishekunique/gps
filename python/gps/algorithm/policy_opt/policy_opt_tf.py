@@ -161,6 +161,17 @@ class PolicyOptTf(PolicyOpt):
         # traj_feats = self.run_features_forward(obs_full[0][0][0], 0)
 
         nconds = len(obs_full[0])
+        import pickle
+        val_vars = pickle.load(open(self._hyperparams['load_file'], 'rb'))
+        self.var_list_feat = {}
+        for v in tf.trainable_variables():
+            self.var_list_feat[v.name] = v
+        for k,v in self.var_list_feat.items():
+            if k in val_vars:   
+                print("COST LOAD")
+                print(k)         
+                assign_op = v.assign(val_vars[k])
+                self.session.run(assign_op)
 
         # traj_feats = [self.run_features_forward(obs_full[0][c], 0) for c in range(nconds)]
 
@@ -226,6 +237,7 @@ class PolicyOptTf(PolicyOpt):
             maxitr = 30000
         else:
             maxitr = 1000
+        maxitr = 0
         for i in range(maxitr):
             feed_dict = {}
             for robot_number in range(self.num_robots):
@@ -326,6 +338,7 @@ class PolicyOptTf(PolicyOpt):
         for k, v in self.var_list.items():
             var_dict[k] = self.sess.run(v)
         pickle.dump(var_dict, open(weight_save_file, "wb"))
+
         # obs = obs_full[0]
         # N, T = obs.shape[:2]
         # dO = obs.shape[2]

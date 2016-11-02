@@ -80,6 +80,7 @@ common = {
         'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
         'ncond': len(train_conds),
         'type': PolicyOptTf,
+        'load_file' : 'subspace_state.pkl',
         'network_model': unsup_domain_confusion,
         'network_model_feat': unsup_domain_confusion,
         'run_feats': False,
