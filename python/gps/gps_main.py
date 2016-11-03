@@ -113,12 +113,15 @@ class GPSMain(object):
                 for m in self._train_idx[robot_number]:
                     sample_costs = []
                     for sample in traj_sample_lists[robot_number][m]:
-                        sample_costs.append([costfn.eval(sample)[0] for costfn in self.algorithm[robot_number].cost[m]._costs])
+                        costs = [costfn.eval(sample)[0] for costfn in self.algorithm[robot_number].cost[m]._costs]
+                        if len(costs)< 2:
+                            costs.append(np.zeros_like(costs[0]))
+                        sample_costs.append(costs)
                     cond_costs.append(sample_costs)
                 robot_costs.append(cond_costs)
             itr_costs.append(robot_costs)
-            import IPython
-            IPython.embed()
+            # import IPython
+            # IPython.embed()
             robot_costs = np.array(robot_costs)
             robot_costs = np.sum(robot_costs, axis=-1)
             robot_costs = np.mean(robot_costs, axis = 2)
