@@ -214,21 +214,21 @@ class PolicyOptTf(PolicyOpt):
         num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
 
         
-        for cond in range(num_conds):
-            for s_no in range(num_samples):
-                xs = []
-                ys = []
-                for robot_number in range(self.num_robots):
-                    color = ['r', 'b'][robot_number]
-                    x = obs_extended_full[robot_number][cond, s_no, :, 6+2*robot_number]
-                    y = obs_extended_full[robot_number][cond, s_no, :, 8+2*robot_number]
-                    plt.scatter(x, y, c=color)
-                    xs.append(x)
-                    ys.append(y)
-                plt.plot([xs[0], xs[1]], [ys[0], ys[1]])
-        plt.show()
-        import IPython
-        IPython.embed()
+        # for cond in range(num_conds):
+        #     for s_no in range(num_samples):
+        #         xs = []
+        #         ys = []
+        #         for robot_number in range(self.num_robots):
+        #             color = ['r', 'b'][robot_number]
+        #             x = obs_extended_full[robot_number][cond, s_no, :, 6+2*robot_number]
+        #             y = obs_extended_full[robot_number][cond, s_no, :, 8+2*robot_number]
+        #             plt.scatter(x, y, c=color)
+        #             xs.append(x)
+        #             ys.append(y)
+        #         plt.plot([xs[0], xs[1]], [ys[0], ys[1]])
+        # plt.show()
+        # import IPython
+        # IPython.embed()
 
         obs_reshaped = []
         next_obs_reshaped = []
@@ -325,21 +325,21 @@ class PolicyOptTf(PolicyOpt):
         print("CHECK NN")
         import IPython
         IPython.embed()
-        for cond in range(num_conds):
-            for s_no in range(num_samples):
-                color = ['r', 'b'][robot_number]
-                for t in range(T_extended):
-                    x = obs_extended_full[1][cond, s_no, t, 8]
-                    y = obs_extended_full[1][cond, s_no, t, 10]
-                    nnbr_currpoint = indices[cond, s_no, t]
-                    x_nbr = obs_full_reshaped[nnbr_currpoint][6]
-                    y_nbr = obs_full_reshaped[nnbr_currpoint][8]
-                    print("X: " + str([x,x_nbr]))
-                    print("Y: " + str([y,y_nbr]))
-                    lines = plt.plot([x,x_nbr], [y,y_nbr])
-        plt.show()
-        import IPython
-        IPython.embed()
+        # for cond in range(num_conds):
+        #     for s_no in range(num_samples):
+        #         color = ['r', 'b'][robot_number]
+        #         for t in range(T_extended):
+        #             x = obs_extended_full[1][cond, s_no, t, 8]
+        #             y = obs_extended_full[1][cond, s_no, t, 10]
+        #             nnbr_currpoint = indices[cond, s_no, t]
+        #             x_nbr = obs_full_reshaped[nnbr_currpoint][6]
+        #             y_nbr = obs_full_reshaped[nnbr_currpoint][8]
+        #             print("X: " + str([x,x_nbr]))
+        #             print("Y: " + str([y,y_nbr]))
+        #             lines = plt.plot([x,x_nbr], [y,y_nbr])
+        # plt.show()
+        # import IPython
+        # IPython.embed()
         np.save("3link_feats.npy", np.asarray(cond_feats))
 
         print("done training invariant autoencoder and saving weights")

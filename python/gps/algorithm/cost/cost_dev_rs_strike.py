@@ -34,7 +34,7 @@ class CostDevRs(Cost):
         layer_size = 30
         dim_hidden = (n_layers - 1)*[layer_size]
         feature_layers = []
-        dim_input = 14
+        dim_input = 8#14
         num_feats = 30
         with g.as_default():
             nn_input = tf.placeholder("float", [None, dim_input], name='nn_input_state1')
@@ -102,7 +102,8 @@ class CostDevRs(Cost):
 
         tgt = self._hyperparams['target_feats']
         x = sample.get_obs()
-        x = np.concatenate([x[:, 0:4], x[:, 5:9], x[:, 10:13], x[:, 19:22]], axis=1)
+        # x = np.concatenate([x[:, 0:4], x[:, 5:9], x[:, 10:13], x[:, 19:22]], axis=1)
+        x = np.concatenate([x[:, 0:4], x[:, 5:9]], axis=1)
         feed_dict = {self.input: x}
         feat_forward = self.session.run(self.feature_layers, feed_dict=feed_dict)
         num_feats = feat_forward.shape[1]
@@ -122,29 +123,29 @@ class CostDevRs(Cost):
 
             ls[t, 0:4] = grad_mult[0:4]
             ls[t, 5:9] = grad_mult[4:8]
-            ls[t, 10:13] = grad_mult[8:11]
-            ls[t, 19:22] = grad_mult[11:14]
+            # ls[t, 10:13] = grad_mult[8:11]
+            # ls[t, 19:22] = grad_mult[11:14]
             hess_mult = gradients_all[t].T.dot(gradients_all[t])
 
             lss[t,0:4,0:4] = hess_mult[0:4, 0:4]
             lss[t,5:9,0:4] = hess_mult[4:8, 0:4]
-            lss[t,10:13,0:4] = hess_mult[8:11, 0:4]
-            lss[t,19:22,0:4] = hess_mult[11:14, 0:4]
+            # lss[t,10:13,0:4] = hess_mult[8:11, 0:4]
+            # lss[t,19:22,0:4] = hess_mult[11:14, 0:4]
 
             lss[t,0:4,5:9] = hess_mult[0:4, 4:8]
             lss[t,5:9,5:9] = hess_mult[4:8, 4:8]
-            lss[t,10:13,5:9] = hess_mult[8:11, 4:8]
-            lss[t,19:22,5:9] = hess_mult[11:14, 4:8]
+            # lss[t,10:13,5:9] = hess_mult[8:11, 4:8]
+            # lss[t,19:22,5:9] = hess_mult[11:14, 4:8]
 
-            lss[t,0:4,10:13] = hess_mult[0:4, 8:11]
-            lss[t,5:9,10:13] = hess_mult[4:8, 8:11]
-            lss[t,10:13,10:13] = hess_mult[8:11, 8:11]
-            lss[t,19:22,10:13] = hess_mult[11:14, 8:11]
+            # lss[t,0:4,10:13] = hess_mult[0:4, 8:11]
+            # lss[t,5:9,10:13] = hess_mult[4:8, 8:11]
+            # lss[t,10:13,10:13] = hess_mult[8:11, 8:11]
+            # lss[t,19:22,10:13] = hess_mult[11:14, 8:11]
 
-            lss[t,0:4,19:22] = hess_mult[0:4, 11:14]
-            lss[t,5:9,19:22] = hess_mult[4:8, 11:14]
-            lss[t,10:13,19:22] = hess_mult[8:11, 11:14]
-            lss[t,19:22,19:22] = hess_mult[11:14, 11:14]
+            # lss[t,0:4,19:22] = hess_mult[0:4, 11:14]
+            # lss[t,5:9,19:22] = hess_mult[4:8, 11:14]
+            # lss[t,10:13,19:22] = hess_mult[8:11, 11:14]
+            # lss[t,19:22,19:22] = hess_mult[11:14, 11:14]
 
         final_l += l
         final_lx += ls

@@ -113,6 +113,8 @@ class GPSMain(object):
                 for m in self._train_idx[robot_number]:
                     sample_costs = []
                     for sample in traj_sample_lists[robot_number][m]:
+                        # import IPython
+                        # IPython.embed()
                         costs = [costfn.eval(sample)[0] for costfn in self.algorithm[robot_number].cost[m]._costs]
                         if len(costs)< 2:
                             costs.append(np.zeros_like(costs[0]))
@@ -279,8 +281,8 @@ class GPSMain(object):
             next_obs = []
             tgt_actions = []
             for task in tasks:
-                obs.append(full_dict[task]['obs_full'][robot_number])
-                next_obs.append(full_dict[task]['next_obs_full'][robot_number])
+                obs.append(full_dict[task]['obs_full'][robot_number][:, :, :[6, 8][robot_number]])
+                next_obs.append(full_dict[task]['next_obs_full'][robot_number][:, :, :[6, 8][robot_number]])
                 tgt_actions.append(full_dict[task]['action_full'][robot_number])
             obs = np.concatenate(obs, axis=0)
             next_obs = np.concatenate(next_obs, axis=0)

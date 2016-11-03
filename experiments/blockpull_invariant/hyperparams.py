@@ -108,8 +108,8 @@ common = {
         'iterations': 60000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-        'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
-        'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)])
+        'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7)]),#, np.arange(8,11), np.arange(17,20)]),
+        'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9)]),#, np.arange(10,13), np.arange(19,22)])
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
     }
 }
@@ -333,14 +333,14 @@ state_cost_2 = [{
 
 load_trajs = np.load("3link_feats.npy")
 load_trajs = np.reshape(load_trajs, (2,7,100,30))
-# test_cost = [{
-#     'type': CostDevRs,
-#     'l1': 0.1,
-#     'l2': 10.0,
-#     'alpha': 1e-5,
-#     'target_feats': np.mean(load_trajs[i], axis=0),
-#     'load_file': 'subspace_state.pkl'
-# } for i in agent[0]['train_conditions']]
+test_cost = [{
+    'type': CostDevRs,
+    'l1': 0.1,
+    'l2': 10.0,
+    'alpha': 1e-5,
+    'target_feats': np.mean(load_trajs[i], axis=0),
+    'load_file': 'subspace_state.pkl'
+} for i in agent[0]['train_conditions']]
 
 # fk_cost_4 = [{
 #     'type': CostFK,
@@ -368,7 +368,7 @@ load_trajs = np.reshape(load_trajs, (2,7,100,30))
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [state_cost_2[i]],#, test_cost[i]],#fk_cost_2[i]],
+    'costs': [state_cost_2[i],test_cost[i]],#fk_cost_2[i]],
     'weights': [1.0, 5.0],
 } for i in agent[1]['train_conditions']]
 
@@ -447,8 +447,8 @@ config = {
     'robot_iters': [range(25), range(0,25,2)],
     # 'robot0_file': '/home/abhigupta/gps/experiments/blockstrike/data_files/traj_sample_itr_07_rn_00.pkl',
     # 'robot1_file': '/home/abhigupta/gps/experiments/4link_blockstrike/data_files/traj_sample_itr_13_rn_00.pkl',
-    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
-    'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
+    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7)]),#, np.arange(8,11), np.arange(17,20)]),
+    'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9)]),#, np.arange(10,13), np.arange(19,22)])
 }
 
 common['info'] = generate_experiment_info(config)
