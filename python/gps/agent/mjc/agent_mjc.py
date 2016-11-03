@@ -51,8 +51,8 @@ class AgentMuJoCo(Agent):
         """
         self._world = []
         self._model = []
-        import IPython
-        IPython.embed()
+        # import IPython
+        # IPython.embed()
         # Initialize Mujoco worlds. If there's only one xml file, create a single world object,
         # otherwise create a different world for each condition.
         # if not isinstance(filename, list):

@@ -50,7 +50,7 @@ class CostDevRs(Cost):
             layer2 = tf.nn.relu(tf.matmul(layer1, w2) + b2)
             feature_layers = layer2
             gradients = tf.gradients(layer2, nn_input)
-            init_op = tf.initialize_local_variables()
+            init_op = tf.initialize_all_variables()
             self.feature_layers = feature_layers
             self.gradients = gradients
             self.input = nn_input
