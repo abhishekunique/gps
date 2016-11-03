@@ -130,7 +130,7 @@ class GPSMain(object):
 
             np.save("data%d.npy" %seed, np.array(itr_costs))
             print robot_costs
-            for robot_number in range(self.num_robots):
+            for robot_number in range(1, self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
             for robot_number in range(self.num_robots):

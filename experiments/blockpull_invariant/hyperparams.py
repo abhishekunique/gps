@@ -369,7 +369,7 @@ test_cost = [{
 algorithm[1]['cost'] = [{
     'type': CostSum,
     'costs': [state_cost_2[i],test_cost[i]],#fk_cost_2[i]],
-    'weights': [1.0, 5.0],
+    'weights': [1.0, 10.0],
 } for i in agent[1]['train_conditions']]
 
 

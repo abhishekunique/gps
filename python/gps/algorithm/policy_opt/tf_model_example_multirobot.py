@@ -1158,7 +1158,7 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
             loss_contrastive_state = tf.nn.l2_loss(state_features_list[0] - state_features_list[1])
             loss_contrastive_action = tf.nn.l2_loss(action_features_list[0] - action_features_list[1])
             loss_contrastive_transition = tf.nn.l2_loss(transition_out_list[0] - transition_out_list[1])
-            all_losses += [loss_contrastive_state, loss_contrastive_action, loss_contrastive_transition]
+            all_losses += [loss_contrastive_state]#, loss_contrastive_action, loss_contrastive_transition]
         nnets.append(TfMap.init_from_lists([None, None, None], [None], [None], None, None))
 
     all_variables_dict = {}
