@@ -1152,7 +1152,7 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
         loss_transition = tf.nn.l2_loss(output_transition - next_state_features)
         loss_ae_action = tf.nn.l2_loss(output_action - action_input)
         loss_ae_state = tf.nn.l2_loss(output_state_ae - state_input)
-        all_losses += [loss_transition, loss_ae_action, loss_ae_state]
+        all_losses += [loss_ae_state]#[loss_transition, loss_ae_action, loss_ae_state]
         #contrastive loss version
         if robot_number == 1:
             loss_contrastive_state = tf.nn.l2_loss(state_features_list[0] - state_features_list[1])
