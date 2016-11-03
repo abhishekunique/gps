@@ -143,7 +143,8 @@ class GPSMain(object):
             #     import IPython
             #     IPython.embed()
 
-
+        import IPython
+        IPython.embed()
         self._end()
 
     def run_badmm(self, itr_load=None, rf=False):
@@ -207,7 +208,7 @@ class GPSMain(object):
         Returns: None
         """
 
-        traj_distr = self.data_logger.unpickle("pullingtask.pkl")
+        traj_distr = self.data_logger.unpickle("pullingdata2.pkl")
         import IPython
         IPython.embed()
         for ag in range(self.num_robots):
