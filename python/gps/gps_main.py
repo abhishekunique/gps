@@ -91,7 +91,10 @@ class GPSMain(object):
 
         itr_costs = []
         seed = np.random.randint(10000)
-        import random
+        import random, shutil
+        if os.path.exists(self._hyperparams['common']['data_files_dir']):
+            shutil.move(self._hyperparams['common']['data_files_dir'], self._hyperparams['common']['data_files_dir'][:-1] + str(seed))
+            os.makedirs(self._hyperparams['common']['data_files_dir'])
         random.seed(seed)
         np.random.seed(seed)
         for itr in range(itr_start, self._hyperparams['iterations']):
