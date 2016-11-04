@@ -10,7 +10,6 @@ from gps.agent.mjc.agent_mjc import AgentMuJoCo
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.algorithm.cost.cost_fk import CostFK
-from gps.algorithm.cost.cost_state import CostState
 from gps.algorithm.cost.cost_fk_dev import CostFKDev
 from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_action import CostAction
@@ -24,7 +23,7 @@ from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
 from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, transition_reward_model
-from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC,RAMP_MIDDLE_DRAWER
+from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC, RAMP_MIDDLE_DRAWER
 from gps.utility.data_logger import DataLogger
 
 IMAGE_WIDTH = 80
@@ -57,7 +56,7 @@ SENSOR_DIMS = [{
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
-EXP_DIR = BASE_DIR + '/../experiments/blockpull_invariant/'
+EXP_DIR = BASE_DIR + '/../experiments/blockstrike_invariant/'
 INIT_POLICY_DIR = '/home/abhigupta/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
@@ -70,48 +69,48 @@ common = {
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
     'conditions': 4,
-    'train_conditions': [0,1],
+    'train_conditions': [0, 1],
     'test_conditions': [2,3],
     'num_robots':2,
-    'policy_opt': {
-        'type': PolicyOptTf,
-        'network_model': transition_reward_model,
-        'run_feats': False,
-        'invariant_train': True,
-        'load_weights': '/home/abhigupta/gps/subspace_newweights.pkl',
-        'network_params': [{
-            'dim_hidden': [10],
-            'num_filters': [10, 20],
-            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_image_data':[],
-            'image_width': IMAGE_WIDTH,
-            'image_height': IMAGE_HEIGHT,
-            'image_channels': IMAGE_CHANNELS,
-            'sensor_dims': SENSOR_DIMS[0],
-            'batch_size': 25,
-            # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
-        },
-        {
-            'dim_hidden': [10],
-            'num_filters': [10, 20],
-            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_image_data':[],
-            'image_width': IMAGE_WIDTH,
-            'image_height': IMAGE_HEIGHT,
-            'image_channels': IMAGE_CHANNELS,
-            'sensor_dims': SENSOR_DIMS[1],
-            'batch_size': 25,
-            # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
-        }],
-        'iterations': 60000,
-        'fc_only_iterations': 5000,
-        'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-        'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7)]),#, np.arange(8,11), np.arange(17,20)]),
-        'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9)]),#, np.arange(10,13), np.arange(19,22)])
-        # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
-    }
+    # 'policy_opt': {
+    #     'type': PolicyOptTf,
+    #     'network_model': transition_reward_model,
+    #     'run_feats': False,
+    #     'invariant_train': True,
+    #     'load_weights': '/home/abhigupta/gps/subspace_newweights.pkl',
+    #     'network_params': [{
+    #         'dim_hidden': [10],
+    #         'num_filters': [10, 20],
+    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_image_data':[],
+    #         'image_width': IMAGE_WIDTH,
+    #         'image_height': IMAGE_HEIGHT,
+    #         'image_channels': IMAGE_CHANNELS,
+    #         'sensor_dims': SENSOR_DIMS[0],
+    #         'batch_size': 25,
+    #         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
+    #     },
+    #     {
+    #         'dim_hidden': [10],
+    #         'num_filters': [10, 20],
+    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_image_data':[],
+    #         'image_width': IMAGE_WIDTH,
+    #         'image_height': IMAGE_HEIGHT,
+    #         'image_channels': IMAGE_CHANNELS,
+    #         'sensor_dims': SENSOR_DIMS[1],
+    #         'batch_size': 25,
+    #         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
+    #     }],
+    #     'iterations': 60000,
+    #     'fc_only_iterations': 5000,
+    #     'checkpoint_prefix': EXP_DIR + 'data_files/policy',
+    #     'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
+    #     'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)])
+    #     # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
+    # }
 }
 
 if not os.path.exists(common['data_files_dir']):
@@ -119,17 +118,16 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = [{
     'type': AgentMuJoCo,
-    'filename': ['./mjc_models/3link_gripper_pull.xml', './mjc_models/3link_gripper_pull_right.xml','./mjc_models/3link_gripper_pull_left.xml', './mjc_models/3link_gripper_pull_right.xml'],
-    'x0': [np.array([0.0, 0.0, 0.0, -0.6, 0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0]), 
-            np.array([0.0, 0.0, 0.0, -0.6, 0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0])],
+    'filename': ['./mjc_models/3link_button.xml', './mjc_models/3link_button_left.xml', './mjc_models/3link_button.xml', './mjc_models/3link_button_left.xml'],
+    'x0': np.zeros((8,)),
     'dt': 0.05,
     'substeps': 5,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
     'pos_body_offset': [
-                        [np.array([1.2, 0.0, 0.0]), np.array([1.2, 0.0, 0.0])],
-                        [np.array([1.2, 0.0, 0.0]), np.array([1.2, 0.0, 0.0])],
-                        [np.array([1.2, 0.0, 0.0]), np.array([1.2, 0.0, 0.0])],
-                        [np.array([1.2, 0.0, 0.0]), np.array([1.2, 0.0, 0.0])],
+                        [np.array([.5, 0.0, 1]),np.array([ 0.0,0.0,0.0])],
+                        [np.array([.5, 0.0, -1]),np.array([0.0,0.0,0.0])],
+                        [np.array([-0.9, 0.0, 0.7]),np.array([0.5, 0.0, 1.4])],
+                        [np.array([-0.7, 0.0, -0.6]),np.array([0.8, 0.0, -1.4])],
 
                         # [np.array([-0.3, 0.0, 0.6]),np.array([0.5, 0.0, 0.9])],
                         # [np.array([-0.4, 0.0, -0.5]),np.array([0.5, 0.0, -0.75])],
@@ -155,17 +153,16 @@ agent = [{
          },
          {
     'type': AgentMuJoCo,
-    'filename': ['./mjc_models/4link_gripper_pull.xml', './mjc_models/4link_gripper_pull_right.xml','./mjc_models/4link_gripper_pull_left.xml', './mjc_models/4link_gripper_pull_right.xml'],
-    'x0': [np.array([0.0, 0.0, 0.0, 0.0, -0.6, 0.0, 0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0]), 
-            np.array([0.0, 0.0, 0.0, 0.0, -0.6, 0.0, 0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0])],
+    'filename': ['./mjc_models/4link_button.xml', './mjc_models/4link_button_left.xml', './mjc_models/4link_button_left.xml', './mjc_models/4link_gripper_strike.xml'],
+    'x0': np.zeros((10,)),
     'dt': 0.05,
     'substeps': 5,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
     'pos_body_offset': [
-                        [np.array([1.2, 0.0, 0.0]),  np.array([1.2, 0.0, 0.0])],
-                        [np.array([1.2, 0.0, 0.0]),  np.array([1.2, 0.0, 0.0])],
-                        [np.array([1.2, 0.0, 0.0]), np.array([1.2, 0.0, 0.0])],
-                        [np.array([1.2, 0.0, 0.0]),  np.array([1.2, 0.0, 0.0])],
+                        [np.array([.5, 0.0, 1]),np.array([ 0.0,0.0,0.0])],
+                        [np.array([.5, 0.0, -1]),np.array([0.0,0.0,0.0])],
+                        [np.array([-0.9, 0.0, 0.7]),np.array([0.5, 0.0, 1.4])],
+                        [np.array([-0.7, 0.0, -0.6]),np.array([0.8, 0.0, -1.4])],
 
                         # [np.array([-0.3, 0.0, 0.6]),np.array([0.5, 0.0, 0.9])],
                         # [np.array([-0.4, 0.0, -0.5]),np.array([0.5, 0.0, -0.75])],
@@ -246,43 +243,23 @@ algorithm[1]['init_traj_distr'] = {
     'T': agent[1]['T'],
 }
 
-# fk_cost_1 = [{
-#     'type': CostFK,
-#     'target_end_effector': np.concatenate([np.array([0,0,0]), 
-#                                            np.array([0.05, 0.05, 0.05]) + agent[0]['pos_body_offset'][i][1],
-#                                            np.array([0,0,0])]),
-#     'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
-#     'l1': 0.1,
-#     'l2': 10.0,
-#     'alpha': 1e-5,
-#     'ramp_option': RAMP_QUADRATIC
-# } for i in agent[0]['train_conditions']]
-
-state_cost_1 = [{
-    'type': CostState,
-    'data_types' : {
-        JOINT_ANGLES: {
-            'wp': np.array([0, 0, 0, 1]),
-            'target_state': np.zeros((4,)),
-        },
-    },
+fk_cost_1 = [{
+    'type': CostFK,
+    'target_end_effector': np.concatenate([np.array([0,0,0]), 
+                                           [np.array([.5, 0.0, 1.5]), np.array([.5, 0.0, -1.5])][i] + agent[0]['pos_body_offset'][i][1],
+                                           np.array([0,0,0])]),
+    'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+    'l1': 0.1,
+    'l2': 10.0,
+    'alpha': 1e-5,
+    'ramp_option': RAMP_QUADRATIC
 } for i in agent[0]['train_conditions']]
 
 
-fk_cost_2 = [{
-    'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0.9, 0.0, -0.6]),
-                                           np.array([0,0,0]), 
-                                           np.array([0,0,0])]),
-    'wp': np.array([1, 1, 1, 0, 0, 0,0,0,0]),
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'ramp_option': RAMP_MIDDLE_DRAWER
-},
+fk_cost_blocktouch = [
 {
     'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0.9, 0.0, 0.6]),
+    'target_end_effector': np.concatenate([[np.array([0.5, 0.0, 0.95]), np.array([0.5, 0.0, -0.95])][i],
                                            np.array([0,0,0]), 
                                            np.array([0,0,0])]),
     'wp': np.array([1, 1, 1, 0, 0, 0,0,0,0]),
@@ -290,38 +267,33 @@ fk_cost_2 = [{
     'l2': 10.0,
     'alpha': 1e-5,
     'ramp_option': RAMP_MIDDLE_DRAWER
-}]
-
-
-#put a shaping here
+}
+# {
+#     'type': CostFKBlock,
+#     'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+# }
+ for i in agent[0]['train_conditions']]
 
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [state_cost_1[i], fk_cost_2[i]],
-    'weights': [1.0, 1.0],
+    'costs': [fk_cost_1[i], fk_cost_blocktouch[i]],
+    'weights': [5.0, 1.0],
 } for i in agent[0]['train_conditions']]
 
-state_cost_2 = [{
-    'type': CostState,
-    'data_types' : {
-        JOINT_ANGLES: {
-            'wp': np.array([0, 0, 0, 0, 1]),
-            'target_state': np.zeros((5,)),
-        },
-    },
+fk_cost_2 = [{
+    'type': CostFK,
+    'target_end_effector': np.concatenate([np.array([0,0,0]), 
+                                           np.array([0.05, 0.05, 0.05]) + agent[1]['pos_body_offset'][i][1],
+                                           np.array([0,0,0])]),
+    'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+    'l1': 0.1,
+    'l2': 10.0,
+    'alpha': 1e-5,
+    'ramp_option': RAMP_QUADRATIC
 } for i in agent[1]['train_conditions']]
-
-# fk_cost_3 = [{
-#     'type': CostFK,
-#     'target_end_effector': np.concatenate([np.array([0,0,0]), 
-#                                            np.array([0.05, 0.05, 0.05]) + agent[1]['pos_body_offset'][i][1],
-#                                            np.array([0,0,0])]),
-#     'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
-#     'l1': 0.1,
-#     'l2': 10.0,
-#     'alpha': 1e-5,
-#     'ramp_option': RAMP_QUADRATIC
-# } for i in agent[1]['train_conditions']]
 
 # fk_cost_blocktouch2 = [{
 #     'type': CostFKBlock,
@@ -333,44 +305,21 @@ state_cost_2 = [{
 
 load_trajs = np.load("3link_feats.npy")
 load_trajs = np.reshape(load_trajs, (2,7,100,30))
-test_cost = [{
-    'type': CostDevRs,
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'target_feats': np.mean(load_trajs[i], axis=0),
-    'load_file': 'subspace_state.pkl'
-} for i in agent[0]['train_conditions']]
-
-# fk_cost_4 = [{
-#     'type': CostFK,
-#     'target_end_effector': np.concatenate([np.array([0.9, 0.0, -0.6]),
-#                                            np.array([0,0,0]), 
-#                                            np.array([0,0,0])]),
-#     'wp': np.array([1, 1, 1, 0, 0, 0,0,0,0]),
+# test_cost = [{
+#     'type': CostDevRs,
 #     'l1': 0.1,
 #     'l2': 10.0,
 #     'alpha': 1e-5,
-#     'ramp_option': RAMP_MIDDLE_DRAWER
-# },
-# {
-#     'type': CostFK,
-#     'target_end_effector': np.concatenate([np.array([0.9, 0.0, 0.6]),
-#                                            np.array([0,0,0]), 
-#                                            np.array([0,0,0])]),
-#     'wp': np.array([1, 1, 1, 0, 0, 0,0,0,0]),
-#     'l1': 0.1,
-#     'l2': 10.0,
-#     'alpha': 1e-5,
-#     'ramp_option': RAMP_MIDDLE_DRAWER
-# }]
+#     'target_feats': np.mean(load_trajs[i], axis=0),
+#     'load_file': 'subspace_state.pkl'
+# } for i in agent[0]['train_conditions']]
 
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [state_cost_2[i], test_cost[i]], #fk_cost_2[i]],
-    'weights': [1.0, 10.0],
-} for i in agent[1]['train_conditions']]
+    'costs': [fk_cost_1[i], fk_cost_blocktouch[i]],
+    'weights': [1.0, 1.0],
+} for i in agent[0]['train_conditions']]
 
 
 
@@ -431,7 +380,7 @@ algorithm[1]['policy_prior'] = {
 
 config = {
     'iterations': 25,
-    'num_samples': 7,
+    'num_samples': 2,
     'verbose_trials': 7,
     'verbose_policy_trials': 5,
     'save_wts': True,
@@ -447,8 +396,8 @@ config = {
     'robot_iters': [range(25), range(0,25,2)],
     # 'robot0_file': '/home/abhigupta/gps/experiments/blockstrike/data_files/traj_sample_itr_07_rn_00.pkl',
     # 'robot1_file': '/home/abhigupta/gps/experiments/4link_blockstrike/data_files/traj_sample_itr_13_rn_00.pkl',
-    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7)]),#, np.arange(8,11), np.arange(17,20)]),
-    'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9)]),#, np.arange(10,13), np.arange(19,22)])
+    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
+    'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
 }
 
 common['info'] = generate_experiment_info(config)
