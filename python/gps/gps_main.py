@@ -276,7 +276,7 @@ class GPSMain(object):
             tgt_actions_full.append(tgt_actions)
             obs_complete_time_full.append(obs_complete_time)
         full_dict = pickle.load(open("multiproxy_data.pkl", "rb"))
-        tasks = ['reach', 'push', 'peg']
+        tasks = ['peg']#['reach', 'push', 'peg']
         obs_full = []
         next_obs_full = []
         tgt_actions_full = []

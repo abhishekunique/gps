@@ -19,6 +19,7 @@ from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, invariant_subspace_test,double_contrastive_invariance, invariant_subspace_test_action
 
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, transition_reward_model
 
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
@@ -75,7 +76,7 @@ common = {
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': invariant_subspace_test,
+        'network_model': transition_reward_model,
         'network_model_feat': invariant_subspace_test,
         # 'network_model_action': invariant_subspace_test_action,
         'run_feats': False,
@@ -342,7 +343,7 @@ algorithm[1]['policy_prior'] = {
 config = {
     'iterations': 25,
     'num_samples': 5,
-    'verbose_trials': 5,
+    'verbose_trials': 1,
     'verbose_policy_trials': 5,
     'common': common,
     'save_wts': True,

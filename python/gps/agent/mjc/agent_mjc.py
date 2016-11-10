@@ -183,6 +183,8 @@ class AgentMuJoCo(Agent):
             mj_U = policy.act(X_t, obs_t, t, noise[t, :])
             U[t, :] = mj_U
             if verbose:
+                # if t%10==0:
+                #     _ = raw_input("pause")
                 self._world[condition].plot(mj_X)
             if (t + 1) < self.T:
                 for _ in range(self._hyperparams['substeps']):
