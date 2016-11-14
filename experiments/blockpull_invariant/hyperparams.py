@@ -119,7 +119,7 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = [{
     'type': AgentMuJoCo,
-    'filename': ['./mjc_models/3link_gripper_pull_left.xml', './mjc_models/3link_gripper_pull_right.xml','./mjc_models/3link_gripper_pull_left.xml', './mjc_models/3link_gripper_pull_right.xml'],
+    'filename': ['./mjc_models/3link_gripper_pull.xml', './mjc_models/3link_gripper_pull_right.xml','./mjc_models/3link_gripper_pull_left.xml', './mjc_models/3link_gripper_pull_right.xml'],
     'x0': [np.array([0.0, 0.0, 0.0, -0.6, 0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0]), 
             np.array([0.0, 0.0, 0.0, -0.6, 0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0])],
     'dt': 0.05,
@@ -155,7 +155,7 @@ agent = [{
          },
          {
     'type': AgentMuJoCo,
-    'filename': ['./mjc_models/4link_gripper_pull_left.xml', './mjc_models/4link_gripper_pull_right.xml','./mjc_models/4link_gripper_pull_left.xml', './mjc_models/4link_gripper_pull_right.xml'],
+    'filename': ['./mjc_models/4link_gripper_pull.xml', './mjc_models/4link_gripper_pull_right.xml','./mjc_models/4link_gripper_pull_left.xml', './mjc_models/4link_gripper_pull_right.xml'],
     'x0': [np.array([0.0, 0.0, 0.0, 0.0, -0.6, 0.0, 0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0]), 
             np.array([0.0, 0.0, 0.0, 0.0, -0.6, 0.0, 0.0, 0.0, 0.0, 0.0]), np.array([0.0, 0.0, 0.0, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0])],
     'dt': 0.05,
@@ -333,14 +333,14 @@ state_cost_2 = [{
 
 load_trajs = np.load("3link_feats.npy")
 load_trajs = np.reshape(load_trajs, (2,7,100,30))
-test_cost = [{
-    'type': CostDevRs,
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'target_feats': np.mean(load_trajs[i], axis=0),
-    'load_file': 'subspace_state.pkl'
-} for i in agent[0]['train_conditions']]
+# test_cost = [{
+#     'type': CostDevRs,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'target_feats': np.mean(load_trajs[i], axis=0),
+#     'load_file': 'subspace_state.pkl'
+# } for i in agent[0]['train_conditions']]
 
 # fk_cost_4 = [{
 #     'type': CostFK,
@@ -368,8 +368,8 @@ test_cost = [{
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [state_cost_2[i]],
-    'weights': [1.0, 1.0],
+    'costs': [state_cost_2[i]],#, test_cost[i]],#fk_cost_2[i]],
+    'weights': [1.0, 5.0],
 } for i in agent[1]['train_conditions']]
 
 
@@ -432,7 +432,7 @@ algorithm[1]['policy_prior'] = {
 config = {
     'iterations': 25,
     'num_samples': 7,
-    'verbose_trials': 7,
+    'verbose_trials': 2,
     'verbose_policy_trials': 5,
     'save_wts': True,
     'common': common,

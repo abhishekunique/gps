@@ -101,9 +101,15 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
+        itr_costs = []
+        seed = np.random.randint(10000)
+        import random
+        random.seed(seed)
+        np.random.seed(seed)
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             feature_lists = []
+            robot_costs = []
             for robot_number in range(self.num_robots):
                 for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
@@ -115,7 +121,22 @@ class GPSMain(object):
                 ]
                 if rf:
                     feature_lists.append(self.policy_opt.run_features_forward(self._extract_features(traj_sample_lists[robot_number], robot_number), robot_number))
+                cond_costs = []
+                for m in self._train_idx[robot_number]:
+                    sample_costs = []
+                    for sample in traj_sample_lists[robot_number][m]:
+                        sample_costs.append([costfn.eval(sample)[0] for costfn in self.algorithm[robot_number].cost[m]._costs])
+                    cond_costs.append(sample_costs)
+                robot_costs.append(cond_costs)
+            itr_costs.append(robot_costs)
+            import IPython
+            IPython.embed()
+            robot_costs = np.array(robot_costs)
+            robot_costs = np.sum(robot_costs, axis=-1)
+            robot_costs = np.mean(robot_costs, axis = 2)
 
+            np.save("data%d.npy" %seed, np.array(itr_costs))
+            print robot_costs
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
@@ -125,9 +146,9 @@ class GPSMain(object):
                 if rf:
                     np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
 
-            if itr % 8 == 0 and itr > 0:
-                import IPython
-                IPython.embed()
+            # if itr % 8 == 0 and itr > 0:
+            #     import IPython
+            #     IPython.embed()
 
 
         self._end()
@@ -784,6 +805,7 @@ def main():
         import random
         import numpy as np
         import matplotlib.pyplot as plt
+
         #0 works - bottom is gret, top is meh
         #1 works
         #2 doesn't work
