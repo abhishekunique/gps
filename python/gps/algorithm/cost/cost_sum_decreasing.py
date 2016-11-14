@@ -43,7 +43,10 @@ class CostSumDecrease(Cost):
         lux = lux * weight
         for i in range(1, len(self._costs)):
             pl, plx, plu, plxx, pluu, plux = self._costs[i].eval(sample)
-            weight = self._weights[i]/((itr + 1)**(0.2))
+            if itr >= 8:
+                weight = 0.1
+            else:
+                weight = self._weights[i]
             l = l + pl * weight
             lx = lx + plx * weight
             lu = lu + plu * weight

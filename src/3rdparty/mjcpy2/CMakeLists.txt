@@ -6,7 +6,7 @@ include_directories(SYSTEM
 )
 # boost_python_module(mjcpy2 mjcpy2.cpp mjosgviewer.cpp)
 # target_link_libraries(mjcpy mjc boost_numpy)
-
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 add_definitions("-DmjUSEDOUBLE")
 
 
@@ -43,12 +43,10 @@ message("osg includes: ${OSG_INCLUDE_DIR}")
 # add_executable(test_mujoco_osg test_mujoco_osg.cpp mujoco_osg_viewer.cpp)
 # target_link_libraries(test_mujoco_osg mujoco ${OSG_LIBRARIES} stdc++ pthread)
 
+#add_executable(pr_mujoco_cb pr_thinPort.cpp pr_Dyn.cpp)
+
 
 include_directories(SYSTEM "${CMAKE_SOURCE_DIR}")
 include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/Boost.NumPy")
 boost_python_module(mjcpy mjcpy2.cpp  mujoco_osg_viewer.cpp)
-if (MJC_OLD)  # version of mujoco older than 1.31
-target_link_libraries(mjcpy "${CMAKE_SOURCE_DIR}/mjpro/libmujoco.so" ${OSG_LIBRARIES} boost_numpy)
-else()
-target_link_libraries(mjcpy "${CMAKE_SOURCE_DIR}/mjpro/bin/libmujoco131.so" ${OSG_LIBRARIES} boost_numpy)
-endif()
+target_link_libraries(mjcpy "${CMAKE_SOURCE_DIR}/mjpro/bin/libmujoco131.so" "${CMAKE_SOURCE_DIR}/mjpro/bin/libglfw.so.3" ${OSG_LIBRARIES} boost_numpy)

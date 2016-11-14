@@ -480,11 +480,7 @@ void MujocoOSGViewer::SetData(const mjData* d) {
 
 void NewModelFromXML(const char* filename,mjModel*& model) {
     char errmsg[100];
-#if MJC131
     model = mj_loadXML(filename, NULL, errmsg, sizeof(errmsg));
-#else
-    model = mj_loadXML(filename, errmsg);
-#endif
     if( !model ) {
         printf("%s\n",errmsg);
     }

@@ -1,141 +1,72 @@
-<mujoco model="Tendon Finger">
-	<compiler coordinate="global"/>
+<mujoco model="arm3d">
+    <compiler inertiafromgeom="true" angle="radian" coordinate="local" />
     <option timestep="0.01" gravity="0 0 0" iterations="20" integrator="Euler" />
-	<visual>
-		<headlight diffuse=".7 .7 .7"/>
-	</visual>
-
-	<default>
-		<geom  density="1" contype="0" conaffinity="0" rgba=".9 .3 .1 1" group="1"/>
-		<joint limited="true"/>
-		<site type="sphere" size="0.05"/>
-		<tendon width="0.02"/>
-	</default>
-
-	<worldbody>
-		<site name="top_0" pos="2.5 0 0.25"/>
-		<site name="bot_0" pos="2.5 0 -0.25"/>
-
-
-		<geom name="MCP_wrap"  type="sphere" pos="3.1 0 0" size="0.42" rgba="0 .7 .7 .5"/>
-
-
-		<body name="Proximate">
-			<joint type="hinge" pos="3 0 0" axis="0 1 0" range="-90 90"/>
-			
-			<geom type="capsule" fromto="3 0 0  5 0 0" size="0.2"/>
-			
-            <site name="top_1" pos="3.5 0 0.25"/>
-            <site name="bot_1" pos="3.5 0 -0.25"/>
-            <site name="top_2" pos="4.5 0 0.25"/>
-            <site name="bot_2" pos="4.5 0 -0.25"/>
-			
-			<geom name="PIP_wrap"  type="cylinder" pos="5 0 0" zaxis="0 1 0" size="0.2 0.2" rgba="0 .7 .7 .5"/>
-			
-			<body name="Intermediate">
-				<joint type="hinge" pos="5 0 0" axis="0 1 0" range="-90 90"/>
-				
-				<geom type="capsule" fromto="5 0 0  7 0 0" size="0.15"/>
-                <site name="top_3" pos="5.5 0 0.25"/>
-                <site name="bot_3" pos="5.5 0 -0.25"/>
-                <site name="top_4" pos="6.5 0 0.25"/>
-                <site name="bot_4" pos="6.5 0 -0.25"/>
+    <visual>
+        <headlight diffuse=".7 .7 .7"/>
+    </visual>
+    
+    <default>
+        <joint armature='0.04' damping="1" limited="true"/>
+        <geom rgba=".9 .3 .1 1" friction=".8 .1 .1" density="300" margin="0.002" condim="1" contype="1" conaffinity="1"/>
+        <site type="sphere" size="0.01"/>
+        <tendon width="0.02"/>
+    </default>
+    
+    <worldbody>
+        <body name="palm" pos="0 0 0">
+            <geom type="capsule" fromto="0 -0.1 0 0 0.1 0" size="0.12"/>
             
-			
-				<body name="Distal">
-					<joint type="hinge" pos="7 0 0" axis="0 1 0" range="-90 90"/>
-
-					<geom name="DIP_wrap"  type="cylinder" pos="7 0 0"
-						zaxis="0 1 0" size="0.15 0.16" rgba="0 .7 .7 .5"/>
-                        <site name="top_5" pos="7.5 0 0.25"/>
-                        <site name="bot_5" pos="7.5 0 -0.25"/>
-                        
-					
-					<geom type="capsule" fromto="7 0 0  8.5 0 0" size="0.1"/>
-					
-					<site name="I_D1" pos="4.9130 0.0148 -3.2080"/>
-					<site name="I_D2" pos="4.5144 0.0148 -3.3888"/>
-				</body>
-			</body>
-		</body>
-	</worldbody>
-
-	<tendon>
-		<spatial name="flexorShort">
-			<site site="top_4"/>
-			<site site="top_5"/>
-		</spatial>
-        <spatial name="extensorShort">
-            <site site="bot_4"/>
-            <site site="bot_5"/>
-        </spatial>
-        <spatial name="flexorLong">
-            <site site="top_2"/>
-            <site site="top_3"/>
-        </spatial>
-        <spatial name="extensorLong">
-            <site site="bot_2"/>
-            <site site="bot_3"/>
-        </spatial>
-        <spatial name="flexorLongest">
-            <site site="top_1"/>
-            <site site="top_2"/>
-        </spatial>
-        <spatial name="extensorLongest">
-            <site site="bot_1"/>
-            <site site="bot_2"/>
+            <body name="proximal_1" pos="0 0 0">
+                <joint name="proximal_j_1" type="hinge" pos="0 0 0" axis="0 1 0" range="-1.57 1.57" damping="1.0" />
+                <geom type="capsule"  fromto="0 0 0 0.4 0 0" size="0.06" contype="1" conaffinity="1"/>
+                <body name="distal_1" pos="0.4 0 0">
+                    <geom name="DIP_wrap1"  type="cylinder" pos="0 0 0"
+                    zaxis="0 1 0" size="0.06 0.06" rgba="0 .7 .7 .5"/>
+                    <joint name="distal_j_1" type="hinge" pos="0 0 0" axis="0 1 0" range="-1.57 1.57" damping="1.0"/>
+                    <geom type="capsule"  fromto="0 0 0 0.4 0 0" size="0.06" contype="1" conaffinity="1"/>
+                    <site name="top_4" pos="0.3 0 0.07"/>
+                    <site name="top_6" pos="0.4 0.05 0.08"/>
+                    <body name="distal_2" pos="0.4 0 0">
+                        <geom name="DIP_wrap2"  type="cylinder" pos="0 0 0"
+                        zaxis="0 1 0" size="0.06 0.06" rgba="0 .7 .7 .5"/>
+                        <site name="top_5" pos="0.1 0 0.07"/>
+                        <joint name="distal_j_2" type="hinge" pos="0 0 0" axis="0 1 0" range="-1.57 1.57" damping="1.0"/>
+                        <geom type="capsule" fromto="0 0 0 0.5 0 0" size="0.06" contype="1" conaffinity="1"/>
+                        <body name="distal_4" pos="0.4 0 0">
+                            <site name="tip arm" pos="0 0 0" size="0.01" />
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+        <body name="goal" pos="0 0 0">
+            <geom rgba="1. 0. 0. 1" type="box" size="0.1 0.1 0.1" density='0.00001' contype="0" conaffinity="0"/>
+            <body name="distal_11" pos="0 0 0">
+                <site name="goal_pos" pos="0.05 0.05 0.05" size="0.01" />
+            </body>
+        </body>
+    </worldbody>
+    <tendon>
+        <fixed name="T0p">
+            <joint joint="proximal_j_1"  coef="0.05"/>
+            <joint joint="distal_j_1"  coef="0.01"/>
+        </fixed>
+        <fixed name="T1p">
+            <joint joint="distal_j_1"  coef="0.025"/>
+        </fixed>
+        <spatial name="flexorShort">
+            <site site="top_4"/>
+            <geom geom="DIP_wrap2" sidesite="top_6"/>
+            <site site="top_5"/>
         </spatial>
         
-        
-
-<!--		<spatial name="extensor">-->
-<!--			<pulley divisor="2"/>-->
-<!--			<site site="S_M2"/>-->
-<!--			<site site="S_M1"/>-->
-<!--			<site site="S_P2"/>-->
-<!--			<site site="S_P1"/>-->
-<!--			<geom geom="PIP_wrap" sidesite="PIP_wrapside"/>-->
-<!--			<site site="I_P1"/>-->
-<!--			-->
-<!--			<pulley divisor="2"/>-->
-<!--			<site site="S_M2"/>-->
-<!--			<site site="S_M1"/>-->
-<!--			<site site="S_P2"/>-->
-<!--			<site site="S_P1"/>-->
-<!--			<geom geom="PIP_wrap" sidesite="PIP_wrapside"/>-->
-<!--			<site site="S_D2"/>-->
-<!--			<site site="S_D1"/>-->
-<!--			<geom geom="DIP_wrap" sidesite="DIP_wrapside"/>-->
-<!--			<site site="I_D1"/>-->
-<!--		</spatial>-->
-
-<!--		<spatial name="extensorNew" limited="true" range="0 5">-->
-<!--			<!-- <site site="W2"/> -->-->
-<!--			<site site="S_M2"/>-->
-<!--			<site site="S_M1"/>-->
-<!--			<site site="I_M1"/>-->
-<!--		</spatial>-->
-<!---->
-<!--		<spatial name="flexorLong" limited="true" range="0 8">-->
-<!--			<!-- <site site="W4"/> -->-->
-<!--			<site site="S_M4"/>-->
-<!--			<site site="S_P3"/>-->
-<!--			<site site="S_P4"/>-->
-<!--			<site site="S_D3"/>-->
-<!--			<site site="S_D4"/>-->
-<!--			<site site="I_D2"/>-->
-<!--		</spatial>		-->
-	</tendon>
-	<actuator>
-        <!--  ================= Torque actuators ================= /-->
-        <motor tendon='flexorShort' name='flexorShort_actuator'/>
-        <motor tendon='extensorShort' name='extensorShort_actuator'/>
-        <motor tendon='flexorLong' name='flexorLong_actuator'/>
-        <motor tendon='extensorLong' name='extensorLong_actuator'/>
-        <motor tendon='flexorLongest' name='flexorLongest_actuator'/>
-        <motor tendon='extensorLongest' name='extensorLongest_actuator'/>
-<!--        <motor tendon='extensor' name='extensor_actuator'/>-->
-<!--        <motor tendon='extensorNew' name='extensorNew_actuator'/>-->
-<!--        <motor tendon='flexorLong' name='flexorLong_actuator'/>-->
+    </tendon>
+    
+    <actuator>
+        <motor tendon='T0p' name='T0p_actuato'/>
+        <motor tendon='T1p' name='T1p_actuato'/>
+        <motor tendon='flexorShort' name='flexorShort_actuaor'/>
     </actuator>
 </mujoco>
+
+

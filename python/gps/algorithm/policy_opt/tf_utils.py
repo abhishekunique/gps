@@ -72,7 +72,9 @@ class TfSolver:
         self.loss_scalar = loss_scalar
         if self.lr_policy != 'fixed':
             raise NotImplementedError('learning rate policies other than fixed are not implemented')
-
+        print("In Tf solver")
+        import IPython
+        IPython.embed()
         self.weight_decay = weight_decay
         if weight_decay is not None:
             if vars_to_opt is None:

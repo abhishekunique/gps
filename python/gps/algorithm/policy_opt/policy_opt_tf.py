@@ -209,19 +209,26 @@ class PolicyOptTf(PolicyOpt):
         #                       weight_decay=self._hyperparams['weight_decay'],
         #                       vars_to_opt=self.other['dc_variables'].values())
 
-    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full):
+    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full, obs_uncut_full):
         import matplotlib.pyplot as plt
         num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
 
-        
+        import IPython
+        IPython.embed()
         for cond in range(num_conds):
             for s_no in range(num_samples):
                 xs = []
                 ys = []
                 for robot_number in range(self.num_robots):
-                    color = ['r', 'b'][robot_number]
-                    x = obs_extended_full[robot_number][cond, s_no, :, 6+2*robot_number]
-                    y = obs_extended_full[robot_number][cond, s_no, :, 8+2*robot_number]
+                    color = ['r', 'b'][robot_number] 
+                    if robot_number == 0:
+                        x_plot_idx = 6
+                        y_plot_idx = 8
+                    else:
+                        x_plot_idx = 12
+                        y_plot_idx = 14
+                    x = obs_uncut_full[robot_number][cond, s_no, :, x_plot_idx]
+                    y = obs_uncut_full[robot_number][cond, s_no, :, y_plot_idx]
                     plt.scatter(x, y, c=color)
                     xs.append(x)
                     ys.append(y)
@@ -301,8 +308,8 @@ class PolicyOptTf(PolicyOpt):
 
 
 
-        cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
-        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 30))
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, 60))
+        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 60))
         l2_loss = 0
         for cond in range(num_conds):
             for sample_num in range(num_samples):
@@ -315,13 +322,15 @@ class PolicyOptTf(PolicyOpt):
         print("RAN THROUGH FEATURES")
         import IPython
         IPython.embed()
-        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,30))
-        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,30))
+        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,60))
+        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,60))
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
         distances, indices = nbrs.kneighbors(cond_feats_other)
         indices = np.reshape(indices, (num_conds, num_samples, T_extended))
         dO_robot0 = obs_extended_full[0].shape[-1]
         obs_full_reshaped = np.reshape(obs_extended_full[0], (num_conds*num_samples*T_extended,dO_robot0))
+        dO_robot0_uncut = obs_uncut_full[0].shape[-1]
+        obs_uncut_reshaped = np.reshape(obs_uncut_full[0], (num_conds*num_samples*T_extended,dO_robot0_uncut))
         print("CHECK NN")
         import IPython
         IPython.embed()
@@ -329,11 +338,11 @@ class PolicyOptTf(PolicyOpt):
             for s_no in range(num_samples):
                 color = ['r', 'b'][robot_number]
                 for t in range(T_extended):
-                    x = obs_extended_full[1][cond, s_no, t, 8]
-                    y = obs_extended_full[1][cond, s_no, t, 10]
+                    x = obs_uncut_full[1][cond, s_no, t, 12]
+                    y = obs_uncut_full[1][cond, s_no, t, 14]
                     nnbr_currpoint = indices[cond, s_no, t]
-                    x_nbr = obs_full_reshaped[nnbr_currpoint][6]
-                    y_nbr = obs_full_reshaped[nnbr_currpoint][8]
+                    x_nbr = obs_uncut_reshaped[nnbr_currpoint][6]
+                    y_nbr = obs_uncut_reshaped[nnbr_currpoint][8]
                     print("X: " + str([x,x_nbr]))
                     print("Y: " + str([y,y_nbr]))
                     lines = plt.plot([x,x_nbr], [y,y_nbr])
@@ -343,6 +352,16 @@ class PolicyOptTf(PolicyOpt):
         np.save("3link_feats.npy", np.asarray(cond_feats))
 
         print("done training invariant autoencoder and saving weights")
+
+    def run_invariant_autoencoder_forward(self, obs_extended_full):
+        num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, 60))
+        for cond in range(num_conds):
+            for sample_num in range(num_samples):
+                feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num]}
+                cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+        np.save("3link_feats.npy", np.asarray(cond_feats))
+        print("done saving features")
 
     def train_invariant_dc(self, obs_full, next_obs_full, action_full, obs_extended_full):
         num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
@@ -463,8 +482,8 @@ class PolicyOptTf(PolicyOpt):
 
 
         
-        cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
-        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 30))
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, 60))
+        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 60))
         l2_loss = 0
         for cond in range(num_conds):
             for sample_num in range(num_samples):
@@ -477,8 +496,8 @@ class PolicyOptTf(PolicyOpt):
         print("RAN THROUGH FEATURES")
         import IPython
         IPython.embed()
-        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,30))
-        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,30))
+        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,60))
+        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,60))
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
         distances, indices = nbrs.kneighbors(cond_feats_other)
         indices = np.reshape(indices, (num_conds, num_samples, T_extended))
@@ -502,7 +521,7 @@ class PolicyOptTf(PolicyOpt):
         plt.show()
         import IPython
         IPython.embed()
-        cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T_extended, 30))
+        cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T_extended, 60))
         np.save("3link_feats.npy", np.asarray(cond_feats))
         print("done training invariant DC and saving weights")
 
