@@ -10,6 +10,7 @@ from gps.algorithm.policy.tf_policy import TfPolicy
 from gps.algorithm.policy_opt.policy_opt import PolicyOpt
 from gps.algorithm.policy_opt.config import POLICY_OPT_TF
 from gps.algorithm.policy_opt.tf_utils import TfSolver
+import time
 LOGGER = logging.getLogger(__name__)
 import pickle
 import matplotlib
@@ -41,15 +42,15 @@ class MLPlotter:
         axes[1].plot(*zip(*self.error_discriminator), color='r', linestyle='--', label='Val')
         axes[2].plot(*zip(*self.error_generator_only), color='r', linestyle='--', label='Val')
 
-        axes[0].set_title('Error')
+        axes[0].set_title('Error Generator')
         axes[0].set_ylabel('Percentage')
         axes[0].set_xlabel('Epoch')
 
-        axes[1].set_title('Error')
+        axes[1].set_title('Error Discriminator')
         axes[1].set_ylabel('Percentage')
         axes[1].set_xlabel('Epoch')
 
-        axes[2].set_title('Error')
+        axes[2].set_title('Error Generator Only')
         axes[2].set_ylabel('Percentage')
         axes[2].set_xlabel('Epoch')
 
@@ -122,12 +123,12 @@ class PolicyOptTf(PolicyOpt):
             self.precision_tensors_action.append(None)
             self.action_tensors_action.append(None)
 
-        if not self._hyperparams['run_feats']:
+        if not False: #self._hyperparams['run_feats']:
             self.init_network()
             self.init_solver()
         self.tf_vars = tf.trainable_variables()
-        if self._hyperparams['run_feats']:
-            self.init_feature_space()
+        # if self._hyperparams['run_feats']:
+        #     self.init_feature_space()
         self.sess = tf.Session()
         self.policy = []
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
@@ -158,7 +159,9 @@ class PolicyOptTf(PolicyOpt):
         if self._hyperparams['load_weights'] and self._hyperparams['run_feats']:
             import pickle
             val_vars = pickle.load(open(self._hyperparams['load_weights'], 'rb'))
-            for k,v in self.var_list_feat.items():
+            all_vars = self.other['all_variables'].copy()
+            # all_vars.update(self.other['dc_variables'])
+            for k,v in all_vars.items():
                 if k in val_vars:   
                     print(k)        
                     assign_op = v.assign(val_vars[k])
@@ -190,10 +193,11 @@ class PolicyOptTf(PolicyOpt):
             self.individual_losses.append(tf_map.individual_losses)
         # self.combined_loss = tf.add_n(self.loss_scalars)
         self.other= other
+        #self._hyperparams['lr'] = self.other['hyperparams'][3]
 
     def init_solver(self):
         """ Helper method to initialize the solver. """
-        self.solver =TfSolver(loss_scalar=tf.add_n(self.other['all_losses']) + 10*tf.add_n(self.other['gen_loss']),
+        self.solver =TfSolver(loss_scalar=tf.add_n(self.other['all_losses']),#tf.add_n(self.other['gen_loss']),
                               solver_name=self._hyperparams['solver_type'],
                               base_lr=self._hyperparams['lr'],
                               lr_policy=self._hyperparams['lr_policy'],
@@ -201,38 +205,40 @@ class PolicyOptTf(PolicyOpt):
                               weight_decay=self._hyperparams['weight_decay'],
                               vars_to_opt=self.other['all_variables'].values())
 
-        self.dc_solver =TfSolver(loss_scalar=tf.add_n(self.other['dc_loss']),
-                              solver_name=self._hyperparams['solver_type'],
-                              base_lr=0.0005, #self._hyperparams['lr'],
-                              lr_policy=self._hyperparams['lr_policy'],
-                              momentum=self._hyperparams['momentum'],
-                              weight_decay=self._hyperparams['weight_decay'],
-                              vars_to_opt=self.other['dc_variables'].values())
+        # self.dc_solver =TfSolver(loss_scalar=tf.add_n(self.other['dc_loss']),
+        #                       solver_name=self._hyperparams['solver_type'],
+        #                       base_lr=0.0005, #self._hyperparams['lr'],
+        #                       lr_policy=self._hyperparams['lr_policy'],
+        #                       momentum=self._hyperparams['momentum'],
+        #                       weight_decay=self._hyperparams['weight_decay'],
+        #                       vars_to_opt=self.other['dc_variables'].values())
 
-    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full):
+    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full, ee_full):
         import matplotlib.pyplot as plt
+        print "in train"
         num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
 
         
-        for cond in range(num_conds):
-            for s_no in range(num_samples):
-                # xs = []
-                # ys = []
-                for robot_number in range(self.num_robots):
-                    color = ['r', 'b'][robot_number]
-                    x = obs_extended_full[robot_number][cond, s_no, :, 6+2*robot_number]
-                    y = obs_extended_full[robot_number][cond, s_no, :, 8+2*robot_number]
-                    plt.scatter(x, y, c=color)
-                    # xs.append(x)
-                    # ys.append(y)
-                # plt.plot(xs[0], ys[0], xs[1], ys[1])
+        # for cond in range(num_conds):
+        #     for s_no in range(num_samples):
+        #         xs = []
+        #         ys = []
+        #         for robot_number in range(self.num_robots):
+        #             color = ['r', 'b'][robot_number]
+        #             x = ee_full[robot_number][cond*4+ s_no, :, 0]
+        #             y = ee_full[robot_number][cond*4+ s_no, :, 2]
+        #             plt.scatter(x, y, c=color)
+        #             xs.append(x)
+        #             ys.append(y)
+        #         #plt.plot(xs[0], ys[0], xs[1], ys[1])
         # plt.show()
-        import IPython
-        IPython.embed()
+        # import IPython
+        # IPython.embed()
 
         obs_reshaped = []
         next_obs_reshaped = []
         action_reshaped = []
+        ee_reshaped = []
         #TODO: [SCALE OBSERVATIONS BACK DOWN TO REASONABLE RANGE]
         for robot_number in range(self.num_robots):
 
@@ -243,51 +249,73 @@ class PolicyOptTf(PolicyOpt):
             dU = self._dU[robot_number]
 
             obs = np.reshape(obs, (N*T, dO))
-
-            next_obs = next_obs_full[robot_number]
-            next_obs = np.reshape(next_obs, (N*T, dO))
+            ee = ee_full[robot_number]
+            ee = np.reshape(ee, (N*T, ee.shape[-1]))
+            ee_reshaped.append(ee)
+            # next_obs = next_obs_full[robot_number]
+            # next_obs = np.reshape(next_obs, (N*T, dO))
             
 
             action = action_full[robot_number]
             action = np.reshape(action, (N*T, dU))
 
             obs_reshaped.append(obs)
-            next_obs_reshaped.append(next_obs)
+            #next_obs_reshaped.append(next_obs)
             action_reshaped.append(action)
-
+        mlplt = MLPlotter("Learning curves")
         idx = range(N*T)
         np.random.shuffle(idx)
         batches_per_epoch = np.floor(N*T / self.batch_size)
         average_loss = 0
-        all_losses = np.zeros((len(self.other['all_losses']),))
+        contrastive =0
+        checkitr = 200
+        all_losses = np.zeros((len(self.other['gen_loss']),))
+        print "starting tf iters"
+        # import IPython
+        # IPython.embed()
+        time0 = time.clock()
         for i in range(self._hyperparams['iterations']):
             feed_dict = {}
             start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
             idx_i = idx[start_idx:start_idx+self.batch_size]
             for robot_number in range(self.num_robots):
                 feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
-                feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
-                feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
+                # feed_dict[self.other['ee_inputs'][robot_number]] = ee_reshaped[robot_number][idx_i]
+                # feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
+                # feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
-            all_losses += self.sess.run(self.other['all_losses'], feed_dict)
+            all_losses += self.sess.run(self.other['gen_loss'], feed_dict)
+            contrastive += self.sess.run(self.other['contrastive'], feed_dict)
+            average_loss += train_loss/200
 
-            average_loss += train_loss
-
-            if i % 1000 == 0 and i != 0:
+            if i % checkitr == 0 and i != 0:
+                time1 = time.clock()
                 LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 100)
-                print 'supervised tf loss is '
-                print (average_loss/1000)
-                print (all_losses/1000)
+                             i, average_loss / checkitr)
+                print 'iter', i, 'supervised tf loss is '
+                print (average_loss)
+                print (all_losses/checkitr)
+
+                print contrastive/checkitr
+                print "time for", checkitr, "iters", time1-time0
+                time0 = time1
                 print("--------------------------")
+                mlplt.add_generator_only(i, np.sum(all_losses) / 200)
+                mlplt.add_discriminator(i, contrastive/200)
+                mlplt.add_generator(i, average_loss)
+
                 average_loss = 0
-                all_losses = np.zeros((len(self.other['all_losses']),))
-        import IPython
-        IPython.embed()
+                contrastive =0
+                all_losses = np.zeros((len(self.other['gen_loss']),))
+                mlplt.plot()
+
+        #import IPython
+        #IPython.embed()
+        mlplt.plot()
         var_dict = {}
         for k, v in self.other['all_variables'].items():
             var_dict[k] = self.sess.run(v)
-        pickle.dump(var_dict, open("subspace_state.pkl", "wb"))
+        pickle.dump(var_dict, open("img_reach_color.pkl", "wb"))
 
 
 
@@ -300,54 +328,139 @@ class PolicyOptTf(PolicyOpt):
         # np.save("3link_feats.npy", np.asarray(cond_feats))
 
 
-
-        cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
-        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 30))
+        obs_full_reshaped = [np.reshape(obs_full[i], (num_conds, num_samples, T,-1)) for i in range(self.num_robots)]
+        cond_feats = np.zeros((num_conds, num_samples, T, 32))
+        cond_feats_other = np.zeros((num_conds, num_samples, T, 32))
         l2_loss = 0
+        import IPython
+        IPython.embed()
         for cond in range(num_conds):
             for sample_num in range(num_samples):
-                feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num], 
-                            self.other['state_inputs'][1]: obs_extended_full[1][cond][sample_num]}
+                feed_dict = {self.other['state_inputs'][0]: obs_full_reshaped[0][cond][sample_num], 
+                            self.other['state_inputs'][1]: obs_full_reshaped[1][cond][sample_num]}
                 cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
                 cond_feats_other[cond, sample_num] = self.sess.run(self.other['state_features_list'][1], feed_dict=feed_dict)
                 l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
         print(l2_loss)
         print("RAN THROUGH FEATURES")
-        import IPython
-        IPython.embed()
-        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,30))
-        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,30))
+        #import IPython
+        #IPython.embed()
+        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T,32))
+        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T,32))
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
         distances, indices = nbrs.kneighbors(cond_feats_other)
-        indices = np.reshape(indices, (num_conds, num_samples, T_extended))
-        dO_robot0 = obs_extended_full[0].shape[-1]
-        obs_full_reshaped = np.reshape(obs_extended_full[0], (num_conds*num_samples*T_extended,dO_robot0))
+        indices = np.reshape(indices, (num_conds, num_samples, T))
+        dO_robot0 = obs_full_reshaped[0].shape[-1]
+        #obs_full_reshaped = np.reshape(obs_full[0], (num_conds*num_samples*T,dO_robot0))
+        #ee_full_reshaped = np.reshape(ee_full
         print("CHECK NN")
-        import IPython
-        IPython.embed()
+        #import IPython
+        #IPython.embed()
+        leng = 0
         for cond in range(num_conds):
             for s_no in range(num_samples):
                 color = ['r', 'b'][robot_number]
-                for t in range(T_extended):
-                    x = obs_extended_full[1][cond, s_no, t, 8]
-                    y = obs_extended_full[1][cond, s_no, t, 10]
+                for t in range(T):
+                    x = ee_full[1][cond*num_samples+ s_no, t, 0]
+                    y = ee_full[1][cond*num_samples+ s_no, t, 2]
+                    # x = obs_extended_full[1][cond, s_no, t, 8]
+                    # y = obs_extended_full[1][cond, s_no, t, 10]
                     nnbr_currpoint = indices[cond, s_no, t]
-                    x_nbr = obs_full_reshaped[nnbr_currpoint][6]
-                    y_nbr = obs_full_reshaped[nnbr_currpoint][8]
+                    x_nbr = ee_reshaped[0][nnbr_currpoint][0]
+                    y_nbr = ee_reshaped[0][nnbr_currpoint][2]
                     print("X: " + str([x,x_nbr]))
                     print("Y: " + str([y,y_nbr]))
                     lines = plt.plot([x,x_nbr], [y,y_nbr])
-        plt.show()
+                    leng += np.linalg.norm([x-x_nbr, y-y_nbr])
+        # plt.show()
+        print "leng", leng
+        #import IPython
+        #IPython.embed()
+        
+
+        #plt.imshow(img)
+        cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T, 32))
+        np.save("3link_feats_reach_color.npy", cond_feats)
         import IPython
         IPython.embed()
-        np.save("3link_feats.npy", np.asarray(cond_feats))
+        r = 0
+        t = 40
+        s = 1
+        orig = obs_full[r][1][t]
+        ee = ee_full[r][1][t]
+        img = np.transpose(obs_full[r][1][t].reshape(3,80,64), [1,2,0])
+        feed_dict[self.other['state_inputs'][r]] = obs_full[r][s]
+        images = np.transpose(obs_full[r][s].reshape(T,3,80,64), [0,2,3,1]).astype(np.uint8)
+        #feed_dict= {}
+        #feed_dict[self.other['state_inputs'][r]] = [orig.reshape(3*80*64)]
+
+        output= self.sess.run(self.other['output'][r], feed_dict)
+        fp = self.sess.run(self.other['state_features_list'][r], feed_dict)
+        #target: 0, 1, 3 4 5 11 14 // not 4,  6 
+        # ee: 8? 9? 12 15 // 2 8 not 12, 15
+        # block: 9
+        # robot 0: 8,12 is not ee, 9 is block, 15 is ee. 0,1,3,5 at least are target
+        image = img.astype(np.uint8)
+        # ee2 = self.sess.run(self.other['ee_output'][r], feed_dict)[0]
+        # image[:,:,0] += 104
+        # image[:,:,1]+= 117
+        # image[:,:,2]+= 123
+        #for i in range(16):
+        x = int(fp[i*2]+40)
+        y = int(fp[i*2+1]+32)
+        print x,y
+        image[x,y,:] = 255
+        image[max(0, x-1),y,:] = 100
+        image[min(79, x+1),y,:] = 100
+        image[x,max(y,0),:] = 100
+        image[x,min(y+1,63),:] = 100
+        out = plt.imshow(image)
+        plt.show(out)
+        def add_feat(images, fp, i):
+            T,_,_,_ = images.shape
+            for t in range(T):
+                x = int(fp[t,i*2]*40+40)
+                y = int(fp[t,i*2+1]*32+32)
+                print x,y
+                images[t,x,y,:] = [250,250,102]#255
+                images[t,max(0, x-1),y,:] = [250,250,102]
+                images[t,min(79, x+1),y,:] = [250,250,102]
+                images[t,x,max(y,0),:] = [250,250,102]
+                images[t,x,min(y+1,63),:] = [250,250,102]
+            return images
+
+        def ani_frame(images, name):
+            import moviepy.editor as mpy
+
+            def make_frame(n):
+                tmp = images[n,:,:,:]
+                return tmp
+            #clip = mpy.VideoClip(make_frame, duration=5)
+            clip = mpy.ImageSequenceClip([images[i] for i in range(100)], fps=20)
+            clip.write_gif("/home/coline/Desktop/test"+name+".gif",fps=20)
+            return clip
+        for r in [0,1]:
+            for s in [2,9]:
+                images_fp = np.transpose(obs_full[r][s].reshape(T,3,80,64), [0,2,3,1]).astype(np.uint8)
+                for feat in range(16):
+                    feed_dict[self.other['state_inputs'][r]] = obs_full[r][s]
+                    fp = self.sess.run(self.other['state_features_list'][r], feed_dict)
+                    images_fp = add_feat(images_fp, fp, feat)
+                ani_frame(images_fp, "allfeats"+str(feat)+"_r"+str(r)+"_s"+str(s))
+            
+        for r in range(2):
+            for s in [1,10]:
+                feed_dict[self.other['state_inputs'][r]] = obs_full[r][s]
+                output= self.sess.run(self.other['output'][r], feed_dict)
+                ani_frame(output, str(r)+"_"+str(s))
 
         print("done training invariant autoencoder and saving weights")
 
     def train_invariant_dc(self, obs_full, next_obs_full, action_full, obs_extended_full):
         num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
-
-        
+        feat_size, act_size, dc_w, lr = self.other['hyperparams']
+        #filename = 'test_f'+str(feat_size)+'_a'+str(act_size)+'_w'+str(dc_w)
+        filename = 'lr_'+str(lr)
         for cond in range(num_conds):
             for s_no in range(num_samples):
                 for robot_number in range(self.num_robots):
@@ -355,8 +468,8 @@ class PolicyOptTf(PolicyOpt):
                     x = obs_extended_full[robot_number][cond, s_no, :, 6+2*robot_number]
                     y = obs_extended_full[robot_number][cond, s_no, :, 8+2*robot_number]
                     plt.scatter(x, y, c=color)
-        import IPython
-        IPython.embed()
+        # import IPython
+        # IPython.embed()
         obs_reshaped = []
         next_obs_reshaped = []
         action_reshaped = []
@@ -395,6 +508,7 @@ class PolicyOptTf(PolicyOpt):
         all_losses = np.zeros((len(self.other['all_losses']),))
         gen_loss = np.zeros((len(self.other['gen_loss']),))
         all_losses_dc = np.zeros((len(self.other['dc_loss']),))
+        contrastive = 0
         mlplt = MLPlotter("Learning curves")
         robot0_classification = np.zeros((self.batch_size,))
         robot1_classification = np.ones((self.batch_size,))
@@ -407,64 +521,72 @@ class PolicyOptTf(PolicyOpt):
                 feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
                 feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
-            all_losses += self.sess.run(self.other['all_losses'], feed_dict)
+            #all_losses += self.sess.run(self.other['all_losses'], feed_dict)
             gen_loss += self.sess.run(self.other['gen_loss'], feed_dict)
-            predictions_full = self.sess.run(self.other['predictions_full'], feed_dict)
-            for robot_number in range(self.num_robots):
-                for pred in predictions_full[robot_number]:
-                    pred_error += np.sum(pred != [robot0_classification, robot1_classification][robot_number])
+            contrastive += self.sess.run(self.other['contrastive'], feed_dict)
+            #preds = self.other['predictions_full'][0]+ self.other['predictions_full'][1]
+            #preds= self.sess.run(preds, feed_dict)
+            #predictions_full = [[preds[j] for j in range(len(self.other['predictions_full'][0]))],
+            #                    [preds[j+len(self.other['predictions_full'][0])] for j in range(len(self.other['predictions_full'][1]))]]
+            #for robot_number in range(self.num_robots):
+            #    for pred in predictions_full[robot_number]:
+            #        pred_error += np.sum(pred != [robot0_classification, robot1_classification][robot_number])
             average_loss += train_loss
-            if i % 200 == 0 and i != 0:
-
+            if i % 200 == 0:# and i != 0:
+                print "hi", i
                 print 'supervised tensorflow loss is '
                 print (average_loss/200)
-                print (all_losses/200)
-                print (gen_loss/200)
-
-                mlplt.add_generator(i, average_loss / 200)
-                mlplt.add_generator_only(i, np.sum(all_losses) / 200)
-                print("PREDICTION ERROR:")
-                print(pred_error/(2.0*self.batch_size*200))
-                mlplt.add_discriminator(i, pred_error/(2.0*self.batch_size*200))
-                pred_error = 0
+                #print (all_losses/200)
+                print "autoencoder", (gen_loss/200)
+                print "contrastive", contrastive/200
+                # mlplt.add_generator(i, average_loss / 200)
+                mlplt.add_generator_only(i, np.sum(gen_loss) / 200)
+                #print("PREDICTION ERROR:")
+                #print(pred_error/(2.0*self.batch_size*200))
+                mlplt.add_discriminator(i, contrastive/200)
+                #pred_error = 0
                 print("--------------------------")
                 average_loss = 0
                 all_losses = np.zeros((len(self.other['all_losses']),))
                 gen_loss = np.zeros((len(self.other['gen_loss']),))
-
+                contrastive = 0
             # if i > 1000:
-            dc_feed_dict = {}
-            start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
-            idx_i = idx[start_idx:start_idx+self.batch_size]
-            for robot_number in range(self.num_robots):
-                dc_feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
-                dc_feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
-                dc_feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
-            dc_loss += self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
-            all_losses_dc += self.sess.run(self.other['dc_loss'], dc_feed_dict)
+            # dc_feed_dict = {}
+            # start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
+            # idx_i = idx[start_idx:start_idx+self.batch_size]
+            # for robot_number in range(self.num_robots):
+            #     dc_feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
+            #     dc_feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
+            #     dc_feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
+            # dc_loss += self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
+            # all_losses_dc += self.sess.run(self.other['dc_loss'], dc_feed_dict)
 
-            if i % 200 == 0 and i != 0:
-                print 'supervised dc loss is '
-                print (dc_loss/200)
-                print (all_losses_dc/200)
-                print("--------------------------")
-                dc_loss = 0
-                all_losses_dc = np.zeros((len(self.other['dc_loss']),))
-        mlplt.plot()
-        raw_input()
-        mlplt.close()
+            # if i % 200 == 0 and i != 0:
+            #     print 'supervised dc loss is '
+            #     print (dc_loss/200)
+            #     print (all_losses_dc/200)
+            #     print("--------------------------")
+            #     dc_loss = 0
+            #     all_losses_dc = np.zeros((len(self.other['dc_loss']),))
         import IPython
         IPython.embed()
+        mlplt.plot()
+        
+        print "DONE WITH TF ITERS"
+
+        # import IPython
+        # IPython.embed()
+        #mlplt.close()
         var_dict = {}
         for k, v in self.other['all_variables'].items():
             var_dict[k] = self.sess.run(v)
-        pickle.dump(var_dict, open("subspace_state.pkl", "wb"))
+        
 
 
 
         
-        cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
-        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 30))
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, feat_size))
+        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, feat_size))
         l2_loss = 0
         for cond in range(num_conds):
             for sample_num in range(num_samples):
@@ -475,18 +597,19 @@ class PolicyOptTf(PolicyOpt):
                 l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
         print(l2_loss)
         print("RAN THROUGH FEATURES")
-        import IPython
-        IPython.embed()
-        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,30))
-        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,30))
+        # import IPython
+        # IPython.embed()
+        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,feat_size))
+        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,feat_size))
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
         distances, indices = nbrs.kneighbors(cond_feats_other)
         indices = np.reshape(indices, (num_conds, num_samples, T_extended))
         dO_robot0 = obs_extended_full[0].shape[-1]
         obs_full_reshaped = np.reshape(obs_extended_full[0], (num_conds*num_samples*T_extended,dO_robot0))
         print("CHECK NN")
-        import IPython
-        IPython.embed()
+        # import IPython
+        # IPython.embed()
+        line_length = 0
         for cond in range(num_conds):
             for s_no in range(num_samples):
                 color = ['r', 'b'][robot_number]
@@ -499,12 +622,18 @@ class PolicyOptTf(PolicyOpt):
                     print("X: " + str([x,x_nbr]))
                     print("Y: " + str([y,y_nbr]))
                     lines = plt.plot([x,x_nbr], [y,y_nbr])
+                    line_length += np.linalg.norm(np.array([x-x_nbr, y-y_nbr]))
+        # plt.savefig(filename+"_"+str(line_length)+"_fig.png")
+        # pickle.dump(var_dict, open(filename+"_"+str(line_length)+"_subspace_state.pkl", "wb"))
         plt.show()
         import IPython
         IPython.embed()
-        cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T_extended, 30))
-        np.save("3link_feats.npy", np.asarray(cond_feats))
+        cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T_extended, feat_size))
+        # np.save(filename+"_"+str(line_length)+"_3link_feats.npy", np.asarray(cond_feats))
+        np.save('3link_feats', cond_feats)
+        # np.save(filename+"_length_"+str(line_length)+".npy", line_length)
         print("done training invariant DC and saving weights")
+        return
 
     def run_features_forward(self, obs, robot_number):
         feed_dict = {}
@@ -515,6 +644,13 @@ class PolicyOptTf(PolicyOpt):
         feed_dict[self.obs_tensors_feat[robot_number]] = obs
         output = self.sess.run(self.feature_points_feat[robot_number], feed_dict=feed_dict)
         output = np.reshape(output, (N, T, 60))
+        return output
+    def run_one_image_forward(self, img, robot_number):
+        feed_dict = {}
+        # dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])][robot_number]
+        # dU = self._dU[robot_number]
+        feed_dict[self.other['state_inputs'][robot_number]] = [img]
+        output = self.sess.run(self.other['state_features_list'][robot_number], feed_dict=feed_dict)[0]
         return output
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
