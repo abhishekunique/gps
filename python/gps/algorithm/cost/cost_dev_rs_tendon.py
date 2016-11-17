@@ -23,6 +23,9 @@ class CostDevRs(Cost):
         config.update(hyperparams)
         Cost.__init__(self, config)
         self.init_feature_space()
+        # dict_data = pickle.load(open("scalebias.pkl", "rb"))
+        # self.scales = dict_data['scale'] 
+        # self.biases = dict_data['bias']
 
     def init_feature_space(self):
         """ Helper method to initialize the tf networks used """
@@ -103,6 +106,8 @@ class CostDevRs(Cost):
         tgt = self._hyperparams['target_feats']
         x = sample.get_obs()
         x = np.concatenate([x[:, 8:11], x[:, 11:14]], axis=1)
+
+        # x = x.dot(self.scales[1]) + self.biases[1]
         feed_dict = {self.input: x}
         feat_forward = self.session.run(self.feature_layers, feed_dict=feed_dict)
         num_feats = feat_forward.shape[1]
@@ -111,6 +116,7 @@ class CostDevRs(Cost):
         grad_vals = self.session.run(self.grad_ops, feed_dict=feed_dict)
         for j, gv in enumerate(grad_vals):
             gradients_all[:, j, :] = gv
+        # gradients_all = gradients_all.dot(self.scales[1])
         print("next")
         size_ls = 32
         l = np.zeros((T,))

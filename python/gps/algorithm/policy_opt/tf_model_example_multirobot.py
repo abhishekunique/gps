@@ -1025,6 +1025,127 @@ def double_contrastive_invariance(dim_input=[27, 27], dim_output=[7, 7], batch_s
         nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
     return nnets, None
 
+def KLDivergence(mean1, z_log_sigma_sq1, mean2, z_log_sigma_sq2):
+    t1 = 0.5*tf.reduce_sum(tf.exp(-z_log_sigma_sq2 + z_log_sigma_sq1),1)
+    t2 = 0.5*tf.diag_part(tf.matmul(tf.mul(mean1 - mean2, tf.exp(-z_log_sigma_sq2)),  tf.transpose(mean1 - mean2, perm=[1,0])))
+    t3 = 0.5*tf.reduce_sum(z_log_sigma_sq2 - z_log_sigma_sq1,1)
+    t4 = -0.5*(tf.reduce_sum(tf.ones((25,60), "float"), 1))
+    return tf.reduce_sum(tf.reduce_sum(t2) + tf.reduce_sum(t3) + tf.reduce_sum(t1) + tf.reduce_sum(t4))
+
+def simple_vae_model(dim_input_state=[27, 27], dim_input_action=[27, 27], batch_size=25, network_config=None, ncond=0):
+    state_features_list = []
+    z_mean_full = []
+    z_log_sigma_sq_full = []
+    outputs_full = []
+    next_state_inputs = []
+    action_inputs = []
+    state_inputs = []
+    nnets = []
+    other = {}
+    #defining layer sizes [TOOD: Get from hyperparams]
+    num_hidden = 6
+    layer_size = 60
+    n_z = 60
+    dim_hidden = [layer_size]*num_hidden
+    #Defining the transition variables
+    all_losses = []
+    all_variables = []
+    num_robots = len(dim_input_state)
+    #defining input placeholders
+    for robot_number in range(num_robots):
+        state_input = tf.placeholder("float", [None, dim_input_state[robot_number]], name='nn_input_state' + str(robot_number))
+
+        #appending into lists
+        state_inputs.append(state_input)
+
+        #DEFINING STATE VARIABLES
+        w0_state = init_weights((dim_input_state[robot_number], dim_hidden[0]), name='w0_state' + str(robot_number))
+        b0_state = init_bias((dim_hidden[0],), name='b0_state'+str(robot_number))
+        w1_state = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_state' + str(robot_number))
+        b1_state = init_bias((dim_hidden[1],), name='b1_state' + str(robot_number))
+        w2_state = init_weights((dim_hidden[1], n_z), name='w2_state' + str(robot_number))
+        b2_state = init_bias((n_z,), name='b2_state' + str(robot_number))
+
+        wlogsigsq_state = init_weights((dim_hidden[1], n_z), name='wlogsigsq_state' + str(robot_number))
+        blogsigsq_state = init_bias((n_z,), name='blogsigsq_state' + str(robot_number))
+
+
+
+        w3_state_ae = init_weights((n_z, dim_hidden[3]), name='w3_state_ae' + str(robot_number))
+        b3_state_ae = init_bias((dim_hidden[3],), name='b3_state_ae' + str(robot_number))
+        w4_state_ae = init_weights((dim_hidden[3], dim_input_state[robot_number]), name='w4_state_ae' + str(robot_number))
+        b4_state_ae = init_bias((dim_input_state[robot_number],), name='b4_state_ae' + str(robot_number))
+        # w5_state_ae = init_weights((dim_hidden[4], dim_input_state[robot_number]), name='w5_state_ae' + str(robot_number))
+        # b5_state_ae = init_bias((dim_input_state[robot_number],), name='b5_state_ae' + str(robot_number))
+
+        all_variables += [w0_state, b0_state]
+        all_variables += [w1_state, b1_state]
+        all_variables += [w2_state, b2_state]
+        all_variables += [wlogsigsq_state, blogsigsq_state]
+        all_variables += [w3_state_ae, b3_state_ae]
+        all_variables += [w4_state_ae, b4_state_ae]
+        # all_variables += [w5_state_ae, b5_state_ae]
+        #END DEFINING STATE VARIABLES
+
+        ### STATE EMBEDDING ###
+        layer0_state = tf.nn.relu(tf.matmul(state_input, w0_state) + b0_state)
+        layer1_state = tf.nn.relu(tf.matmul(layer0_state, w1_state) + b1_state)
+        layer2_state = tf.matmul(layer1_state, w2_state) + b2_state
+        layerlogsigsq_state = tf.matmul(layer1_state, wlogsigsq_state) + blogsigsq_state
+
+        epsilon = tf.random_normal(tf.shape(layerlogsigsq_state), name='epsilon' + str(robot_number))
+        std_encoder = tf.exp(0.5 * layerlogsigsq_state)
+        z = layer2_state + tf.mul(std_encoder, epsilon)
+        z_mean_full.append(layer2_state)
+        z_log_sigma_sq_full.append(layerlogsigsq_state)
+
+
+
+        state_features = layer2_state
+        state_features_list.append(state_features)
+        #autoencoding output#
+        layer3_state_ae = tf.nn.relu(tf.matmul(z, w3_state_ae) + b3_state_ae)
+        # layer4_state_ae = tf.nn.relu(tf.matmul(layer3_state_ae, w4_state_ae) + b4_state_ae)
+        output_state_ae = tf.matmul(layer3_state_ae, w4_state_ae) + b4_state_ae
+        ### END STATE EMBEDDING ###
+        outputs_full.append(output_state_ae)
+        # loss_ae_state = tf.nn.l2_loss(output_state_ae - state_input)
+        reconstr_loss = tf.nn.l2_loss(output_state_ae - state_input)
+
+        # \
+        #     -tf.reduce_sum(state_input * tf.log(1e-10 + output_state_ae)
+        #                    + (1-state_input) * tf.log(1e-10 + 1 - output_state_ae),
+        #                    1)
+        latent_loss = tf.reduce_sum(0.001*(-0.5 * tf.reduce_sum(1 + layerlogsigsq_state - tf.square(layer2_state) - tf.exp(layerlogsigsq_state), 1)))
+        # import IPython
+        # IPython.embed()
+        # full_loss = tf.reduce_mean(reconstr_loss) #+ latent_loss)
+        all_losses += [reconstr_loss, latent_loss]
+        #contrastive loss version
+        if robot_number == 1:
+            # loss_contrastive_state = tf.nn.l2_loss(state_features_list[0] - state_features_list[1])
+            loss_contrastive_state = 0.5*(KLDivergence(z_mean_full[0], z_log_sigma_sq_full[0], z_mean_full[1], z_log_sigma_sq_full[1]) + \
+                                     KLDivergence(z_mean_full[1], z_log_sigma_sq_full[1], z_mean_full[0], z_log_sigma_sq_full[0]))
+            all_losses += [loss_contrastive_state]
+            # loss_contrastive_state2 = 2*tf.nn.l2_loss(z_mean_full[0] - z_mean_full[1])
+            # all_losses += [loss_contrastive_state2]
+        nnets.append(TfMap.init_from_lists([None, None, None], [None], [None], None, None))
+
+    all_variables_dict = {}
+    for v in all_variables:
+        all_variables_dict[v.name] = v
+    other['all_losses'] = all_losses
+    other['all_variables'] = all_variables_dict
+    other['state_inputs'] = state_inputs
+    other['next_state_inputs'] = next_state_inputs
+    other['action_inputs'] = action_inputs
+    other['state_features_list'] = state_features_list
+    other['z_mean_full'] = z_mean_full
+    other['z_log_sigma_sq_full'] = z_log_sigma_sq_full
+    other['outputs_full'] = outputs_full
+    return nnets, other
+
+
 def simple_transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27], batch_size=25, network_config=None, ncond=0):
     state_features_list = []
     action_features_list = []

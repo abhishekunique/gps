@@ -73,18 +73,16 @@ class TfSolver:
         if self.lr_policy != 'fixed':
             raise NotImplementedError('learning rate policies other than fixed are not implemented')
         print("In Tf solver")
-        import IPython
-        IPython.embed()
-        self.weight_decay = weight_decay
-        if weight_decay is not None:
-            if vars_to_opt is None:
-                trainable_vars = tf.trainable_variables()
-            else:
-                trainable_vars = vars_to_opt
-            loss_with_reg = self.loss_scalar
-            for var in trainable_vars:
-                loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
-            self.loss_scalar = loss_with_reg
+        # self.weight_decay = weight_decay
+        # if weight_decay is not None:
+        #     if vars_to_opt is None:
+        #         trainable_vars = tf.trainable_variables()
+        #     else:
+        #         trainable_vars = vars_to_opt
+        #     loss_with_reg = self.loss_scalar
+        #     for var in trainable_vars:
+        #         loss_with_reg += self.weight_decay*tf.nn.l2_loss(var)
+        #     self.loss_scalar = loss_with_reg
         
         self.solver_op = self.get_solver_op(var_list=vars_to_opt)
         if fc_vars is not None:
