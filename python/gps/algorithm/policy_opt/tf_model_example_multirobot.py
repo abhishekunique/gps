@@ -1555,7 +1555,7 @@ def autoencoder_img_contrastive(dim_input_state=[27, 27], dim_input_action=[27, 
     n_convlayers = 3
     pool_size = 2
     filter_size = 5
-    cont_weight = 100
+    cont_weight = 0.00001
     im_height = 64; im_width = 80; num_channels = 3;
     num_feats = 32
     layers = []
@@ -1569,9 +1569,6 @@ def autoencoder_img_contrastive(dim_input_state=[27, 27], dim_input_action=[27, 
         'wc4': get_xavier_weights([filter_size, filter_size, num_filters[1], num_filters[2]], (pool_size, pool_size), name='wc4'),
         'wc5': get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc5'),
         'wc6': get_xavier_weights([filter_size, filter_size,  num_channels,num_filters[0]], (pool_size, pool_size), name='wc5'),
-        'wf1': init_weights([num_filters[2]*2, fc_layer_size], name='wf1'),
-        'wf2': init_weights([ fc_layer_size, fc_layer_size], name='wf2'),
-        'wf3': init_weights([ fc_layer_size, 9], name='wf3'),
     }
 
     biases = {
@@ -1581,12 +1578,23 @@ def autoencoder_img_contrastive(dim_input_state=[27, 27], dim_input_action=[27, 
         'bc4': init_bias([num_filters[1]], name='bc4'),
         'bc5': init_bias([num_filters[0]], name='bc5'),
         'bc6': init_bias([num_channels], name='bc6'),
-        'bf1': init_bias([fc_layer_size], name='bf1'),
-        'bf2': init_bias([fc_layer_size], name='bf2'),
-        'bf3': init_bias([9], name='bf3'),
     }
     for robot_number, robot_params in enumerate(network_config):
         #defining input placeholders
+        rst = str(robot_number)
+        weights2 = {
+            'wc4'+rst: get_xavier_weights([filter_size, filter_size, num_filters[1], num_filters[2]], (pool_size, pool_size), name='wc4'+rst),
+            'wc5'+rst: get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc5'+rst),
+            'wc6'+rst: get_xavier_weights([filter_size, filter_size,  num_channels,num_filters[0]], (pool_size, pool_size), name='wc6'+rst),
+        }
+
+        biases2 = {
+            'bc4'+rst: init_bias([num_filters[1]], name='bc4'+rst),
+            'bc5'+rst: init_bias([num_filters[0]], name='bc5'+rst),
+            'bc6'+rst: init_bias([num_channels], name='bc6'+rst),
+        }
+        weights.update(weights2)
+        biases.update(biases2)
         state_input = tf.placeholder("float", [None, dim_input_state[robot_number]], name='nn_input_state' + str(robot_number))
         ee_input = tf.placeholder("float", [None, 9], name='nn_input_ee' + str(robot_number))
         image_input = tf.reshape(state_input, [-1, num_channels, im_width, im_height])
@@ -1628,11 +1636,13 @@ def autoencoder_img_contrastive(dim_input_state=[27, 27], dim_input_action=[27, 
         local_layers +=[softmax, fp]
         softmax_img = tf.transpose(tf.reshape(softmax, [-1, num_fp, num_rows, num_cols]), [0,2,3,1])
         output_shape = tf.pack([batch, num_rows, num_cols, num_filters[0]])
-        #upsample = deconv2d(softmax_img, weights['wc4'], biases['bc4'], (batch_size, num_rows, num_cols, num_filters[1]))
-        upsample = tf.nn.relu(deconv2d(softmax_img, weights['wc5'], biases['bc5'], output_shape))
+
+        upsample = tf.nn.relu(deconv2d(softmax_img, weights['wc4'+rst], biases['bc4'+rst], output_shape))
+
+        upsample = tf.nn.relu(deconv2d(upsample, weights['wc5'+rst], biases['bc5'+rst], output_shape))
         output_shape = tf.pack([batch, num_rows, num_cols, num_channels])
         local_layers +=[softmax_img,upsample]
-        upsample = (tf.sigmoid(deconv2d(softmax_img, weights['wc6'], biases['bc6'], output_shape)))*255
+        upsample = (tf.sigmoid(deconv2d(softmax_img, weights['wc6'+rst], biases['bc6'+rst], output_shape)))*255
 
         loss_ae_state = tf.nn.l2_loss(upsample-image_input)
         all_losses += [loss_ae_state]
@@ -1809,7 +1819,7 @@ def autoencoder_img_contrastive_sep(dim_input_state=[27, 27], dim_input_action=[
     n_convlayers = 3
     pool_size = 2
     filter_size = 5
-    cont_weight = 1
+    cont_weight = 0.00001
     im_height = 64; im_width = 80; num_channels = 3;
     num_feats = 32
     layers = []
@@ -1887,7 +1897,10 @@ def autoencoder_img_contrastive_sep(dim_input_state=[27, 27], dim_input_action=[
         softmax_img = tf.transpose(tf.reshape(softmax, [-1, num_fp, num_rows, num_cols]), [0,2,3,1])
         output_shape = tf.pack([batch, num_rows, num_cols, num_filters[0]])
         #upsample = deconv2d(softmax_img, weights['wc4'], biases['bc4'], (batch_size, num_rows, num_cols, num_filters[1]))
-        upsample = tf.nn.relu(deconv2d(softmax_img, weights['wc5'+rst], biases['bc5'+rst], output_shape))
+        upsample = tf.nn.relu(deconv2d(softmax_img, weights['wc4'+rst], biases['bc4'+rst], output_shape))
+
+        upsample = tf.nn.relu(deconv2d(upsample, weights['wc5'+rst], biases['bc5'+rst], output_shape))
+        # upsample = tf.nn.relu(deconv2d(softmax_img, weights['wc5'+rst], biases['bc5'+rst], output_shape))
         output_shape = tf.pack([batch, num_rows, num_cols, num_channels])
         local_layers +=[softmax_img,upsample]
         upsample = (tf.sigmoid(deconv2d(softmax_img, weights['wc6'+rst], biases['bc6'+rst], output_shape)))*255

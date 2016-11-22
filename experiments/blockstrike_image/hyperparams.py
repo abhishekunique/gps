@@ -60,11 +60,11 @@ SENSOR_DIMS = [{
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
-EXP_DIR = BASE_DIR + '/../experiments/blockstrike_images/'
+EXP_DIR = BASE_DIR + '/../experiments/blockstrike_image/'
 INIT_POLICY_DIR = '/home/abhigupta/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
-weights_file = "/home/coline/dynamics_subspace/gps/img_reach_fresh.pkl"
+weights_file = "/home/coline/dynamics_subspace/gps/img_reach_blue2.pkl"
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),
@@ -149,9 +149,9 @@ agent = [{
     'T': 100,
     'sensor_dims': SENSOR_DIMS[0],
     'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
-                      END_EFFECTOR_POINT_VELOCITIES,IMAGE_FEATURES],
+                      END_EFFECTOR_POINT_VELOCITIES],
                       #include the camera images appropriately here
-    'obs_include': [RGB_IMAGE],
+    'obs_include': [],
     'meta_include': [],
     'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
     'robot_number': 0,
@@ -270,7 +270,7 @@ fk_cost_blocktouch = [{
     'alpha': 1e-5,
 } for i in agent[0]['train_conditions']]
 
-load_trajs = np.load("3link_feats_reach.npy")
+load_trajs = np.load("3link_feats_reach_blue2.npy")
 test_cost_1 = [{
     'type': CostImageFeatures,
     'l1': 0.1,
@@ -286,8 +286,8 @@ test_cost_1 = [{
 
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i], test_cost_1[i]],
-    'weights': [1.0,1],
+    'costs': [fk_cost_1[i]],# test_cost_1[i]],
+    'weights': [1.0],
 } for i in agent[0]['train_conditions']]
 
 # algorithm[0]['cost'] = [{
@@ -316,7 +316,7 @@ fk_cost_2 = [{
 #     'alpha': 1e-5,
 # } for i in agent[1]['train_conditions']]
 
-load_trajs = np.load("3link_feats_reach.npy")
+load_trajs = np.load("3link_feats_reach_blue2.npy")
 test_cost = [{
     'type': CostImageFeatures,
     'l1': 0.1,

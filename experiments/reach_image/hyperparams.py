@@ -37,33 +37,51 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
 from gps.gui.config import generate_experiment_info
 
 SENSOR_DIMS = [{
-    JOINT_ANGLES: 4,
-    JOINT_VELOCITIES: 4,
-    END_EFFECTOR_POINTS: 9,
-    END_EFFECTOR_POINT_VELOCITIES: 9,
+    JOINT_ANGLES: 3,
+    JOINT_VELOCITIES: 3,
+    END_EFFECTOR_POINTS: 6,
+    END_EFFECTOR_POINT_VELOCITIES: 6,
     ACTION: 3,
     RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
     RGB_IMAGE_SIZE: 3,
-},
-{
-    JOINT_ANGLES: 5,
-    JOINT_VELOCITIES: 5,
-    END_EFFECTOR_POINTS: 9,
-    END_EFFECTOR_POINT_VELOCITIES: 9,
+    IMAGE_FEATURES: 32,
+
+},{
+    JOINT_ANGLES: 4,
+    JOINT_VELOCITIES: 4,
+    END_EFFECTOR_POINTS: 6,
+    END_EFFECTOR_POINT_VELOCITIES: 6,
     ACTION: 4,
     RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
     RGB_IMAGE_SIZE: 3,
     IMAGE_FEATURES: 32,
-}]
 
-PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
+},
 
+]
+
+PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
-EXP_DIR = BASE_DIR + '/../experiments/blockstrike_image/'
-INIT_POLICY_DIR = '/home/abhigupta/gps/'
+EXP_DIR = BASE_DIR + '/../experiments/reach_img/'
+
+#close to the blockstrike positions
+# all_offsets = [[np.array([-0.8, 0.0, 0.25])],
+#                 [np.array([-0.8, 0.0, -1.3])],
+#                 [np.array([0.0, 0.0, 0.75])],
+#                 [np.array([0.1, 0.0, -0.75])]]
+
+
+all_offsets = [[np.asarray([-0.3, 0., -1.5])],
+               [np.asarray([0.3, 0., 0.3])],
+               [np.asarray([-0.4, 0.0, 0.6])],
+               [np.asarray([0.3, 0., -1.2])], 
+               [np.asarray([.5, 0.0, 0.3])],
+               [np.asarray([.7, 0.0, -0.3])],
+               [np.array([0., 0., -1.2])],
+               [np.array([0.4, 0., -0.9])]]
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
-weights_file = "/home/coline/dynamics_subspace/gps/img_reach_blue2.pkl"
+weights_file = "/home/coline/dynamics_subspace/gps/img_contrastive1000.pkl"
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),
@@ -71,78 +89,67 @@ common = {
     'data_files_dir': EXP_DIR + 'data_files/',
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
-    'conditions': 4,
-    'train_conditions': [0,1],
-    'test_conditions': [2,3],
-    'weight_decay': 0.005,
+    'conditions': 8,
+    'train_conditions': [0,1,2,3],
+    'test_conditions':[4,5,6,7],
     'num_robots':2,
-    'policy_opt': {
-        'type': PolicyOptTf,
-        'network_model':  autoencoder_img_contrastive, #contrastive_transition_reward_model,#autoencoder_model_domainconfusion,
-        'gpu_id': 1,
-        'run_feats': False,
-        'invariant_train': True,
-        'load_weights': weights_file,
-        'network_params': [{
-            'dim_hidden': [10],
-            'num_filters': [10, 20],
-            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE],
-            'obs_image_data':[],
-            'image_width': IMAGE_WIDTH,
-            'image_height': IMAGE_HEIGHT,
-            'image_channels': IMAGE_CHANNELS,
-            'sensor_dims': SENSOR_DIMS[0],
-            'batch_size': 25,
-            # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
-        },
-        {
-            'dim_hidden': [10],
-            'num_filters': [10, 20],
-            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE],
-            'obs_image_data':[],
-            'image_width': IMAGE_WIDTH,
-            'image_height': IMAGE_HEIGHT,
-            'image_channels': IMAGE_CHANNELS,
-            'sensor_dims': SENSOR_DIMS[1],
-            'batch_size': 25,
-            # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
-        }],
-        'iterations':0,#60000,
-        'fc_only_iterations': 5000,
-        'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-        'r0_index_list': range(15360),#np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
-        'r1_index_list': range(15360),#np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)])
-        # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
-    }
+    # 'policy_opt': {
+    #     'type': PolicyOptTf,
+    #     'network_model':  autoencoder_img_contrastive, #contrastive_transition_reward_model,#autoencoder_model_domainconfusion,
+    #     'run_feats': True,
+    #     'gpu_id': 0,
+    #     'invariant_train': True,
+    #     'load_weights': weights_file,
+    #     'network_params': [{
+    #         'dim_hidden': [10],
+    #         'num_filters': [10, 20],
+    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE],
+    #         'obs_image_data':[],
+    #         'image_width': IMAGE_WIDTH,
+    #         'image_height': IMAGE_HEIGHT,
+    #         'image_channels': IMAGE_CHANNELS,
+    #         'sensor_dims': SENSOR_DIMS[0],
+    #         'batch_size': 25,
+    #         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
+    #     },
+    #     {
+    #         'dim_hidden': [10],
+    #         'num_filters': [10, 20],
+    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE],
+    #         'obs_image_data':[],
+    #         'image_width': IMAGE_WIDTH,
+    #         'image_height': IMAGE_HEIGHT,
+    #         'image_channels': IMAGE_CHANNELS,
+    #         'sensor_dims': SENSOR_DIMS[1],
+    #         'batch_size': 25,
+    #         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
+    #     }],
+    #     'iterations': 50000,
+    #     'fc_only_iterations': 5000,
+    #     'checkpoint_prefix': EXP_DIR + 'data_files/policy',
+    #     'r0_index_list': range(15360),#np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
+    #     'r1_index_list': range(15360),#np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)])
+    #     # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
+    # }
 }
 
 if not os.path.exists(common['data_files_dir']):
     os.makedirs(common['data_files_dir'])
 
-agent = [{
+agent = [
+{
     'type': AgentMuJoCo,
-    'filename': './mjc_models/3link_gripper_strike.xml',
-    'x0': np.zeros((8,)),
+    'filename': './mjc_models/arm_3link_reach.xml',
+    'x0': np.zeros(6),
     'dt': 0.05,
     'substeps': 5,
-    # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
-    'pos_body_offset': [
-                        [np.array([-0.8, 0.0, 0.75]),np.array([0.0, 0.0, 0.75])],
-                        [np.array([-0.7, 0.0, -0.75]),np.array([0.1, 0.0, -0.75])],
-                        [np.array([-0.9, 0.0, 0.7]),np.array([0.5, 0.0, 1.3])],
-                        [np.array([-0.7, 0.0, -0.6]),np.array([0.8, 0.0, -1.2])],
-
-                        # [np.array([-0.3, 0.0, 0.6]),np.array([0.5, 0.0, 0.9])],
-                        # [np.array([-0.4, 0.0, -0.5]),np.array([0.5, 0.0, -0.75])],
-                        # [np.array([-0.3, 0.0, 0.6]),np.array([0.6, 0.0, 0.85])],
-                        # [np.array([-0.4, 0.0, -0.6]),np.array([0.45, 0.0, -0.95])],
-                        ],
-    'pos_body_idx': np.array([6,8]),
-    'conditions': 4,
-    'train_conditions': [0, 1],
-    'test_conditions': [2, 3],
+    'pos_body_offset': all_offsets,
+    'pos_body_idx': np.array([6]),
+    'conditions': common['conditions'],
+    'train_conditions': common['train_conditions'],
+    'test_conditions': common['test_conditions'],
     'image_width': IMAGE_WIDTH,
     'image_height': IMAGE_HEIGHT,
     'image_channels': IMAGE_CHANNELS,
@@ -151,33 +158,23 @@ agent = [{
     'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
                       END_EFFECTOR_POINT_VELOCITIES],
                       #include the camera images appropriately here
-    'obs_include': [RGB_IMAGE],
+    'obs_include': [],#RGB_IMAGE],
     'meta_include': [],
     'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
-
-         },
-         {
+    'robot_number': 0,
+    },{
     'type': AgentMuJoCo,
-    'filename': './mjc_models/4link_gripper_strike.xml',
-    'x0': np.zeros((10,)),
+    'filename': './mjc_models/arm_4link_reach.xml',
+    'x0': np.zeros((8,)),
+    'robot_number': 1,
     'dt': 0.05,
     'substeps': 5,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
-    'pos_body_offset': [
-                        [np.array([-0.8, 0.0, 0.75]),np.array([0.0, 0.0, 0.75])],
-                        [np.array([-0.7, 0.0, -0.75]),np.array([0.1, 0.0, -0.75])],
-                        [np.array([-0.9, 0.0, 0.7]),np.array([0.5, 0.0, 1.3])],
-                        [np.array([-0.7, 0.0, -0.6]),np.array([0.8, 0.0, -1.2])],
-
-                        # [np.array([-0.3, 0.0, 0.6]),np.array([0.5, 0.0, 0.9])],
-                        # [np.array([-0.4, 0.0, -0.5]),np.array([0.5, 0.0, -0.75])],
-                        # [np.array([-0.3, 0.0, 0.6]),np.array([0.6, 0.0, 0.85])],
-                        # [np.array([-0.4, 0.0, -0.6]),np.array([0.45, 0.0, -0.95])],
-                        ],
-    'pos_body_idx': np.array([7,9]),
-    'conditions': 4,
-    'train_conditions': [0, 1],
-    'test_conditions': [2, 3],
+    'pos_body_offset': all_offsets,
+    'pos_body_idx': np.array([6]),
+    'conditions': common['conditions'],
+    'train_conditions': common['train_conditions'],
+    'test_conditions': common['test_conditions'],
     'image_width': IMAGE_WIDTH,
     'image_height': IMAGE_HEIGHT,
     'image_channels': IMAGE_CHANNELS,
@@ -186,7 +183,7 @@ agent = [{
     'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
                       END_EFFECTOR_POINT_VELOCITIES],
                       #include the camera images appropriately here
-    'obs_include': [RGB_IMAGE],
+    'obs_include': [],#RGB_IMAGE],
     'meta_include': [],
     'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
 
@@ -247,19 +244,14 @@ algorithm[1]['init_traj_distr'] = {
     'dt': agent[1]['dt'],
     'T': agent[1]['T'],
 }
-
 fk_cost_1 = [{
     'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0,0,0]), 
-                                           np.array([0.05, 0.05, 0.05]) + agent[0]['pos_body_offset'][i][1],
-                                           np.array([0,0,0])]),
-    'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+    'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
+    'wp': np.array([1, 1, 1, 0, 0, 0]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
-    'ramp_option': RAMP_QUADRATIC
-} for i in agent[0]['train_conditions']]
-
+} for i in common['train_conditions']]
 
 fk_cost_blocktouch = [{
     'type': CostFKBlock,
@@ -269,24 +261,44 @@ fk_cost_blocktouch = [{
     'alpha': 1e-5,
 } for i in agent[0]['train_conditions']]
 
+# load_trajs = np.load("img_3link_feats_contrastive1000.npy")
+# test_cost_1 = [{
+#     'type': CostImageFeatures,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'robot_number': 0,
+#     'alpha': 1e-5,
+#     'cond': i,
+#     'feat_idx': range(4+4+9+9, 4+4+9+9+32),
+#     'target_feats': np.mean(load_trajs[i], axis=0),
+#     'load_file': weights_file,
+# } for i in agent[0]['train_conditions']]
+torque_cost_1 = [{
+    'type': CostAction,
+    'wu': 5e-1 / PR2_GAINS[0],
+} for i in common['train_conditions']]
+
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i], fk_cost_blocktouch[i]],
-    'weights': [5.0, 1.0],
+    'costs': [fk_cost_1[i], torque_cost_1[i]],
+    'weights': [1.0,0.5],
 } for i in agent[0]['train_conditions']]
+
+# algorithm[0]['cost'] = [{
+#     'type': CostSum,
+#     'costs': [fk_cost_1[i], fk_cost_blocktouch[i]],
+#     'weights': [5.0, 1.0],
+# } for i in agent[0]['train_conditions']]
+
 
 fk_cost_2 = [{
     'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0,0,0]), 
-                                           np.array([0.05, 0.05, 0.05]) + agent[1]['pos_body_offset'][i][1],
-                                           np.array([0,0,0])]),
-    'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+    'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent[1]['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
+    'wp': np.array([1, 1, 1, 0, 0, 0]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
-    'ramp_option': RAMP_QUADRATIC
-} for i in agent[1]['train_conditions']]
-
+} for i in common['train_conditions']]
 # fk_cost_blocktouch2 = [{
 #     'type': CostFKBlock,
 #     'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
@@ -295,22 +307,28 @@ fk_cost_2 = [{
 #     'alpha': 1e-5,
 # } for i in agent[1]['train_conditions']]
 
-# load_trajs = np.load("img2_3link_feats.npy")
+# load_trajs = np.load("img_3link_feats_contrastive1000.npy")
 # test_cost = [{
 #     'type': CostImageFeatures,
 #     'l1': 0.1,
 #     'l2': 10.0,
+#     'cond': i,
+#     'robot_number': 1,
 #     'alpha': 1e-5,
 #     'feat_idx': range(5+5+9+9, 5+5+9+9+32),
 #     'target_feats': np.mean(load_trajs[i], axis=0),
-#     'load_file': 'img_subspace_state.pkl'
+#     'load_file': weights_file,
 # } for i in agent[0]['train_conditions']]
 
+torque_cost_2 = [{
+    'type': CostAction,
+    'wu': 5e-1 / PR2_GAINS[1],
+} for i in common['train_conditions']]
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_2[i]],# test_cost[i]],
-    'weights': [1.0,0],
+    'costs': [fk_cost_2[i], torque_cost_2[i]],
+    'weights': [1.0,0.5],
 } for i in agent[0]['train_conditions']]
 
 
@@ -372,13 +390,13 @@ algorithm[1]['policy_prior'] = {
 
 config = {
     'iterations': 25,
-    'num_samples': 7,
-    'verbose_trials': 7,
+    'num_samples': 4,
+    'verbose_trials': 0,
     'verbose_policy_trials': 5,
     'save_wts': True,
     'common': common,
     'agent': agent,
-    'gui_on': False ,
+    'gui_on': True ,
     'algorithm': algorithm,
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],

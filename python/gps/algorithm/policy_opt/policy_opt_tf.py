@@ -315,7 +315,7 @@ class PolicyOptTf(PolicyOpt):
         var_dict = {}
         for k, v in self.other['all_variables'].items():
             var_dict[k] = self.sess.run(v)
-        pickle.dump(var_dict, open("img_reach_color.pkl", "wb"))
+        # pickle.dump(var_dict, open("img_reach_blue2.pkl", "wb"))
 
 
 
@@ -373,14 +373,14 @@ class PolicyOptTf(PolicyOpt):
                     lines = plt.plot([x,x_nbr], [y,y_nbr])
                     leng += np.linalg.norm([x-x_nbr, y-y_nbr])
         # plt.show()
-        print "leng", leng
+        print "leng", leng   
         #import IPython
         #IPython.embed()
         
 
         #plt.imshow(img)
         cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T, 32))
-        np.save("3link_feats_reach_color.npy", cond_feats)
+        np.save("3link_feats_reach_blue2.npy", cond_feats)
         import IPython
         IPython.embed()
         r = 0
@@ -419,6 +419,8 @@ class PolicyOptTf(PolicyOpt):
         def add_feat(images, fp, i):
             T,_,_,_ = images.shape
             for t in range(T):
+                #x = int(fp[t,i*2]*40+40)
+                #y = int(fp[t,i*2+1]*32+32)
                 x = int(fp[t,i*2]*40+40)
                 y = int(fp[t,i*2+1]*32+32)
                 print x,y
@@ -446,13 +448,24 @@ class PolicyOptTf(PolicyOpt):
                     feed_dict[self.other['state_inputs'][r]] = obs_full[r][s]
                     fp = self.sess.run(self.other['state_features_list'][r], feed_dict)
                     images_fp = add_feat(images_fp, fp, feat)
-                ani_frame(images_fp, "allfeats"+str(feat)+"_r"+str(r)+"_s"+str(s))
+                ani_frame(images_fp, "strikeblue"+str(feat)+"_r"+str(r)+"_s"+str(s))
+            
+        data = np.zeros((14,100, 32))
+        for s in range(14):
+            r = 0
+            images_fp = np.transpose(obs_full[r][s].reshape(T,3,80,64), [0,2,3,1]).astype(np.uint8)
+            feed_dict[self.other['state_inputs'][r]] = obs_full[r][s]
+            fp = self.sess.run(self.other['state_features_list'][r], feed_dict)
+            data[s] = fp
+            for feat in range(16):
+                images_fp = add_feat(images_fp, fp, feat)
+            ani_frame(images_fp, "allfeats_test"+str(feat)+"_r"+str(r)+"_s"+str(s))
             
         for r in range(2):
             for s in [1,10]:
                 feed_dict[self.other['state_inputs'][r]] = obs_full[r][s]
                 output= self.sess.run(self.other['output'][r], feed_dict)
-                ani_frame(output, str(r)+"_"+str(s))
+                ani_frame(output, "strike"+str(r)+"_"+str(s))
 
         print("done training invariant autoencoder and saving weights")
 
