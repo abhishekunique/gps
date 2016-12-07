@@ -9,7 +9,7 @@ RAMP_QUADRATIC = 3
 RAMP_FINAL_ONLY = 4
 RAMP_MIDDLE = 5
 RAMP_MIDDLE_DRAWER = 6
-
+RAMP_DECREASE = 7
 
 def get_ramp_multiplier(ramp_option, T, wp_final_multiplier=1.0):
     """
@@ -35,6 +35,8 @@ def get_ramp_multiplier(ramp_option, T, wp_final_multiplier=1.0):
         splitpoint = int(0.5*T)
         wpm = np.ones(T)
         wpm[splitpoint:] = np.zeros(T - splitpoint)
+    elif ramp_option == RAMP_DECREASE:
+        wpm = (np.arange(start=T, stop=0, dtype=np.float32) + 1) / T
     else:
         raise ValueError('Unknown cost ramp requested!')
     wpm[-1] *= wp_final_multiplier

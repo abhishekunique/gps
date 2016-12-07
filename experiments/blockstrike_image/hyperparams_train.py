@@ -63,7 +63,7 @@ EXP_DIR = BASE_DIR + '/../experiments/blockstrike_image/'
 INIT_POLICY_DIR = '/home/abhigupta/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
-weights_file = "/home/coline/dynamics_subspace/gps/img_reach_blue2.pkl"
+weights_file = "/home/coline/dynamics_subspace/gps/img_reach_blue_fp.pkl"
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),
@@ -79,8 +79,9 @@ common = {
     'policy_opt': {
         'type': PolicyOptTf,
         'network_model':  autoencoder_img_contrastive, #contrastive_transition_reward_model,#autoencoder_model_domainconfusion,
-        'gpu_id': 1,
-        'run_feats': False,
+        'gpu_id': 0,
+        'run_feats': True,
+        'strike':True,
         'invariant_train': True,
         'load_weights': weights_file,
         'network_params': [{

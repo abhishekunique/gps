@@ -64,7 +64,7 @@ EXP_DIR = BASE_DIR + '/../experiments/blockstrike_image/'
 INIT_POLICY_DIR = '/home/abhigupta/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
-weights_file = "/home/coline/dynamics_subspace/gps/img_reach_blue2.pkl"
+weights_file = "/home/coline/dynamics_subspace/gps/img_reach_blue_fp.pkl"
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),
@@ -270,7 +270,7 @@ fk_cost_blocktouch = [{
     'alpha': 1e-5,
 } for i in agent[0]['train_conditions']]
 
-load_trajs = np.load("3link_feats_reach_blue2.npy")
+load_trajs = np.load("3link_feats_reach_blue_fp.npy")
 test_cost_1 = [{
     'type': CostImageFeatures,
     'l1': 0.1,
@@ -316,7 +316,7 @@ fk_cost_2 = [{
 #     'alpha': 1e-5,
 # } for i in agent[1]['train_conditions']]
 
-load_trajs = np.load("3link_feats_reach_blue2.npy")
+load_trajs = np.load("3link_feats_reach_blue_fp.npy")
 test_cost = [{
     'type': CostImageFeatures,
     'l1': 0.1,
@@ -333,7 +333,7 @@ test_cost = [{
 algorithm[1]['cost'] = [{
     'type': CostSum,
     'costs': [fk_cost_2[i], test_cost[i]],
-    'weights': [1.0,1],
+    'weights': [1,1],
 } for i in agent[0]['train_conditions']]
 
 

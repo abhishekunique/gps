@@ -31,6 +31,16 @@ def get_xavier_weights(filter_shape, poolsize=(2, 2), name=None):
     high = 4*np.sqrt(6.0/(fan_in + fan_out))
     return tf.Variable(tf.random_uniform(filter_shape, minval=low, maxval=high, dtype=tf.float32), name=name)
 
+def get_xavier_weights_softmax(filter_shape, poolsize=(2, 2), name=None):
+    fan_in = np.prod(filter_shape[1:])
+    fan_out = (filter_shape[0] * np.prod(filter_shape[2:]) //
+               np.prod(poolsize))
+
+    low = -4*np.sqrt(6.0/(fan_in + fan_out)) # use 4 for sigmoid, 1 for tanh activation
+    high =4*np.sqrt(6.0/(fan_in + fan_out))
+    print "WEIGHTSS", low, high
+    return tf.Variable(tf.random_uniform(filter_shape, minval=low, maxval=high, dtype=tf.float32), name=name)
+
 def init_bias_shared(shape, name=None):
     biases = tf.get_variable("biases" + str(name), shape,
         initializer=tf.constant_initializer(0.0))
@@ -1555,7 +1565,8 @@ def autoencoder_img_contrastive(dim_input_state=[27, 27], dim_input_action=[27, 
     n_convlayers = 3
     pool_size = 2
     filter_size = 5
-    cont_weight = 0.00001
+    cont_weight = 1000
+    gradients = []
     im_height = 64; im_width = 80; num_channels = 3;
     num_feats = 32
     layers = []
@@ -1565,7 +1576,7 @@ def autoencoder_img_contrastive(dim_input_state=[27, 27], dim_input_action=[27, 
     weights = {
         'wc1': get_xavier_weights([filter_size, filter_size, 3, num_filters[0]], (pool_size, pool_size), name='wc1'), # 5x5 conv, 3 input, 32 outputs
         'wc2': get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2'), # 5x5 conv, 32 inputs, 64 outputs
-        'wc3': get_xavier_weights([filter_size, filter_size, num_filters[1], num_filters[2]], (pool_size, pool_size), name='wc3'),
+        'wc3': get_xavier_weights_softmax([filter_size, filter_size, num_filters[1], num_filters[2]], (pool_size, pool_size), name='wc3'),
         'wc4': get_xavier_weights([filter_size, filter_size, num_filters[1], num_filters[2]], (pool_size, pool_size), name='wc4'),
         'wc5': get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc5'),
         'wc6': get_xavier_weights([filter_size, filter_size,  num_channels,num_filters[0]], (pool_size, pool_size), name='wc5'),
@@ -1586,12 +1597,14 @@ def autoencoder_img_contrastive(dim_input_state=[27, 27], dim_input_action=[27, 
             'wc4'+rst: get_xavier_weights([filter_size, filter_size, num_filters[1], num_filters[2]], (pool_size, pool_size), name='wc4'+rst),
             'wc5'+rst: get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc5'+rst),
             'wc6'+rst: get_xavier_weights([filter_size, filter_size,  num_channels,num_filters[0]], (pool_size, pool_size), name='wc6'+rst),
+            'wf'+rst: init_weights([num_filters[-1]*2, num_filters[-1]*im_height*im_width], name='wf'+rst),
         }
 
         biases2 = {
             'bc4'+rst: init_bias([num_filters[1]], name='bc4'+rst),
             'bc5'+rst: init_bias([num_filters[0]], name='bc5'+rst),
             'bc6'+rst: init_bias([num_channels], name='bc6'+rst),
+            'bf'+rst: init_bias([ num_filters[-1]*im_height*im_width], name='bf'+rst),
         }
         weights.update(weights2)
         biases.update(biases2)
@@ -1605,11 +1618,22 @@ def autoencoder_img_contrastive(dim_input_state=[27, 27], dim_input_action=[27, 
         batch = tf.shape(state_input)[0]
         ### STATE EMBEDDING ###
         local_layers = []
-        conv_layer_0 = conv2d(img=image_input, w=weights['wc1'], b=biases['bc1'])
-        conv_layer_1 = conv2d(img=conv_layer_0, w=weights['wc2'], b=biases['bc2'])
-        conv_layer_2 = conv2d(img=conv_layer_1, w=weights['wc3'], b=biases['bc3'])
+        conv_layer_0 = tf.contrib.layers.layer_norm(conv2d_sig(img=image_input, w=weights['wc1'], b=biases['bc1']), 
+                                                    activation_fn=tf.nn.relu)
+        gradients.append(tf.gradients(conv_layer_0, image_input))
+        conv_layer_1 = tf.contrib.layers.layer_norm(conv2d_sig(img=conv_layer_0, w=weights['wc2'], b=biases['bc2']), activation_fn=tf.nn.relu)
+        gradients.append(tf.gradients(conv_layer_1,conv_layer_0))
+        conv_layer_2 = conv2d_sig(img=conv_layer_1, w=weights['wc3'], b=biases['bc3'])
+        gradients.append(tf.gradients(conv_layer_2,conv_layer_1))
+        # conv_layer_0 = tf.contrib.layers.layer_norm(conv2d_sig(img=image_input, w=weights['wc1'], b=biases['bc1']), 
+        #                                             activation_fn=tf.nn.relu)
+        # gradients.append(tf.gradients(conv_layer_0, image_input))
+        # conv_layer_1 = tf.contrib.layers.layer_norm(conv2d_sig(img=conv_layer_0, w=weights['wc2'], b=biases['bc2']), activation_fn=tf.nn.relu)
+        # gradients.append(tf.gradients(conv_layer_1,conv_layer_0))
+        # conv_layer_2 = tf.contrib.layers.layer_norm(conv2d_sig(img=conv_layer_1, w=weights['wc3'], b=biases['bc3']))
+        # gradients.append(tf.gradients(conv_layer_2,conv_layer_1))
         local_layers+=[conv_layer_0, conv_layer_1, conv_layer_2]
-
+        
         _, num_rows, num_cols, num_fp = conv_layer_2.get_shape()
         num_rows, num_cols, num_fp = [int(x) for x in [num_rows, num_cols, num_fp]]
         x_map = np.empty([num_rows, num_cols], np.float32)
@@ -1632,22 +1656,47 @@ def autoencoder_img_contrastive(dim_input_state=[27, 27], dim_input_action=[27, 
         fp_x = tf.reduce_sum(tf.mul(x_map, softmax), [1], keep_dims=True)
         fp_y = tf.reduce_sum(tf.mul(y_map, softmax), [1], keep_dims=True)
         fp = tf.reshape(tf.concat(1, [fp_x, fp_y]), [-1, num_fp*2])
+        # new_img = np.zeros([batch, num_rows, num_cols, num_fp])
+
+        # import IPython
+        # IPython.embed()
+        # index = []
+
+        # for f in range(num_fp):
+        #     r =fp_x[0,f]
+        #     c = fp_y[0,f]
+        #     index.append([r,c,f])
+            
+        # new_img = tf.SparseTensor(indices=index, values=[1]*num_fp, shape=[num_rows, num_cols, num_fp])
+        # new_img = tf.sparse_tensor_to_dense(new_img)
+        
         features_list.append(fp)
-        local_layers +=[softmax, fp]
-        softmax_img = tf.transpose(tf.reshape(softmax, [-1, num_fp, num_rows, num_cols]), [0,2,3,1])
+        fp_large = tf.nn.relu(tf.matmul(fp, weights['wf'+rst])+biases['bf'+rst])
+        fp_large = tf.reshape(fp_large, [-1, num_rows, num_cols, num_fp])
+        #local_layers +=[softmax, fp]
+        #softmax_img = tf.transpose(tf.reshape(softmax, [-1, num_fp, num_rows, num_cols]), [0,2,3,1])
         output_shape = tf.pack([batch, num_rows, num_cols, num_filters[0]])
+        
+        
+        # upsample = tf.nn.relu(deconv2d(softmax_img, weights['wc4'+rst], biases['bc4'+rst], output_shape))
+        upsample1 = tf.nn.relu(deconv2d(fp_large, weights['wc4'+rst], biases['bc4'+rst], output_shape))
 
-        upsample = tf.nn.relu(deconv2d(softmax_img, weights['wc4'+rst], biases['bc4'+rst], output_shape))
+        gradients.append(tf.gradients(upsample1, conv_layer_2))
+        # gradients.append(tf.gradients(upsample, softmax_img))
 
-        upsample = tf.nn.relu(deconv2d(upsample, weights['wc5'+rst], biases['bc5'+rst], output_shape))
+        upsample2 = tf.nn.relu(deconv2d(upsample1, weights['wc5'+rst], biases['bc5'+rst], output_shape))
         output_shape = tf.pack([batch, num_rows, num_cols, num_channels])
-        local_layers +=[softmax_img,upsample]
-        upsample = (tf.sigmoid(deconv2d(softmax_img, weights['wc6'+rst], biases['bc6'+rst], output_shape)))*255
+        local_layers +=[fp_large,upsample1, upsample2]
 
-        loss_ae_state = tf.nn.l2_loss(upsample-image_input)
+
+        upsample3 = (tf.sigmoid(deconv2d(upsample2, weights['wc6'+rst], biases['bc6'+rst], output_shape)))*255
+        gradients.append(tf.gradients(upsample3, upsample2))
+
+        loss_ae_state = tf.nn.l2_loss(upsample3-image_input)
+        gradients.append(tf.gradients(loss_ae_state,upsample3))
         all_losses += [loss_ae_state]
         gen_loss +=[loss_ae_state]
-        outputs += [upsample]
+        outputs += [upsample3]
 
         #### Begin Pose Prediction ###
         # layer  = tf.nn.relu(tf.matmul(fp, weights['wf1']) + biases['bf1'])
@@ -1676,6 +1725,7 @@ def autoencoder_img_contrastive(dim_input_state=[27, 27], dim_input_action=[27, 
     other['output'] = outputs
     other['ee_output'] = ee_outs
     other['layers'] = layers
+    other['gradients'] = gradients
 
     return nnets, other
 
@@ -1683,6 +1733,10 @@ def autoencoder_img_contrastive(dim_input_state=[27, 27], dim_input_action=[27, 
 def conv2d(img, w, b):
     #print img.get_shape().dims[3].value
     return tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(img, w, strides=[1, 1, 1, 1], padding='SAME'), b))
+def conv2d_sig(img, w, b):
+    #print img.get_shape().dims[3].value
+    return tf.nn.bias_add(tf.nn.conv2d(img, w, strides=[1, 1, 1, 1], padding='SAME'), b)
+
 def deconv2d(img, w, b, outshape):
     #print img.get_shape().dims[3].value
     return tf.nn.bias_add(tf.nn.conv2d_transpose(img, w, outshape, strides=[1, 1, 1, 1], padding='SAME'), b)

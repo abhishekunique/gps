@@ -26,8 +26,15 @@ class MLPlotter:
         self.error_generator = []
         self.error_discriminator = []
         self.error_generator_only = []
+        self.grad1 = []
+        self.grad2 = []
+        self.grad3 = []
+        self.grad4 = []
+        self.grad5 = []
+        self.grad6 = []
+
         ### setup plot figure
-        self.f, self.axes = plt.subplots(1, 3, figsize=(15,7))
+        self.f, self.axes = plt.subplots(3, 3, figsize=(15,7))
         mng = plt.get_current_fig_manager()
         plt.suptitle(title)
         plt.show(block=False)
@@ -36,23 +43,31 @@ class MLPlotter:
         f, axes = self.f, self.axes
 
         for ax in axes:
-                ax.clear()
+            for a in ax:
+                a.clear()
 
-        axes[0].plot(*zip(*self.error_generator), color='k', linestyle='-', label='Train')
-        axes[1].plot(*zip(*self.error_discriminator), color='r', linestyle='--', label='Val')
-        axes[2].plot(*zip(*self.error_generator_only), color='r', linestyle='--', label='Val')
+        axes[0][0].plot(*zip(*self.error_generator), color='k', linestyle='-', label='Train')
+        axes[0][1].plot(*zip(*self.error_discriminator), color='r', linestyle='--', label='Val')
+        axes[0][2].plot(*zip(*self.error_generator_only), color='r', linestyle='--', label='Val')
 
-        axes[0].set_title('Error Generator')
-        axes[0].set_ylabel('Percentage')
-        axes[0].set_xlabel('Epoch')
+        axes[0][0].set_title('Error Generator')
+        axes[0][0].set_ylabel('Percentage')
+        axes[0][0].set_xlabel('Epoch')
 
-        axes[1].set_title('Error Discriminator')
-        axes[1].set_ylabel('Percentage')
-        axes[1].set_xlabel('Epoch')
+        axes[0][1].set_title('Error Discriminator')
+        axes[0][1].set_ylabel('Percentage')
+        axes[0][1].set_xlabel('Epoch')
 
-        axes[2].set_title('Error Generator Only')
-        axes[2].set_ylabel('Percentage')
-        axes[2].set_xlabel('Epoch')
+        axes[0][2].set_title('Error Generator Only')
+        axes[0][2].set_ylabel('Percentage')
+        axes[0][2].set_xlabel('Epoch')
+
+        axes[1][0].plot(*zip(*self.grad1), color='k', linestyle='-')
+        axes[1][1].plot(*zip(*self.grad2), color='k', linestyle='-')
+        axes[1][2].plot(*zip(*self.grad3), color='k', linestyle='-')
+        axes[2][0].plot(*zip(*self.grad4), color='k', linestyle='-')
+        axes[2][1].plot(*zip(*self.grad5), color='k', linestyle='-')
+        axes[2][2].plot(*zip(*self.grad6), color='k', linestyle='-')
 
         f.canvas.draw()
 
@@ -67,6 +82,13 @@ class MLPlotter:
 
     def add_generator_only(self, itr, err):
         self.error_generator_only.append((itr, err))
+    def add_grad(self, itr, err):
+        self.grad1.append((itr,err[0]))
+        self.grad2.append((itr,err[1]))
+        self.grad3.append((itr,err[2]))
+        self.grad4.append((itr,err[3]))
+        self.grad5.append((itr,err[4]))
+        self.grad6.append((itr,err[5]))
 
     def save(self, save_dir):
         with open(os.path.join(save_dir, 'plotter.pkl'), 'w') as f:
@@ -271,9 +293,34 @@ class PolicyOptTf(PolicyOpt):
         checkitr = 200
         all_losses = np.zeros((len(self.other['gen_loss']),))
         print "starting tf iters"
+        grads = np.zeros(6)
         # import IPython
         # IPython.embed()
         time0 = time.clock()
+        # import IPython
+        # IPython.embed()
+        if self._hyperparams['strike']:
+            obs_full_reshaped = [np.reshape(obs_full[i], (num_conds, num_samples, T,-1)) for i in range(self.num_robots)]
+            cond_feats = np.zeros((num_conds, num_samples, T, 32))
+            cond_feats_other = np.zeros((num_conds, num_samples, T, 32))
+            l2_loss = 0
+            #import IPython
+            #IPython.embed()
+            for cond in range(num_conds):
+                for sample_num in range(num_samples):
+                    feed_dict = {self.other['state_inputs'][0]: obs_full_reshaped[0][cond][sample_num], 
+                                 self.other['state_inputs'][1]: obs_full_reshaped[1][cond][sample_num]}
+                    cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+                    cond_feats_other[cond, sample_num] = self.sess.run(self.other['state_features_list'][1], feed_dict=feed_dict)
+                    l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
+            print(l2_loss)
+            cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T,32))
+
+            #plt.imshow(img)
+            cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T, 32))
+            np.save("3link_feats.npy", cond_feats)
+            import IPython
+            IPython.embed()
         for i in range(self._hyperparams['iterations']):
             feed_dict = {}
             start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
@@ -284,8 +331,19 @@ class PolicyOptTf(PolicyOpt):
                 # feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
                 # feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
-            all_losses += self.sess.run(self.other['gen_loss'], feed_dict)
-            contrastive += self.sess.run(self.other['contrastive'], feed_dict)
+            #a, c, grad = self.sess.run([self.other['gen_loss'], self.other['contrastive'], self.other['gradients']], feed_dict)
+            a, c= self.sess.run([self.other['gen_loss'], self.other['contrastive']], feed_dict)
+            all_losses+= a
+            contrastive+= c
+            #all_losses += self.sess.run(self.other['gen_loss'], feed_dict)
+            #contrastive += self.sess.run(self.other['contrastive'], feed_dict)
+            #grad = self.sess.run(self.other['gradients'], feed_dict)
+            # grads[0] +=np.mean(np.square(grad[0]))
+            # grads[1] +=np.mean(np.square(grad[1]))
+            # grads[2] += np.mean(np.square(grad[2]))
+            # grads[3] +=np.mean(np.square(grad[3]))
+            # grads[4] +=np.mean(np.square(grad[4]))
+            # grads[5] += np.mean(np.square(grad[5]))
             average_loss += train_loss/200
 
             if i % checkitr == 0 and i != 0:
@@ -303,7 +361,7 @@ class PolicyOptTf(PolicyOpt):
                 mlplt.add_generator_only(i, np.sum(all_losses) / 200)
                 mlplt.add_discriminator(i, contrastive/200)
                 mlplt.add_generator(i, average_loss)
-
+                #mlplt.add_grad(i, grads/200)
                 average_loss = 0
                 contrastive =0
                 all_losses = np.zeros((len(self.other['gen_loss']),))
@@ -315,7 +373,7 @@ class PolicyOptTf(PolicyOpt):
         var_dict = {}
         for k, v in self.other['all_variables'].items():
             var_dict[k] = self.sess.run(v)
-        # pickle.dump(var_dict, open("img_reach_blue2.pkl", "wb"))
+        pickle.dump(var_dict, open("img_weights.pkl", "wb"))
 
 
 
@@ -332,8 +390,8 @@ class PolicyOptTf(PolicyOpt):
         cond_feats = np.zeros((num_conds, num_samples, T, 32))
         cond_feats_other = np.zeros((num_conds, num_samples, T, 32))
         l2_loss = 0
-        import IPython
-        IPython.embed()
+        #import IPython
+        #IPython.embed()
         for cond in range(num_conds):
             for sample_num in range(num_samples):
                 feed_dict = {self.other['state_inputs'][0]: obs_full_reshaped[0][cond][sample_num], 
@@ -343,8 +401,8 @@ class PolicyOptTf(PolicyOpt):
                 l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
         print(l2_loss)
         print("RAN THROUGH FEATURES")
-        #import IPython
-        #IPython.embed()
+        import IPython
+        IPython.embed()
         cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T,32))
         cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T,32))
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
@@ -380,7 +438,7 @@ class PolicyOptTf(PolicyOpt):
 
         #plt.imshow(img)
         cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T, 32))
-        np.save("3link_feats_reach_blue2.npy", cond_feats)
+        np.save("3link_feats.npy", cond_feats)
         import IPython
         IPython.embed()
         r = 0

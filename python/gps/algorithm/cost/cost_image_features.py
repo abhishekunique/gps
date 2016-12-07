@@ -43,9 +43,9 @@ class CostImageFeatures(Cost):
 
     def init_feature_space(self):
         """ Helper method to initialize the tf networks used """
-        val_vars = pickle.load(open(self._hyperparams['load_file'], 'rb'))
-        g = tf.Graph()
-        self.graph = g
+        #val_vars = pickle.load(open(self._hyperparams['load_file'], 'rb'))
+        # g = tf.Graph()
+        #self.graph = g
         n_convlayers = 3
         pool_size = 2
         filter_size = 5
@@ -56,83 +56,83 @@ class CostImageFeatures(Cost):
         num_feats = 32
         robot_number = self.robot_number
         self.num_feats = num_feats
-        with g.as_default():
+        # with g.as_default():
             
-            weights = {
-                'wc1': get_xavier_weights([filter_size, filter_size, 3, num_filters[0]], (pool_size, pool_size), name='wc1'), # 5x5 conv, 3 input, 32 outputs
-                'wc2': get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2'), # 5x5 conv, 32 inputs, 64 outputs
-                'wc3': get_xavier_weights([filter_size, filter_size, num_filters[1], num_filters[2]], (pool_size, pool_size), name='wc3'),
-                # 'wc4': get_xavier_weights([filter_size, filter_size, num_filters[1], num_filters[2]], (pool_size, pool_size), name='wc4'),
-                # 'wc5': get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc5'),
-                # 'wc6': get_xavier_weights([filter_size, filter_size,  num_channels,num_filters[0]], (pool_size, pool_size), name='wc5'),
-            }
+        #     weights = {
+        #         'wc1': get_xavier_weights([filter_size, filter_size, 3, num_filters[0]], (pool_size, pool_size), name='wc1'), # 5x5 conv, 3 input, 32 outputs
+        #         'wc2': get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc2'), # 5x5 conv, 32 inputs, 64 outputs
+        #         'wc3': get_xavier_weights([filter_size, filter_size, num_filters[1], num_filters[2]], (pool_size, pool_size), name='wc3'),
+        #         # 'wc4': get_xavier_weights([filter_size, filter_size, num_filters[1], num_filters[2]], (pool_size, pool_size), name='wc4'),
+        #         # 'wc5': get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='wc5'),
+        #         # 'wc6': get_xavier_weights([filter_size, filter_size,  num_channels,num_filters[0]], (pool_size, pool_size), name='wc5'),
+        #     }
 
-            biases = {
-                'bc1': init_bias([num_filters[0]], name='bc1'),
-                'bc2': init_bias([num_filters[1]], name='bc2'),
-                'bc3': init_bias([num_filters[2]], name='bc3'),
-                # 'bc4': init_bias([num_filters[1]], name='bc4'),
-                # 'bc5': init_bias([num_filters[0]], name='bc5'),
-                # 'bc6': init_bias([num_channels], name='bc6'),
-            }
-            state_input = tf.placeholder("float", [None, num_channels*im_height*im_width], name='nn_input_state' + str(robot_number))
-            image_input = tf.reshape(state_input, [-1, num_channels, im_width, im_height])
-            image_input = tf.transpose(image_input, perm=[0,2,3,1])
-            #appending into lists
-            batch = tf.shape(state_input)[0]
-            ### STATE EMBEDDING ###
-            conv_layer_0 = conv2d(img=image_input, w=weights['wc1'], b=biases['bc1'])
-            conv_layer_1 = conv2d(img=conv_layer_0, w=weights['wc2'], b=biases['bc2'])
-            conv_layer_2 = conv2d(img=conv_layer_1, w=weights['wc3'], b=biases['bc3'])
+        #     biases = {
+        #         'bc1': init_bias([num_filters[0]], name='bc1'),
+        #         'bc2': init_bias([num_filters[1]], name='bc2'),
+        #         'bc3': init_bias([num_filters[2]], name='bc3'),
+        #         # 'bc4': init_bias([num_filters[1]], name='bc4'),
+        #         # 'bc5': init_bias([num_filters[0]], name='bc5'),
+        #         # 'bc6': init_bias([num_channels], name='bc6'),
+        #     }
+        #     state_input = tf.placeholder("float", [None, num_channels*im_height*im_width], name='nn_input_state' + str(robot_number))
+        #     image_input = tf.reshape(state_input, [-1, num_channels, im_width, im_height])
+        #     image_input = tf.transpose(image_input, perm=[0,2,3,1])
+        #     #appending into lists
+        #     batch = tf.shape(state_input)[0]
+        #     ### STATE EMBEDDING ###
+        #     conv_layer_0 = conv2d(img=image_input, w=weights['wc1'], b=biases['bc1'])
+        #     conv_layer_1 = conv2d(img=conv_layer_0, w=weights['wc2'], b=biases['bc2'])
+        #     conv_layer_2 = conv2d(img=conv_layer_1, w=weights['wc3'], b=biases['bc3'])
 
-            _, num_rows, num_cols, num_fp = conv_layer_2.get_shape()
-            num_rows, num_cols, num_fp = [int(x) for x in [num_rows, num_cols, num_fp]]
-            x_map = np.empty([num_rows, num_cols], np.float32)
-            y_map = np.empty([num_rows, num_cols], np.float32)
-            for i in range(num_rows):
-                for j in range(num_cols):
-                    x_map[i, j] = (i - num_rows / 2.0)# / num_rows
-                    y_map[i, j] = (j - num_cols / 2.0)# / num_cols
-            x_map = tf.convert_to_tensor(x_map)
-            y_map = tf.convert_to_tensor(y_map)
+        #     _, num_rows, num_cols, num_fp = conv_layer_2.get_shape()
+        #     num_rows, num_cols, num_fp = [int(x) for x in [num_rows, num_cols, num_fp]]
+        #     x_map = np.empty([num_rows, num_cols], np.float32)
+        #     y_map = np.empty([num_rows, num_cols], np.float32)
+        #     for i in range(num_rows):
+        #         for j in range(num_cols):
+        #             x_map[i, j] = (i - num_rows / 2.0)# / num_rows
+        #             y_map[i, j] = (j - num_cols / 2.0)# / num_cols
+        #     x_map = tf.convert_to_tensor(x_map)
+        #     y_map = tf.convert_to_tensor(y_map)
 
-            x_map = tf.reshape(x_map, [num_rows * num_cols])
-            y_map = tf.reshape(y_map, [num_rows * num_cols])
+        #     x_map = tf.reshape(x_map, [num_rows * num_cols])
+        #     y_map = tf.reshape(y_map, [num_rows * num_cols])
 
-            # rearrange features to be [batch_size, num_fp, num_rows, num_cols]
-            features = tf.reshape(tf.transpose(conv_layer_2, [0,3,1,2]),
-                                  [-1, num_rows*num_cols])
+        #     # rearrange features to be [batch_size, num_fp, num_rows, num_cols]
+        #     features = tf.reshape(tf.transpose(conv_layer_2, [0,3,1,2]),
+        #                           [-1, num_rows*num_cols])
 
-            softmax = tf.nn.softmax(features)
-            fp_x = tf.reduce_sum(tf.mul(x_map, softmax), [1], keep_dims=True)
-            fp_y = tf.reduce_sum(tf.mul(y_map, softmax), [1], keep_dims=True)
-            fp = tf.reshape(tf.concat(1, [fp_x, fp_y]), [-1, num_fp*2])
-            init_op = tf.initialize_all_variables()
-            self.feature_layers = fp
-            self.input = state_input
-            # col_sum = tf.reduce_sum(self.feature_layers, 0)
-            # split_feats = tf.split(0, num_feats, col_sum)
-            # grad_ops = []
-            # for j in range(num_feats):
-            #     grad_ops += tf.gradients(split_feats[j], self.input)
-            # self.grad_ops = grad_ops
-        self.session = tf.Session(graph=g)
-        self.session.run(init_op)
-        print "val vars",val_vars.keys()
-        with g.as_default():
-            self.var_list_feat = {}
-            for v in tf.trainable_variables():
-                self.var_list_feat[v.name] = v
-            # import IPython
-            # IPython.embed()
-            for k,v in self.var_list_feat.items():
-                #print k
-                for k2 in val_vars.keys():
-                    if k2 in k:
-                        print("COST LOAD")
-                        print(k)
-                        assign_op = v.assign(val_vars[k2])
-                        self.session.run(assign_op)
+        #     softmax = tf.nn.softmax(features)
+        #     fp_x = tf.reduce_sum(tf.mul(x_map, softmax), [1], keep_dims=True)
+        #     fp_y = tf.reduce_sum(tf.mul(y_map, softmax), [1], keep_dims=True)
+        #     fp = tf.reshape(tf.concat(1, [fp_x, fp_y]), [-1, num_fp*2])
+        #     init_op = tf.initialize_all_variables()
+        #     self.feature_layers = fp
+        #     self.input = state_input
+        #     # col_sum = tf.reduce_sum(self.feature_layers, 0)
+        #     # split_feats = tf.split(0, num_feats, col_sum)
+        #     # grad_ops = []
+        #     # for j in range(num_feats):
+        #     #     grad_ops += tf.gradients(split_feats[j], self.input)
+        #     # self.grad_ops = grad_ops
+        # self.session = tf.Session(graph=g)
+        # self.session.run(init_op)
+        # print "val vars",val_vars.keys()
+        # with g.as_default():
+        #     self.var_list_feat = {}
+        #     for v in tf.trainable_variables():
+        #         self.var_list_feat[v.name] = v
+        #     # import IPython
+        #     # IPython.embed()
+        #     for k,v in self.var_list_feat.items():
+        #         #print k
+        #         for k2 in val_vars.keys():
+        #             if k2 in k:
+        #                 print("COST LOAD")
+        #                 print(k)
+        #                 assign_op = v.assign(val_vars[k2])
+        #                 self.session.run(assign_op)
     def animate(self, images, name):
         import moviepy.editor as mpy
         
@@ -141,13 +141,13 @@ class CostImageFeatures(Cost):
             return tmp
         #clip = mpy.VideoClip(make_frame, duration=5)
         clip = mpy.ImageSequenceClip([images[i] for i in range(100)], fps=20)
-        clip.write_gif("/home/coline/Desktop/samples_strike/sample"+name+".gif",fps=20)
+        clip.write_gif("/home/coline/Desktop/samples_strike_test/sample"+name+".gif",fps=20)
         return clip
     def add_feat(self,images, fp, i):
         T,_,_,_ = images.shape
         for t in range(T):
-            x = int(fp[t,i*2]+40)
-            y = int(fp[t,i*2+1]+32)
+            x = int(fp[t,i*2]*40+40)
+            y = int(fp[t,i*2+1]*32+32)
             images[t,x,y,:] = [250,250,102]#255
             images[t,max(0, x-1),y,:] = [250,250,102]
             images[t,min(79, x+1),y,:] = [250,250,102]
@@ -157,8 +157,8 @@ class CostImageFeatures(Cost):
     def add_target_feat(self,images, fp, i):
         T,_,_,_ = images.shape
         for t in range(T):
-            x = int(fp[t,i*2]+40)
-            y = int(fp[t,i*2+1]+32)
+            x = int(fp[t,i*2]*40+40)
+            y = int(fp[t,i*2+1]*32+32)
             images[t,x,y,:] = [250,102,250]#255
             images[t,max(0, x-1),y,:] = [250,102,250]
             # images[t,min(79, x+1),y,:] = [250,102,250]
@@ -215,8 +215,8 @@ class CostImageFeatures(Cost):
             final_l[t] = np.sum(np.square(feat_forward[t] - tgt[t]))/2
 
         final_lx[:,feat_idx] = feat_forward- tgt
-        # if (self.count % 3) ==0:
-        #     self.make_clip(imgs, feat_forward, tgt)
+        #if (self.count % 5) ==0:
+        #    self.make_clip(imgs, feat_forward, tgt)
         print "mean cost", np.mean(final_l)
         self.count+=1
         return final_l, final_lx, final_lu, final_lxx, final_luu, final_lux
