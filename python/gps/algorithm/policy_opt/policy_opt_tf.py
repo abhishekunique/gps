@@ -517,6 +517,27 @@ class PolicyOptTf(PolicyOpt):
         output = np.reshape(output, (N, T, 60))
         return output
 
+    def cca(self,obs_full):
+        from sklearn.cross_decomposition import CCA
+        num_components = 6
+        self.fitted_cca = CCA(num_components)
+        Y, X = obs_full
+        N = X.shape[0]
+        T = X.shape[1]
+        X = np.reshape(X, [N*T, -1])
+        Y = np.reshape(Y, [N*T, -1])
+        self.fitted_cca.fit(X,Y)
+        return X,Y
+    def run_cca(self,obs_full):
+        from sklearn.cross_decomposition import CCA
+        Y, X = obs_full
+        N = X.shape[0]
+        T = X.shape[1]
+        X = np.reshape(X, [N*T, -1])
+        Y = np.reshape(Y, [N*T, -1])
+        r1, r0 = self.fitted_cca.transform(X,Y)
+        return r0
+
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """
         Update policy.

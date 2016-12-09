@@ -14,6 +14,7 @@ from gps.algorithm.cost.cost_fk_dev import CostFKDev
 from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
+from gps.algorithm.cost.cost_cca import CostCCA
 from gps.algorithm.cost.cost_dev_rs_strike import CostDevRs
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
 from gps.algorithm.dynamics.dynamics_prior_gmm import DynamicsPriorGMM
@@ -303,16 +304,16 @@ fk_cost_2 = [{
 #     'alpha': 1e-5,
 # } for i in agent[1]['train_conditions']]
 
-load_trajs = np.load("3link_feats.npy")
+load_trajs = np.load("3link_cca.npy")
 print load_trajs.shape
-load_trajs = np.reshape(load_trajs, (2,7,100,30))
+# load_trajs = load_trajs[:, 0, :, :]
+#load_trajs = np.load('3link_feats.npy')
 test_cost = [{
-    'type': CostDevRs,
+    'type': CostCCA,
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
     'target_feats': np.mean(load_trajs[i], axis=0),
-    'load_file': 'subspace_state.pkl'
 } for i in agent[0]['train_conditions']]
 
 
