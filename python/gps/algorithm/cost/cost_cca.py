@@ -67,15 +67,17 @@ class CostCCA(Cost):
             ls[t, 5:9] = grad_mult[4:8]
             # ls[t, 10:13] = grad_mult[8:11]
             # ls[t, 19:22] = grad_mult[11:14]
-            # hess_mult = gradients_all[t].T.dot(gradients_all[t])
+            x_weightsT = self.x_weights.T
+            hess_mult = self.x_weights.dot(x_weightsT)
 
-            # lss[t,0:4,0:4] = hess_mult[0:4, 0:4]
-            # lss[t,5:9,0:4] = hess_mult[4:8, 0:4]
+
+            lss[t,0:4,0:4] = hess_mult[0:4, 0:4]
+            lss[t,5:9,0:4] = hess_mult[4:8, 0:4]
             # # lss[t,10:13,0:4] = hess_mult[8:11, 0:4]
             # # lss[t,19:22,0:4] = hess_mult[11:14, 0:4]
 
-            # lss[t,0:4,5:9] = hess_mult[0:4, 4:8]
-            # lss[t,5:9,5:9] = hess_mult[4:8, 4:8]
+            lss[t,0:4,5:9] = hess_mult[0:4, 4:8]
+            lss[t,5:9,5:9] = hess_mult[4:8, 4:8]
             # # lss[t,10:13,5:9] = hess_mult[8:11, 4:8]
             # # lss[t,19:22,5:9] = hess_mult[11:14, 4:8]
 
