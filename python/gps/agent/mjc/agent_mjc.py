@@ -14,7 +14,14 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         CONTEXT_IMAGE, CONTEXT_IMAGE_SIZE
 
 from gps.sample.sample import Sample
+import tensorflow as tf
 
+def init_weights(shape, name=None):
+    return tf.Variable(tf.random_normal(shape, stddev=0.01), name=name)
+
+
+def init_bias(shape, name=None):
+    return tf.Variable(tf.zeros(shape, dtype='float'), name=name)
 
 class AgentMuJoCo(Agent):
     """
@@ -32,6 +39,140 @@ class AgentMuJoCo(Agent):
         Agent.__init__(self, config)
         self._setup_conditions()
         self._setup_world(hyperparams['filename'])
+        self.init_nn()
+
+    def init_nn(self):
+        self.sess = tf.Session()
+        num_hidden = 4
+        layer_size = 60
+        dim_hidden = [layer_size]*num_hidden
+        dim_hidden_action = [layer_size]*num_hidden
+
+        #defining input placeholders
+        state_input_target = tf.placeholder("float", [None,14], name='nn_input_state1')
+        action_input_source = tf.placeholder("float", [None,3], name='nn_input_action0')
+        self.state_input_target = state_input_target
+        self.action_input_source = action_input_source
+        #appending into lists
+        robot_number = 1
+        w0_state = init_weights((14, dim_hidden[0]), name='w0_state' + str(robot_number))
+        b0_state = init_bias((dim_hidden[0],), name='b0_state'+str(robot_number))
+        w1_state = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_state' + str(robot_number))
+        b1_state = init_bias((dim_hidden[1],), name='b1_state' + str(robot_number))
+        w2_state = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_state' + str(robot_number))
+        b2_state = init_bias((dim_hidden[2],), name='b2_state' + str(robot_number))
+        w3_state_ae = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_state_ae' + str(robot_number))
+        b3_state_ae = init_bias((dim_hidden[3],), name='b3_state_ae' + str(robot_number))
+        w4_state_ae = init_weights((dim_hidden[3], 12), name='w4_state_ae' + str(robot_number))
+        b4_state_ae = init_bias((12,), name='b4_state_ae' + str(robot_number))
+
+        ### STATE EMBEDDING ###
+        layer0_state = tf.nn.relu(tf.matmul(state_input_target, w0_state) + b0_state)
+        layer1_state = tf.nn.relu(tf.matmul(layer0_state, w1_state) + b1_state)
+        layer2_state = tf.nn.relu(tf.matmul(layer1_state, w2_state) + b2_state)
+        #autoencoding output#
+        layer3_state_ae = tf.nn.relu(tf.matmul(layer2_state, w3_state_ae) + b3_state_ae)
+        output_state_ae = tf.matmul(layer3_state_ae, w4_state_ae) + b4_state_ae
+        self.source_traj = output_state_ae
+        ### END STATE EMBEDDING ###
+
+         #DEFINING ACTION VARIABLES
+
+        w0_action = init_weights((3, dim_hidden_action[0]), name='w0_action' + str(robot_number))
+        b0_action = init_bias((dim_hidden_action[0],), name='b0_action'+str(robot_number))
+        w1_action = init_weights((dim_hidden_action[0], dim_hidden_action[1]), name='w1_action' + str(robot_number))
+        b1_action = init_bias((dim_hidden_action[1],), name='b1_action' + str(robot_number))
+        w2_action = init_weights((dim_hidden_action[1], dim_hidden_action[2]), name='w2_action' + str(robot_number))
+        b2_action = init_bias((dim_hidden_action[2],), name='b2_action' + str(robot_number))
+
+        w3_action = init_weights((dim_hidden_action[2], dim_hidden_action[3]), name='w3_action' + str(robot_number))
+        b3_action = init_bias((dim_hidden_action[3],), name='b3_action' + str(robot_number))
+        w4_action = init_weights((dim_hidden_action[3], 4), name='w4_action' + str(robot_number))
+        b4_action = init_bias((4,), name='b4_action' + str(robot_number))
+
+        ### ACTION EMBEDDING ###
+        layer0_action = tf.nn.relu(tf.matmul(action_input_source, w0_action) + b0_action)
+        layer1_action = tf.nn.relu(tf.matmul(layer0_action, w1_action) + b1_action)
+        layer2_action = tf.nn.relu(tf.matmul(layer1_action, w2_action) + b2_action)
+        layer3_action = tf.nn.relu(tf.matmul(layer2_action, w3_action) + b3_action)
+        output_action = tf.matmul(layer3_action, w4_action) + b4_action
+        self.target_act = output_action
+        ### END ACTION EMBEDDING ###
+        init_op = tf.initialize_all_variables()
+        self.sess.run(init_op)
+        import pickle
+        val_vars = pickle.load(open('subspace_state.pkl', 'rb'))
+        for v in tf.trainable_variables():
+            k = v.name[:-2]
+            for vvkey in val_vars.keys():
+                if k in vvkey:
+                    print("LOADED")   
+                    print(k)        
+                    assign_op = v.assign(val_vars[vvkey])
+                    self.sess.run(assign_op)
+
+
+    def sample_pol(self, policy, condition, verbose=True, save=True):
+        """
+        Runs a trial and constructs a new sample containing information
+        about the trial.
+        Args:
+            policy: Policy to to used in the trial.
+            condition: Which condition setup to run.
+            verbose: Whether or not to plot the trial.
+            save: Whether or not to store the trial into the samples.
+        """
+        # Create new sample, populate first time step.
+        print("TAKING SAMPLE")
+        new_sample = self._init_sample(condition)
+        mj_X = self._hyperparams['x0'][condition]
+        U = np.zeros([self.T, self.dU])
+        noise = generate_noise(self.T, 3, self._hyperparams)
+        if np.any(self._hyperparams['x0var'][condition] > 0):
+            x0n = self._hyperparams['x0var'] * \
+                    np.random.randn(self._hyperparams['x0var'].shape)
+            mj_X += x0n
+        noisy_body_idx = self._hyperparams['noisy_body_idx'][condition]
+        if noisy_body_idx.size > 0:
+            for i in range(len(noisy_body_idx)):
+                idx = noisy_body_idx[i]
+                var = self._hyperparams['noisy_body_var'][condition][i]
+                self._model[condition]['body_pos'][idx, :] += \
+                        var * np.random.randn(1, 3)
+        self._world[condition].set_model(self._model[condition])
+        for t in range(self.T):
+            X_t = new_sample.get_X(t=t)
+            obs_t = new_sample.get_obs(t=t)
+            X_t_sliced = np.asarray([np.concatenate([X_t[:4], X_t[5:9], X_t[10:13], X_t[19:22]])])
+            X_t_in = self.sess.run(self.source_traj, feed_dict = {self.state_input_target: X_t_sliced})
+            X_t_replaced = np.zeros((26,))
+            X_t_replaced[:3] = X_t_in[0, :3]
+            X_t_replaced[4:7] = X_t_in[0, 3:6]
+            X_t_replaced[8:11] = X_t_in[0, 6:9]
+            X_t_replaced[17:20] = X_t_in[0, 9:12]
+
+            X_t_replaced[3:4] = X_t[4:5]
+            X_t_replaced[7:8] = X_t[9:10]
+            X_t_replaced[11:17] = X_t[13:19]
+            X_t_replaced[20:26] = X_t[22:28]
+            mj_U_out = policy.act(X_t_replaced, None, t, noise[t, :])
+            mj_U_out = np.asarray([mj_U_out])
+            mj_U = self.sess.run(self.target_act, feed_dict = {self.action_input_source: mj_U_out})[0]
+            mj_U = np.asarray(mj_U, dtype=np.float64)
+            print(mj_U)
+            U[t, :] = mj_U
+            if verbose:
+                self._world[condition].plot(mj_X)
+            if (t + 1) < self.T:
+                for _ in range(self._hyperparams['substeps']):
+                    mj_X, _ = self._world[condition].step(mj_X, mj_U)
+                #TODO: Some hidden state stuff will go here.
+                self._data = self._world[condition].get_data()
+                self._set_sample(new_sample, mj_X, t, condition)
+        new_sample.set(ACTION, U)
+        if save:
+            self._samples[condition].append(new_sample)
+        return new_sample
 
     def _setup_conditions(self):
         """
@@ -181,6 +322,7 @@ class AgentMuJoCo(Agent):
             X_t = new_sample.get_X(t=t)
             obs_t = new_sample.get_obs(t=t)
             mj_U = policy.act(X_t, obs_t, t, noise[t, :])
+            print(mj_U.shape)
             U[t, :] = mj_U
             if verbose:
                 self._world[condition].plot(mj_X)

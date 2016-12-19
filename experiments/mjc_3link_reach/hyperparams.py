@@ -31,9 +31,9 @@ from gps.gui.config import generate_experiment_info
 SENSOR_DIMS = [{
     JOINT_ANGLES: 3,
     JOINT_VELOCITIES: 3,
-    END_EFFECTOR_POINTS: 6,
-    END_EFFECTOR_POINT_VELOCITIES: 6,
-    ACTION: 4,
+    END_EFFECTOR_POINTS: 15,
+    END_EFFECTOR_POINT_VELOCITIES: 15,
+    ACTION: 3,
 },]
 
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
@@ -96,12 +96,12 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = [ {
     'type': AgentMuJoCo,
-    'filename': './mjc_models/finger_weight.xml',
+    'filename': './mjc_models/arm_3link_reach_sites.xml',
     'x0': np.zeros(6),
     'dt': 0.05,
     'substeps': 5,
     'pos_body_offset': all_offsets,
-    'pos_body_idx': np.array([4]),
+    'pos_body_idx': np.array([6]),
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
@@ -117,7 +117,6 @@ agent = [ {
                       END_EFFECTOR_POINT_VELOCITIES],
     'meta_include': [],
     'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
-    'tendon': [25, 26]
     }
 ]
 
@@ -160,7 +159,7 @@ algorithm = [{
 
 algorithm[0]['init_traj_distr'] = {
     'type': init_pd,
-    'init_var': 1.0,
+    'init_var': 10.0,
     'pos_gains': 10.0,
     'dQ': SENSOR_DIMS[0][ACTION],
     'dt': agent[0]['dt'],
@@ -172,13 +171,13 @@ algorithm[0]['init_traj_distr'] = {
 
 torque_cost_1 = [{
     'type': CostAction,
-    'wu': 5e-1 / PR2_GAINS[1],
+    'wu': 5e-1 / PR2_GAINS[0],
 } for i in common['train_conditions']]
 
 fk_cost_1 = [{
     'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
-    'wp': np.array([1, 1, 1, 0, 0, 0]),
+    'target_end_effector': np.concatenate([np.zeros(9), np.array([0.8, 0.0, 0.5])+ agent[0]['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
+    'wp':  np.concatenate([np.zeros(9), np.array([1, 1, 1, 0, 0, 0])]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
@@ -220,8 +219,8 @@ algorithm[0]['policy_prior'] = {
 
 config = {
     'iterations': 25,
-    'num_samples': 10,
-    'verbose_trials': 10,
+    'num_samples': 7,
+    'verbose_trials': 7,
     'verbose_policy_trials': 5,
     'common': common,
     'save_wts': True,

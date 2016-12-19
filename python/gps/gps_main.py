@@ -22,7 +22,8 @@ from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.proto.gps_pb2 import ACTION, RGB_IMAGE
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-
+from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
+        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
 
 class GPSMain(object):
     """ Main class to run algorithms and experiments. """
@@ -88,13 +89,39 @@ class GPSMain(object):
         """
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
+        traj_distr = self.data_logger.unpickle("btndata.pkl")
+        # for ag in range(self.num_robots):
+        #     name = self.agent[ag]._hyperparams['filename'][0]
+        #     print(name)
+        #     if name in traj_distr:
+        #         for cond in  self._train_idx[ag]:
+        #             print ag, cond
+        #             self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+        #     else:
+        #         print name, "not in traj_distr"
+        print("ABOUT to run this sample")
+        # self.agent[1].sample(traj_distr['./mjc_models/4link_button.xml'][0], 0, verbose=True, save=False)
+        self.agent[1].sample_pol(traj_distr['./mjc_models/3link_button.xml'][0], 0, verbose=True, save=False)
+        self.agent[1].sample_pol(traj_distr['./mjc_models/3link_button.xml'][1], 1, verbose=True, save=False)
 
+        import IPython
+        IPython.embed()
+        # traj_distr = self.data_logger.unpickle('arm_3link_manysites_working.pkl')
+        # for ag in range(self.num_robots):
+        #     name =self.agent[ag]._hyperparams['filename'][0]
+        #     print name
+        #     if name in traj_distr:
+        #         for cond in  self._train_idx[ag]:
+        #             print ag, cond
+        #             self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+        #     else:
+        #         print name, "not in traj_distr"
         itr_costs = []
         seed = np.random.randint(10000)
         import random, shutil
-        if os.path.exists(self._hyperparams['common']['data_files_dir']):
-            shutil.move(self._hyperparams['common']['data_files_dir'], self._hyperparams['common']['data_files_dir'][:-1] + str(seed))
-            os.makedirs(self._hyperparams['common']['data_files_dir'])
+        # if os.path.exists(self._hyperparams['common']['data_files_dir']):
+        #     shutil.move(self._hyperparams['common']['data_files_dir'], self._hyperparams['common']['data_files_dir'][:-1] + str(seed))
+        #     os.makedirs(self._hyperparams['common']['data_files_dir'])
         random.seed(seed)
         np.random.seed(seed)
         for itr in range(itr_start, self._hyperparams['iterations']):
@@ -133,7 +160,7 @@ class GPSMain(object):
 
             np.save("data%d.npy" %seed, np.array(itr_costs))
             print robot_costs
-            for robot_number in range(1, self.num_robots):
+            for robot_number in range(0, self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
             for robot_number in range(self.num_robots):
@@ -142,9 +169,9 @@ class GPSMain(object):
                 if rf:
                     np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
 
-            # if itr > 3:
-            #     import IPython
-            #     IPython.embed()
+            if itr >0 and itr%6==0:
+                import IPython
+                IPython.embed()
 
         import IPython
         IPython.embed()
@@ -248,11 +275,13 @@ class GPSMain(object):
         next_obs_full = []
         tgt_actions_full = []
         obs_complete_time_full = []
+        ee_full = []
         for robot_number in range(self.num_robots):
             dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T - 1
             T_extended = T + 1
             obs_data, next_obs_data, tgt_actions = np.zeros((0, T, dO)), np.zeros((0, T, dO)), np.zeros((0, T, dU))
             obs_complete_time = np.zeros((len(self._train_idx[robot_number]), self._hyperparams['num_samples'], T_extended, dO))
+            ee = np.zeros((len(self._train_idx[robot_number]), self._hyperparams['num_samples'], T_extended, 9))
             for m in self._train_idx[robot_number]:
                 samples = traj_sample_lists[robot_number][m]
                 X = samples.get_X()
@@ -267,7 +296,7 @@ class GPSMain(object):
                 obs_data = np.concatenate((obs_data, samples.get_obs()[:, :-1, :]))
                 next_obs_data = np.concatenate((next_obs_data, samples.get_obs()[:, 1:, :]))
                 obs_complete_time[m] = samples.get_obs()
-
+                ee[m] = samples.get(END_EFFECTOR_POINTS)
             obs_data = obs_data[:, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
             next_obs_data = next_obs_data[:, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
             obs_complete_time = obs_complete_time[:, :, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
@@ -275,8 +304,11 @@ class GPSMain(object):
             next_obs_full.append(next_obs_data)
             tgt_actions_full.append(tgt_actions)
             obs_complete_time_full.append(obs_complete_time)
+            ee_full.append(ee)
         full_dict = pickle.load(open("multiproxy_data.pkl", "rb"))
-        tasks = ['reach', 'push', 'peg']
+        import IPython
+        IPython.embed()
+        tasks = ['reach']
         obs_full = []
         next_obs_full = []
         tgt_actions_full = []
@@ -285,8 +317,8 @@ class GPSMain(object):
             next_obs = []
             tgt_actions = []
             for task in tasks:
-                obs.append(full_dict[task]['obs_full'][robot_number][:, :, :[6, 8][robot_number]])
-                next_obs.append(full_dict[task]['next_obs_full'][robot_number][:, :, :[6, 8][robot_number]])
+                obs.append(full_dict[task]['obs_full'][robot_number][:, :, :[12, 14][robot_number]])
+                next_obs.append(full_dict[task]['next_obs_full'][robot_number][:, :, :[12, 14][robot_number]])
                 tgt_actions.append(full_dict[task]['action_full'][robot_number])
             obs = np.concatenate(obs, axis=0)
             next_obs = np.concatenate(next_obs, axis=0)
@@ -294,11 +326,116 @@ class GPSMain(object):
             obs_full.append(obs)
             next_obs_full.append(next_obs)
             tgt_actions_full.append(tgt_actions)
-            
-        self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)
+        self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full, ee_full)
         import IPython
         IPython.embed()
         
+    def run_subspace_learning_hri(self, itr_load=None):
+        """
+        Run training by iteratively sampling and taking an iteration.
+        Args:
+            itr_load: If specified, loads algorithm state from that
+                iteration, and resumes training at the next iteration.
+        Returns: None
+        """
+
+        traj_distr = self.data_logger.unpickle("blockstrike_blue.pkl")
+        for ag in range(self.num_robots):
+            name = self.agent[ag]._hyperparams['filename'][0]
+            print(name)
+            if name in traj_distr:
+                for cond in  self._train_idx[ag]:
+                    print ag, cond
+                    self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+            else:
+                print name, "not in traj_distr"
+        # traj_distr = self.data_logger.unpickle("blockstrike_blue.pkl")
+        # for robot_number in range(self.num_robots):
+        #     for cond in  self._train_idx[robot_number]:
+        #         self.algorithm[robot_number].cur[cond].traj_distr = traj_distr[robot_number][cond]
+
+        # for robot_number in range(self.num_robots):
+        #     itr_start = self._initialize(itr_load, robot_number=robot_number)
+
+        traj_sample_lists = {}
+        for robot_number in [0]: #range(self.num_robots):
+            for cond in self._train_idx[robot_number]:
+                for i in range(self._hyperparams['num_samples']):
+                    self._take_sample(0, cond, i, robot_number=robot_number)
+
+            traj_sample_lists[robot_number] = [
+                self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
+                for cond_1 in self._train_idx[robot_number]
+            ]
+        import IPython
+        IPython.embed()
+        obs_complete_blockstrike = np.zeros((2,7,100,12))
+        obs_complete_blockstrike_human = np.zeros((2,7,100,4))
+        obs_complete_human = np.load("blockstrike_demo.npy")[:, :100, :]
+
+        for i in range(2):
+            for j in range(7):
+                obs_complete_blockstrike_human[i,j] = obs_complete_human[i]
+
+        for i in range(2):
+            sl = traj_sample_lists[0][i]
+            for s_no, sample in enumerate(sl._samples):
+                obs_complete_blockstrike[i,s_no] = sample.get_X()[:, self._hyperparams['r0_index_list']]
+        obs_complete = [obs_complete_blockstrike_human, obs_complete_blockstrike]
+        # human_data = np.load('full_human_data.npy')
+        # full_data = []
+        # for datum in human_data:    
+        #     full_data.append(datum)
+        # human_data = np.asarray(full_data)[:, :99, :]
+        # human_data_button = np.load('full_human_data_buttonpush.npy')
+        # full_dict = pickle.load(open("multiproxy_data.pkl", "rb"))
+        # tasks = ['reach']
+        # obs_full = []
+        # #repeat the data here
+        # obs_full.append(human_data)
+        # obs_complete = [human_data_button]
+        # for robot_number in [0]:
+        #     obs = []
+        #     for task in tasks:
+        #         obs.append(full_dict[task]['obs_full'][robot_number][:, :, :[6, 8][robot_number]])
+        #     obs = np.concatenate(obs, axis=0)
+        #     obs_full.append(obs)
+        # import IPython
+        # IPython.embed()
+        # self.policy_opt.train_invariant_autoencoder(obs_full, None, None, obs_complete)
+        # import IPython
+        # IPython.embed()
+        indices = [0, 2, 3, 1]
+        human_data = np.load('human_data.npy')
+        full_data = []
+        for index in indices:   
+            datum = human_data[index]
+            for j in range(7):
+                full_data.append(datum)
+        human_data = np.asarray(full_data)[:, :99, :]
+        # human_data = self.data_logger.unpickle("multisite_data.pkl")
+        # human_data_button = np.load('full_human_data_buttonpush.npy')
+        full_dict = pickle.load(open("multiproxy_data.pkl", "rb"))
+        tasks = ['reach']
+        obs_full = []
+        #repeat the data here
+        obs_full.append(human_data)
+        
+        for robot_number in [0]:
+            obs = []
+            # obs_c = []
+            for task in tasks:
+                obs.append(full_dict[task]['obs_full'][robot_number][:, :, :[6, 8][robot_number]])
+                # obs_c.append(full_dict[task]['obs_full'][robot_number])
+            obs = np.concatenate(obs, axis=0)
+            obs_full.append(obs)
+            # obs_complete.append(np.reshape(obs_c, (4,7,99,12)))
+        print("CHECK SIZES")
+        import IPython
+        IPython.embed()
+        self.policy_opt.train_invariant_autoencoder(obs_full, None, None, obs_complete)
+        import IPython
+        IPython.embed()
 
     def _take_reward_shaping(self):
         targets = []
@@ -678,8 +815,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(100)
-        np.random.seed(100)
+        random.seed(102)
+        np.random.seed(102)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:

@@ -22,7 +22,7 @@ from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd, init_from_fil
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, transition_reward_model
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, transition_reward_model_simple
 from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
 from gps.utility.data_logger import DataLogger
 
@@ -74,7 +74,7 @@ common = {
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': transition_reward_model,
+        'network_model': transition_reward_model_simple,
         'run_feats': False,
         'invariant_train': True,
         'load_weights': '/home/abhigupta/gps/subspace_newweights.pkl',
@@ -104,11 +104,11 @@ common = {
             'batch_size': 25,
             # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
         }],
-        'iterations': 60000,
+        'iterations': 20000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
-        'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)])
+        'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)]),
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
     }
 }
@@ -264,10 +264,40 @@ fk_cost_blocktouch = [{
     'alpha': 1e-5,
 } for i in agent[0]['train_conditions']]
 
+load_trajs = np.load("3link_feats.npy")
+print load_trajs.shape
+load_trajs_full = np.reshape(load_trajs, (2,7,100,30))
+# load_trajs_full = np.zeros((2,7,100,30))
+# load_trajs_full[:,:,:-1,:] = load_trajs
+# load_trajs_full[:,:,-1,:] = load_trajs_full[:,:,-2,:]
+import IPython
+IPython.embed()
+
+shaped_cost = [{
+    'type': CostDevRs,
+    'l1': 0.1,
+    'l2': 10.0,
+    'alpha': 1e-5,
+    # 'data_type': [JOINT_ANGLES, JOINT_VELOCITIES],
+    # 'wp': np.concatenate([np.ones(4), np.zeros(1)]),
+    'target_feats': np.mean(load_trajs_full[0], axis=0),
+    'load_file': 'subspace_state.pkl'
+},
+{
+    'type': CostDevRs,
+    'l1': 0.1,
+    'l2': 10.0,
+    'alpha': 1e-5,
+    # 'data_type': [JOINT_ANGLES, JOINT_VELOCITIES],
+    # 'wp': np.concatenate([np.ones(4), np.zeros(1)]),
+    'target_feats': np.mean(load_trajs_full[1], axis=0),
+    'load_file': 'subspace_state.pkl'
+}]
+
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i], fk_cost_blocktouch[i]],
-    'weights': [5.0, 1.0],
+    'costs': [fk_cost_1[i], shaped_cost[i]],
+    'weights': [2.0, 2.0],
 } for i in agent[0]['train_conditions']]
 
 fk_cost_2 = [{
@@ -282,6 +312,35 @@ fk_cost_2 = [{
     'ramp_option': RAMP_QUADRATIC
 } for i in agent[1]['train_conditions']]
 
+# load_trajs = np.load("3link_feats.npy")
+# print load_trajs.shape
+# load_trajs = np.reshape(load_trajs, (4,7,99,30))
+# load_trajs_full = np.zeros((4,7,100,30))
+# load_trajs_full[:,:,:-1,:] = load_trajs
+# load_trajs_full[:,:,-1,:] = load_trajs_full[:,:,-2,:]
+# import IPython
+# IPython.embed()
+
+# shaped_cost = [{
+#     'type': CostDevRs,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     # 'data_type': [JOINT_ANGLES, JOINT_VELOCITIES],
+#     # 'wp': np.concatenate([np.ones(4), np.zeros(1)]),
+#     'target_feats': np.mean(load_trajs_full[2], axis=0),
+#     'load_file': 'subspace_state.pkl'
+# },
+# {
+#     'type': CostDevRs,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     # 'data_type': [JOINT_ANGLES, JOINT_VELOCITIES],
+#     # 'wp': np.concatenate([np.ones(4), np.zeros(1)]),
+#     'target_feats': np.mean(load_trajs_full[0], axis=0),
+#     'load_file': 'subspace_state.pkl'
+# }]
 # fk_cost_blocktouch2 = [{
 #     'type': CostFKBlock,
 #     'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
@@ -290,21 +349,21 @@ fk_cost_2 = [{
 #     'alpha': 1e-5,
 # } for i in agent[1]['train_conditions']]
 
-load_trajs = np.load("3link_feats.npy")
-load_trajs = np.reshape(load_trajs, (2,7,100,30))
-test_cost = [{
-    'type': CostDevRs,
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'target_feats': np.mean(load_trajs[i], axis=0),
-    'load_file': 'subspace_state.pkl'
-} for i in agent[0]['train_conditions']]
+# load_trajs = np.load("3link_feats.npy")
+# load_trajs = np.reshape(load_trajs, (2,7,100,30))
+# test_cost = [{
+#     'type': CostDevRs,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'target_feats': np.mean(load_trajs[i], axis=0),
+#     'load_file': 'subspace_state.pkl'
+# } for i in agent[0]['train_conditions']]
 
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_2[i], test_cost[i]],
+    'costs': [fk_cost_2[i]],
     'weights': [1.0, 1.0],
 } for i in agent[0]['train_conditions']]
 
@@ -368,7 +427,7 @@ algorithm[1]['policy_prior'] = {
 config = {
     'iterations': 25,
     'num_samples': 7,
-    'verbose_trials': 7,
+    'verbose_trials': 1,
     'verbose_policy_trials': 5,
     'save_wts': True,
     'common': common,
