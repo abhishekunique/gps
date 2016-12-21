@@ -133,7 +133,7 @@ class GPSMain(object):
 
             np.save("data%d.npy" %seed, np.array(itr_costs))
             print robot_costs
-            for robot_number in range(1, self.num_robots):
+            for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
             for robot_number in range(self.num_robots):
@@ -142,9 +142,9 @@ class GPSMain(object):
                 if rf:
                     np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
 
-            # if itr > 3:
-            #     import IPython
-            #     IPython.embed()
+            if itr > 20:
+                import IPython
+                IPython.embed()
 
         import IPython
         IPython.embed()

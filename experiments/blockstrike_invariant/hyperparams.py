@@ -72,45 +72,45 @@ common = {
     'train_conditions': [0,1],
     'test_conditions': [2,3],
     'num_robots':2,
-    'policy_opt': {
-        'type': PolicyOptTf,
-        'network_model': transition_reward_model,
-        'run_feats': False,
-        'invariant_train': True,
-        'load_weights': '/home/abhigupta/gps/subspace_newweights.pkl',
-        'network_params': [{
-            'dim_hidden': [10],
-            'num_filters': [10, 20],
-            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_image_data':[],
-            'image_width': IMAGE_WIDTH,
-            'image_height': IMAGE_HEIGHT,
-            'image_channels': IMAGE_CHANNELS,
-            'sensor_dims': SENSOR_DIMS[0],
-            'batch_size': 25,
-            # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
-        },
-        {
-            'dim_hidden': [10],
-            'num_filters': [10, 20],
-            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
-            'obs_image_data':[],
-            'image_width': IMAGE_WIDTH,
-            'image_height': IMAGE_HEIGHT,
-            'image_channels': IMAGE_CHANNELS,
-            'sensor_dims': SENSOR_DIMS[1],
-            'batch_size': 25,
-            # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
-        }],
-        'iterations': 60000,
-        'fc_only_iterations': 5000,
-        'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-        'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
-        'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)])
-        # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
-    }
+    # 'policy_opt': {
+    #     'type': PolicyOptTf,
+    #     'network_model': transition_reward_model,
+    #     'run_feats': False,
+    #     'invariant_train': True,
+    #     'load_weights': '/home/abhigupta/gps/subspace_newweights.pkl',
+    #     'network_params': [{
+    #         'dim_hidden': [10],
+    #         'num_filters': [10, 20],
+    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_image_data':[],
+    #         'image_width': IMAGE_WIDTH,
+    #         'image_height': IMAGE_HEIGHT,
+    #         'image_channels': IMAGE_CHANNELS,
+    #         'sensor_dims': SENSOR_DIMS[0],
+    #         'batch_size': 25,
+    #         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
+    #     },
+    #     {
+    #         'dim_hidden': [10],
+    #         'num_filters': [10, 20],
+    #         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_vector_data': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+    #         'obs_image_data':[],
+    #         'image_width': IMAGE_WIDTH,
+    #         'image_height': IMAGE_HEIGHT,
+    #         'image_channels': IMAGE_CHANNELS,
+    #         'sensor_dims': SENSOR_DIMS[1],
+    #         'batch_size': 25,
+    #         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
+    #     }],
+    #     'iterations': 60000,
+    #     'fc_only_iterations': 5000,
+    #     'checkpoint_prefix': EXP_DIR + 'data_files/policy',
+    #     'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),
+    #     'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9), np.arange(10,13), np.arange(19,22)])
+    #     # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
+    # }
 }
 
 if not os.path.exists(common['data_files_dir']):
@@ -282,29 +282,29 @@ fk_cost_2 = [{
     'ramp_option': RAMP_QUADRATIC
 } for i in agent[1]['train_conditions']]
 
-# fk_cost_blocktouch2 = [{
-#     'type': CostFKBlock,
-#     'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
-#     'l1': 0.1,
-#     'l2': 10.0,
-#     'alpha': 1e-5,
-# } for i in agent[1]['train_conditions']]
-
-load_trajs = np.load("3link_feats.npy")
-load_trajs = np.reshape(load_trajs, (2,7,100,30))
-test_cost = [{
-    'type': CostDevRs,
+fk_cost_blocktouch2 = [{
+    'type': CostFKBlock,
+    'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
-    'target_feats': np.mean(load_trajs[i], axis=0),
-    'load_file': 'subspace_state.pkl'
-} for i in agent[0]['train_conditions']]
+} for i in agent[1]['train_conditions']]
+
+# load_trajs = np.load("3link_feats.npy")
+# load_trajs = np.reshape(load_trajs, (2,7,100,30))
+# test_cost = [{
+#     'type': CostDevRs,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'target_feats': np.mean(load_trajs[i], axis=0),
+#     'load_file': 'subspace_state.pkl'
+# } for i in agent[0]['train_conditions']]
 
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_2[i], test_cost[i]],
+    'costs': [fk_cost_2[i], fk_cost_blocktouch2[i]],
     'weights': [1.0, 1.0],
 } for i in agent[0]['train_conditions']]
 
