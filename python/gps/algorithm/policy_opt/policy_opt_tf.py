@@ -17,6 +17,9 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import plot, ion, show
 from matplotlib.backends.backend_pdf import PdfPages
 from sklearn.neighbors import NearestNeighbors
+import PyKCCA as pc
+
+
 class MLPlotter:
     """
     Plot/save machine learning data
@@ -163,6 +166,8 @@ class PolicyOptTf(PolicyOpt):
                     print(k)        
                     assign_op = v.assign(val_vars[k])
                     self.sess.run(assign_op)
+        if self._hyperparams['run_kcca']:
+            self.kernel = pc.kernels.GaussianKernel()
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
@@ -518,15 +523,23 @@ class PolicyOptTf(PolicyOpt):
         return output
 
     def cca(self,obs_full):
-        from sklearn.cross_decomposition import CCA
-        num_components = 6
-        self.fitted_cca = CCA(num_components)
         Y, X = obs_full
         N = X.shape[0]
         T = X.shape[1]
         X = np.reshape(X, [N*T, -1])
         Y = np.reshape(Y, [N*T, -1])
-        self.fitted_cca.fit(X,Y)
+
+        if self._hyperparams['run_kcca']:
+            Kx = gauss(X,X)
+            Ky= gauss(Y,Y)
+            reg = 0.1
+            self.fitted_cca = pc.kcca.KCCA(Kx, Ky, reg, max_variance_ratio=0.2)
+            xp, yp, b = kc.kcca(Kx,Ky)
+        else:
+            from sklearn.cross_decomposition import CCA
+            num_components = 6
+            self.fitted_cca = CCA(num_components)
+            self.fitted_cca.fit(X,Y)
         return X,Y
     def run_cca(self,obs_full):
         from sklearn.cross_decomposition import CCA
