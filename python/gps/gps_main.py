@@ -310,8 +310,8 @@ class GPSMain(object):
         X,Y = obs_full
         N = X.shape[0]
         T = X.shape[1]
-        X = np.reshape(X, [N*T, -1])[:20,:]
-        Y = np.reshape(Y, [N*T, -1])[:20,:]
+        X = np.reshape(X, [N*T, -1])
+        Y = np.reshape(Y, [N*T, -1])
         self.UMA.align(X,Y)
         # X, Y= self.policy_opt.cca(obs_full)
         self.data_logger.pickle('multiproxy_uma.pkl', self.UMA)
