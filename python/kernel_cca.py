@@ -6,6 +6,7 @@
 import cmath
 import warnings
 import numpy as np
+import tensorflow as tf
 from scipy import linalg
 
 from sklearn.utils import check_array, check_consistent_length
@@ -429,8 +430,8 @@ class KernelCCA(BaseEstimator):
             raise ValueError('kapa should be in (0, 1) when pgso=False')
         if self.pgso and (self.kapa < 0 or self.kapa > 1):
             raise ValueError('kapa should be in [0, 1] when pgso=True')
-        self.X_ = X
-        self.Y_ = Y
+        self.X_ = X.astype('float32')
+        self.Y_ = Y.astype('float32')
         KX = self._get_kernel(X)
         KY = self._get_kernel(Y)
 
@@ -450,7 +451,7 @@ class KernelCCA(BaseEstimator):
         return self
 
     def transform(self, X, Y=None):
-        KX = self._get_kernel(X, self.X_)
+        KX = X.dot(self.X_.T)#self._get_kernel(X, self.X_)
         if self.center:
             KXc = self.kc.transform(KX)
         else:
@@ -467,4 +468,23 @@ class KernelCCA(BaseEstimator):
             return xcomp, ycomp
         return xcomp
 
+    def __getstate__(self):
+        """Return state values to be pickled."""
+        return (self.X_, self.alphas_, self.kc, self.kernel, self.kernel_params, self.center)
+
+    def __setstate__(self, state):
+        """Restore state from the unpickled state values."""
+        self.X_, self.alphas_, self.kc, self.kernel, self.kernel_params, self.center = state
+
+    def transform_tf(self, X):
+        K = tf.matmul(X, self.X_.T)
+        if self.center:
+            K_pred_cols = (tf.reduce_sum(K, 1) /
+                       self.kc.K_fit_rows_.shape[0])[:, np.newaxis]
+
+            K -= self.kc.K_fit_rows_
+            K -= K_pred_cols
+            K += self.kc.K_fit_all_
+        xcomp = tf.matmul(K, self.alphas_.astype('float32'))
+        return xcomp
 

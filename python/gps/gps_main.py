@@ -97,6 +97,7 @@ class GPSMain(object):
             os.makedirs(self._hyperparams['common']['data_files_dir'])
         random.seed(seed)
         np.random.seed(seed)
+        np.set_printoptions(suppress=True)
         for itr in range(itr_start, self._hyperparams['iterations']):
             traj_sample_lists = {}
             feature_lists = []
@@ -132,7 +133,7 @@ class GPSMain(object):
             robot_costs = np.mean(robot_costs, axis = 2)
 
             np.save("data%d.npy" %seed, np.array(itr_costs))
-            print robot_costs
+            print "costs", itr, robot_costs
             for robot_number in range(1, self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
@@ -309,7 +310,7 @@ class GPSMain(object):
             next_obs_full.append(next_obs_data)
             tgt_actions_full.append(tgt_actions)
             obs_complete_time_full.append(obs_complete_time)
-        self.policy_opt.fitted_cca = self.data_logger.unpickle('multiproxy_cca.pkl')
+        # self.policy_opt.fitted_cca = self.data_logger.unpickle('multiproxy_cca.pkl')
         r0 = self.policy_opt.run_cca(obs_full)
         np.save('3link_cca.npy', np.reshape(r0, (2, 7, T, -1)))
         # self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)

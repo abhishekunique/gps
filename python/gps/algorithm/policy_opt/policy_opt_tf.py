@@ -132,7 +132,11 @@ class PolicyOptTf(PolicyOpt):
         self.tf_vars = tf.trainable_variables()
         if self._hyperparams['run_feats']:
             self.init_feature_space()
-        self.sess = tf.Session()
+
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth=True
+        self.sess = tf.Session(config=config)
+
         self.policy = []
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
             self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string))

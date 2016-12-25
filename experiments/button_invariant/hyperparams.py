@@ -15,6 +15,7 @@ from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
 from gps.algorithm.cost.cost_cca import CostCCA
+from gps.algorithm.cost.cost_tf import CostTF
 from gps.algorithm.cost.cost_dev_rs_strike import CostDevRs
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
 from gps.algorithm.dynamics.dynamics_prior_gmm import DynamicsPriorGMM
@@ -308,19 +309,26 @@ load_trajs = np.load("3link_cca.npy")
 print load_trajs.shape
 # load_trajs = load_trajs[:, 0, :, :]
 #load_trajs = np.load('3link_feats.npy')
-test_cost = [{
-    'type': CostCCA,
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
+
+test_cost_tf = [{
+    'type': CostTF,
     'target_feats': np.mean(load_trajs[i], axis=0),
-} for i in agent[0]['train_conditions']]
+    'tf_loss': CostCCA.tf_loss
+} for i in common['train_conditions']]
+
+# test_cost = [{
+#     'type': CostCCA,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'target_feats': np.mean(load_trajs[i], axis=0),
+# } for i in agent[0]['train_conditions']]
 
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i], test_cost[i]],#, fk_cost_blocktouch[i]],
-    'weights': [1.0, 50.0],
+    'costs': [fk_cost_1[i], test_cost_tf[i]],#, fk_cost_blocktouch[i]],
+    'weights': [1.0, 50000.0, 5.0],
 } for i in agent[0]['train_conditions']]
 
 
@@ -383,7 +391,7 @@ algorithm[1]['policy_prior'] = {
 config = {
     'iterations': 25,
     'num_samples': 7,
-    'verbose_trials': 7,
+    'verbose_trials': 1,
     'verbose_policy_trials': 5,
     'save_wts': True,
     'common': common,
