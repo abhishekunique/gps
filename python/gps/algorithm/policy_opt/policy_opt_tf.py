@@ -17,6 +17,10 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import plot, ion, show
 from matplotlib.backends.backend_pdf import PdfPages
 from sklearn.neighbors import NearestNeighbors
+from pykcca.kcca import KCCA
+from pykcca.kernels import LinearKernel
+from kernel_cca import KernelCCA
+
 class MLPlotter:
     """
     Plot/save machine learning data
@@ -520,14 +524,39 @@ class PolicyOptTf(PolicyOpt):
     def cca(self,obs_full):
         from sklearn.cross_decomposition import CCA
         num_components = 6
-        self.fitted_cca = CCA(num_components)
+        self.fitted_cca = KernelCCA(n_components=num_components, kernel="linear", gamma=None,
+                 degree=3, coef0=1, kernel_params=None, eigen_solver='auto',
+                 center=True, pgso=True, eta=0, kapa=0.1, nor=2,
+                 max_iter=500, tol=1e-6, copy=True)#CCA(num_components)
         Y, X = obs_full
         N = X.shape[0]
         T = X.shape[1]
         X = np.reshape(X, [N*T, -1])
         Y = np.reshape(Y, [N*T, -1])
         self.fitted_cca.fit(X,Y)
+
+        # print "fitting kcca"
+        # self.kcca = KernelCCA(n_components=num_components, kernel="linear", gamma=None,
+        #          degree=3, coef0=1, kernel_params=None, eigen_solver='auto',
+        #          center=True, pgso=True, eta=0, kapa=0.1, nor=2,
+        #          max_iter=500, tol=1e-6, copy=True)
+        # self.kcca.fit(X, Y)
+        # import IPython
+        # IPython.embed()
+        # kernel = LinearKernel()
+        # self.kcca = KCCA(kernel, kernel,
+        #             regularization=0,#1e-5,
+        #             decomp='icd',
+        #             lrank=100,
+        #             method='simplified_hardoon_method',
+        #             scaler1=lambda x:x,
+        #             scaler2=lambda x:x,
+        #             ).fit(X,Y)
+
+
+
         return X,Y
+
     def run_cca(self,obs_full):
         from sklearn.cross_decomposition import CCA
         Y, X = obs_full
@@ -536,6 +565,9 @@ class PolicyOptTf(PolicyOpt):
         X = np.reshape(X, [N*T, -1])
         Y = np.reshape(Y, [N*T, -1])
         r1, r0 = self.fitted_cca.transform(X,Y)
+        # y1, y2 = self.kcca.transform(X, Y)
+        # import IPython
+        # IPython.embed()
         return r0
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
