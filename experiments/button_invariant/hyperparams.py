@@ -304,7 +304,7 @@ fk_cost_2 = [{
 #     'alpha': 1e-5,
 # } for i in agent[1]['train_conditions']]
 
-load_trajs = np.load("3link_cca.npy")
+load_trajs = np.load("3link_random.npy")
 print load_trajs.shape
 # load_trajs = load_trajs[:, 0, :, :]
 #load_trajs = np.load('3link_feats.npy')

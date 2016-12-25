@@ -1,4 +1,4 @@
-""" This file defines the main object that runs experiments. """
+r""" This file defines the main object that runs experiments. """
 
 import matplotlib as mpl
 mpl.use('Qt4Agg')
@@ -90,7 +90,7 @@ class GPSMain(object):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         itr_costs = []
-        seed = np.random.randint(89)
+        seed = np.random.randint(2345)
         import random, shutil
         if os.path.exists(self._hyperparams['common']['data_files_dir']):
             shutil.move(self._hyperparams['common']['data_files_dir'], self._hyperparams['common']['data_files_dir'][:-1] + str(seed))
@@ -306,14 +306,19 @@ class GPSMain(object):
         #     tgt_actions_full.append(tgt_actions)
         # X, Y= self.policy_opt.cca(obs_full)
         
-        #self.data_logger.pickle('multiproxy_cca.pkl', self.policy_opt.fitted_cca)
+        # self.data_logger.pickle('multiproxy_cca.pkl', self.policy_opt.fitted_cca)
         self.policy_opt.fitted_cca = self.data_logger.unpickle('multiproxy_cca.pkl')
+        x_weights = self.policy_opt.fitted_cca.x_weights_
+        random_proj = np.random.random_sample(x_weights.shape)*np.std(x_weights)+np.mean(x_weights)
+        self.policy_opt.fitted_cca.x_weights = random_proj
+        y_weights = self.policy_opt.fitted_cca.y_weights_
+        random_proj = np.random.random_sample(y_weights.shape)*np.std(y_weights)+np.mean(y_weights)
+        self.policy_opt.fitted_cca.y_weights = random_proj
         r0 = self.policy_opt.run_cca(obs_full)
-        np.save('3link_cca.npy', np.reshape(r0, (2, 7, T, -1)))
-        # self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)
-        import IPython
-        IPython.embed()
-        
+        np.save('3link_random.npy', np.reshape(r0, (2, 7, T, -1)))
+        # # self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)
+        # import IPython
+    
 
     def _take_reward_shaping(self):
         targets = []
@@ -694,8 +699,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(100)
-        np.random.seed(100)
+        random.seed(457)
+        np.random.seed(3248)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:
