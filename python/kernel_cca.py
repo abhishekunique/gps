@@ -194,14 +194,32 @@ class KernelCCA(BaseEstimator):
         self.copy = copy
 
     def _get_kernel(self, X, Y=None):
-        if callable(self.kernel):
-            params = self.kernel_params or {}
-        else:
-            params = {"gamma": self.gamma,
-                      "degree": self.degree,
-                      "coef0": self.coef0}
-        return pairwise_kernels(X, Y, metric=self.kernel,
-                                filter_params=True, **params)
+        if Y is None:
+            Y = X
+        if self.kernel == 'linear':
+            return X.dot(Y.T)
+        elif self.kernel == 'poly':
+            c = self.kernel_params['c']
+            deg = self.kernel_params['deg']
+            return (np.dot(X, Y.T) + c) ** deg
+    def _get_kernel_tf(self, X, Y=None):
+        # if callable(self.kernel):
+        #     params = self.kernel_params or {}
+        # else:
+        #     params = {"gamma": self.gamma,
+        #               "degree": self.degree,
+        #               "coef0": self.coef0}
+        # return pairwise_kernels(X, Y, metric=self.kernel,
+        #                         filter_params=True, **params)
+        if Y is None:
+            Y = X
+        if self.kernel == 'linear':
+            return tf.matmul(X, Y.T)
+        elif self.kernel == 'poly':
+            c = self.kernel_params['c']
+            deg = self.kernel_params['deg']
+            return (tf.matmul(X, Y.T) + c) ** deg
+
 
     def _solve_eigenvalues(self, A):
         """Solve eigenvalue problem for matrix A"""
@@ -451,7 +469,7 @@ class KernelCCA(BaseEstimator):
         return self
 
     def transform(self, X, Y=None):
-        KX = X.dot(self.X_.T)#self._get_kernel(X, self.X_)
+        KX = self._get_kernel(X, self.X_)
         if self.center:
             KXc = self.kc.transform(KX)
         else:
@@ -477,7 +495,7 @@ class KernelCCA(BaseEstimator):
         self.X_, self.alphas_, self.kc, self.kernel, self.kernel_params, self.center = state
 
     def transform_tf(self, X):
-        K = tf.matmul(X, self.X_.T)
+        K = self._get_kernel_tf(X, self.X_)
         if self.center:
             K_pred_cols = (tf.reduce_sum(K, 1) /
                        self.kc.K_fit_rows_.shape[0])[:, np.newaxis]

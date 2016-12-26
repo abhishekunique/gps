@@ -328,7 +328,7 @@ test_cost_tf = [{
 algorithm[1]['cost'] = [{
     'type': CostSum,
     'costs': [fk_cost_1[i], test_cost_tf[i]],#, fk_cost_blocktouch[i]],
-    'weights': [1.0, 50000.0, 5.0],
+    'weights': [1.0, 5.0],
 } for i in agent[0]['train_conditions']]
 
 
@@ -391,7 +391,7 @@ algorithm[1]['policy_prior'] = {
 config = {
     'iterations': 25,
     'num_samples': 7,
-    'verbose_trials': 1,
+    'verbose_trials': 7,
     'verbose_policy_trials': 5,
     'save_wts': True,
     'common': common,

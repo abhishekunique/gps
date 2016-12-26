@@ -143,9 +143,9 @@ class GPSMain(object):
                 if rf:
                     np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
 
-            # if itr > 3:
-            #     import IPython
-            #     IPython.embed()
+            if itr >= 23:
+                import IPython
+                IPython.embed()
 
         import IPython
         IPython.embed()

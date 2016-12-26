@@ -1,6 +1,7 @@
 import copy
 
 import numpy as np
+from gps.algorithm.cost.cost_cca import CostCCA
 
 from gps.algorithm.cost.cost import Cost
 from gps.proto.gps_pb2 import JOINT_ANGLES, END_EFFECTOR_POINTS, \
@@ -10,6 +11,7 @@ import tensorflow as tf
 class CostTF(Cost):
     def __init__(self, hyperparams):
         Cost.__init__(self, hyperparams)
+        self.cca = CostCCA(hyperparams)
         self.initialized = False
 
     def initTFGrad(self, Xshape, Ushape, JXshape, EEshape):
@@ -95,5 +97,10 @@ class CostTF(Cost):
             # sample.agent.pack_data_x(tf_lxx, lss,
             #                          data_types=[JOINT_ANGLES, JOINT_ANGLES])
 
-        # print "tf", np.sum(tf_loss), tf_lx, tf_loss.shape, tf_lx.shape
-        return tf_loss, tf_lx, tf_lu, tf_lxx, tf_luu, tf_lux
+        # print "tf", tf_loss, tf_lx, tf_loss.shape, tf_lx.shape
+        cL, cLx, cLu, cLxx, cLuu, cLux = self.cca.eval(sample)
+        # print "cca", cL, cLx
+        print (np.linalg.norm(cL-tf_loss), np.linalg.norm(cLx - tf_lx), 
+            np.linalg.norm(cLu - tf_lu), np.linalg.norm(cLxx - np.zeros_like(tf_lxx)),
+            np.linalg.norm(cLuu - tf_luu), np.linalg.norm(cLux - tf_lux)) 
+        return tf_loss, tf_lx, tf_lu, np.zeros_like(tf_lxx), tf_luu, tf_lux

@@ -92,7 +92,7 @@ class CostCCA(Cost):
         final_l += l
         final_lx += ls
         final_lxx += lss
-        print "cca", np.sum(final_l), final_lx, final_l.shape, final_lx.shape
+        # print "cca", np.sum(final_l), final_lx, final_l.shape, final_lx.shape
         return final_l, final_lx, final_lu, final_lxx, final_luu, final_lux
 
 

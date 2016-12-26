@@ -528,10 +528,9 @@ class PolicyOptTf(PolicyOpt):
     def cca(self,obs_full):
         from sklearn.cross_decomposition import CCA
         num_components = 6
-        self.fitted_cca = KernelCCA(n_components=num_components, kernel="linear", gamma=None,
-                 degree=3, coef0=1, kernel_params=None, eigen_solver='auto',
-                 center=True, pgso=True, eta=0, kapa=0.1, nor=2,
-                 max_iter=500, tol=1e-6, copy=True)#CCA(num_components)
+        self.fitted_cca = KernelCCA(n_components=num_components, kernel="poly",
+            kernel_params={"c": 1, "deg":2}, eigen_solver='auto',
+                 center=True, pgso=True)#CCA(num_components)
         Y, X = obs_full
         N = X.shape[0]
         T = X.shape[1]
