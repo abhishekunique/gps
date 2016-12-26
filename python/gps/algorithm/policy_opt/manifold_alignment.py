@@ -71,8 +71,8 @@ class UMA:
         R = np.zeros((X.shape[0], self.k, self.k))
         for xi in range(X.shape[0]):
             distances, indices = Xnb.kneighbors(X[xi,:])
-            for i in range(self.k):
-                for j in range(self.k):
+            for i in range(indices):
+                for j in range(indicies):
                     R[xi,i,j] = np.linalg.norm(X[i]-X[j])
         return R
 
