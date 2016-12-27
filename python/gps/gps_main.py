@@ -311,8 +311,10 @@ class GPSMain(object):
         x_weights = self.policy_opt.fitted_cca.x_weights_
         random_proj = np.random.random_sample(x_weights.shape)#*np.std(x_weights)+np.mean(x_weights)
         self.policy_opt.fitted_cca.x_weights = random_proj
+        print random_proj
         y_weights = self.policy_opt.fitted_cca.y_weights_
         random_proj = np.random.random_sample(y_weights.shape)#*np.std(y_weights)+np.mean(y_weights)
+        print random_proj
         self.policy_opt.fitted_cca.y_weights = random_proj
         r0 = self.policy_opt.run_cca(obs_full)
         np.save('3link_random.npy', np.reshape(r0, (2, 7, T, -1)))
@@ -699,8 +701,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(3)
-        np.random.seed(3)
+        random.seed(21)
+        np.random.seed(58)
 
         gps = GPSMain(hyperparams.config)
         if hyperparams.config['gui_on']:

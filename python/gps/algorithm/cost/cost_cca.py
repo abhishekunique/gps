@@ -51,7 +51,7 @@ class CostCCA(Cost):
         x = sample.get_obs()
         # x = np.concatenate([x[:, 0:4], x[:, 5:9], x[:, 10:13], x[:, 19:22]], axis=1)
         x = np.concatenate([x[:, 0:4], x[:, 5:9]], axis=1)
-        feat_forward = self.cca.transform(x)
+        feat_forward = np.dot(x, self.cca.x_weights_)#self.cca.transform(x)
         num_feats = feat_forward.shape[1]
         num_inputs = x.shape[1]
         

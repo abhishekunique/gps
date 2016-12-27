@@ -535,7 +535,8 @@ class PolicyOptTf(PolicyOpt):
         T = X.shape[1]
         X = np.reshape(X, [N*T, -1])
         Y = np.reshape(Y, [N*T, -1])
-        r1, r0 = self.fitted_cca.transform(X,Y)
+        r0 = np.dot(Y,self.fitted_cca.y_weights_)
+        # r1, r0 = self.fitted_cca.transform(X,Y)
         return r0
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
