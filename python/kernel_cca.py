@@ -202,6 +202,18 @@ class KernelCCA(BaseEstimator):
             c = self.kernel_params['c']
             deg = self.kernel_params['deg']
             return (np.dot(X, Y.T) + c) ** deg
+        elif self.kernel == 'rbf':
+            sigma = self.kernel_params['sigma']
+            j1 = np.ones((X.shape[0], 1))
+            j2 = np.ones((Y.shape[0], 1))
+
+            diagK1 = np.sum(X**2, 1)
+            diagK2 = np.sum(Y**2, 1)
+
+            XY = np.dot(X, Y.T)
+            Q = (2*XY - np.outer(diagK1, j2) - np.outer(j1, diagK2) )/ (2*sigma**2)
+
+            return np.exp(Q)
     def _get_kernel_tf(self, X, Y=None):
         # if callable(self.kernel):
         #     params = self.kernel_params or {}
@@ -219,7 +231,19 @@ class KernelCCA(BaseEstimator):
             c = self.kernel_params['c']
             deg = self.kernel_params['deg']
             return (tf.matmul(X, Y.T) + c) ** deg
+        elif self.kernel == 'rbf':
+            sigma = self.kernel_params['sigma']
+            j1 = tf.ones((tf.shape(X)[0], 1))
+            j2 = tf.ones((tf.shape(Y)[0], 1))
 
+            diagK1 = tf.reduce_sum(X**2, 1)
+            diagK2 = tf.reduce_sum(Y**2, 1)
+
+            XY = tf.matmul(X, Y.T)
+            Q = (2*XY - tf.matmul(diagK1[:, None], tf.transpose(j2)) - 
+                tf.matmul(j1, diagK2[None, :]) )/ (2*sigma**2)
+
+            return tf.exp(Q)
 
     def _solve_eigenvalues(self, A):
         """Solve eigenvalue problem for matrix A"""
@@ -257,6 +281,7 @@ class KernelCCA(BaseEstimator):
             warnings.warn("PGSO failed, try larger eta or KCCA without PGSO.")
 
         while np.sum(norm2) > eta and j != m:
+            print np.sum(norm2), eta
             # find the best new element
             j2 = np.argmax(norm2)
 
@@ -348,7 +373,9 @@ class KernelCCA(BaseEstimator):
         # solve the eigen value problem
         B = np.dot((1-self.kapa)*tEyeX, Zxx) + self.kapa*tEyeX
         S = linalg.cholesky(B, lower=True)
+        print "inv", S.shape
         invS = linalg.pinv(S)
+        print "done"
         Zyyinv = linalg.pinv(np.dot((1-self.kapa)*tEyeY, Zyy) +
                              self.kapa*tEyeY)
         SinvZxy = np.dot(invS, Zxy)

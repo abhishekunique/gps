@@ -90,7 +90,7 @@ class GPSMain(object):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         itr_costs = []
-        seed = np.random.randint(89)
+        seed = np.random.randint(8900)
         import random, shutil
         if os.path.exists(self._hyperparams['common']['data_files_dir']):
             shutil.move(self._hyperparams['common']['data_files_dir'], self._hyperparams['common']['data_files_dir'][:-1] + str(seed))
@@ -132,7 +132,7 @@ class GPSMain(object):
             robot_costs = np.sum(robot_costs, axis=-1)
             robot_costs = np.mean(robot_costs, axis = 2)
 
-            np.save("data%d.npy" %seed, np.array(itr_costs))
+            np.save("data{},{}.npy".format(seed, self._hyperparams['common']['cost_weight']), np.array(itr_costs))
             print "costs", itr, robot_costs
             for robot_number in range(1, self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
@@ -143,12 +143,12 @@ class GPSMain(object):
                 if rf:
                     np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
 
-            if itr >= 23:
-                import IPython
-                IPython.embed()
+            # if itr >= 23:
+            #     import IPython
+            #     IPython.embed()
 
-        import IPython
-        IPython.embed()
+        # import IPython
+        # IPython.embed()
         self._end()
 
     def run_badmm(self, itr_load=None, rf=False):

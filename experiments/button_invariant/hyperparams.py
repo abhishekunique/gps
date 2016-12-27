@@ -63,11 +63,14 @@ INIT_POLICY_DIR = '/home/abhigupta/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
 
+cost_weight = 3.829637#10 ** (np.random.rand() * 5)
+
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),
     'experiment_dir': EXP_DIR,
     'data_files_dir': EXP_DIR + 'data_files/',
+    'cost_weight': cost_weight,
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
     'conditions': 4,
@@ -324,11 +327,10 @@ test_cost_tf = [{
 #     'target_feats': np.mean(load_trajs[i], axis=0),
 # } for i in agent[0]['train_conditions']]
 
-
 algorithm[1]['cost'] = [{
     'type': CostSum,
     'costs': [fk_cost_1[i], test_cost_tf[i]],#, fk_cost_blocktouch[i]],
-    'weights': [1.0, 5.0],
+    'weights': [1.0, cost_weight],
 } for i in agent[0]['train_conditions']]
 
 
