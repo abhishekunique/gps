@@ -1,7 +1,7 @@
 import numpy as np
 import scipy
 import math
-
+import time
 from sklearn.neighbors import NearestNeighbors
 import itertools as it
 
@@ -12,21 +12,51 @@ class UMA:
         
 
     def align(self, X,Y):
-        
+        self.meanX = np.mean(X, axis=0)
+        self.meanY = np.mean(Y, axis=0)
+        X = X-self.meanX
+        Y = Y-self.meanY
+
+        self.varX = np.std(X, axis=0)
+        self.varY = np.std(Y, axis=0)
+        X = X/self.varX
+        Y = Y/self.varY
+
         Xnb = NearestNeighbors(n_neighbors=self.k, algorithm='ball_tree').fit(X)
         Ynb = NearestNeighbors(n_neighbors=self.k, algorithm='ball_tree').fit(Y)
         print "Getting Rx"
         Rx = self.getR(X, Xnb)
+        np.save('Rx.npy', Rx)
         print "Getting Ry"
         Ry = self.getR(Y, Ynb)
-
+        np.save('Ry.npy', Ry)
         # Need to make function return Dx
         print "Getting Wx"
+        t0 = time.clock()
         Wx, Dx = self.get_distances(Rx,Rx)
+        t1 = time.clock()
+        np.save('Wx.npy', Wx)
+        print "time for Wx", t1-t0
         print "Getting Wy"
         Wy, Dy = self.get_distances(Ry,Ry)
+        t2 = time.clock()
+        np.save('Wy.npy', Wy)
+        print "time for Wy", t2-t1
         print "Getting W"
         W, Gamma1 = self.get_distances(Rx,Ry)
+        t3 = time.clock()
+        print "Time for W", t3-t2
+        np.save('W.npy', W)
+
+        # Rx = np.load('Rx.npy')
+        # Ry = np.load('Ry.npy')
+        # W = np.load('W.npy')
+        # Wy = np.load('Wy.npy')
+        # Wx = np.load('Wx.npy')
+        # Dx = self.get_D(Wx, Rx, Rx)
+        # Dy = self.get_D(Wx, Ry, Ry)
+        # Gamma1 = self.get_D(W, Rx, Ry)
+
         Gamma2 = W
         Gamma3 = W.T
         Gamma4 = np.zeros((Ry.shape[0], Ry.shape[0]))
@@ -59,21 +89,28 @@ class UMA:
         M=np.dot(np.dot(Z.T,L), Z)
         # General eigenvalue decomposition
         print "Eigs"
+        # import IPython
+        # IPython.embed()
         eigvals, eigvecs = scipy.sparse.linalg.eigs(A=A, M=M, k=self.n_components, which='SM')
         self.alpha = eigvecs
         self.alpha_s = eigvecs[:X.shape[1]]
         self.alpha_t = eigvecs[X.shape[1]:]
-        import IPython
-        IPython.embed()
+        # import IPython
+        # IPython.embed()
         self.t_to_s = np.dot(np.linalg.pinv(self.alpha_t.T), self.alpha_s.T)
+
+    def apply(Y):
+        return np.dot(Y, self.t_to_s)
 
     def getR(self,X, Xnb):
         R = np.zeros((X.shape[0], self.k, self.k))
         for xi in range(X.shape[0]):
-            distances, indices = Xnb.kneighbors(X[xi,:])
-            for i in range(indices):
-                for j in range(indicies):
-                    R[xi,i,j] = np.linalg.norm(X[i]-X[j])
+            distances, indices = Xnb.kneighbors(X[xi,:], self.k)
+            indices = indices[0]
+            # print "X", X.shape, "xi", xi, "k", self.k, "ind", len(indices), indices
+            for i in range(self.k):
+                for j in range(self.k):
+                    R[xi,i,j] = np.linalg.norm(X[indices[i]]-X[indices[j]])
         return R
 
     def get_distances(self, Rx,Ry):
@@ -87,11 +124,17 @@ class UMA:
             D[i,i] = np.sum(W[i,:])
         return W, D
 
+    def get_D(self, W, Rx, Ry):
+        D = np.zeros((Rx.shape[0], Rx.shape[0]))
+        for i in range(Rx.shape[0]):
+            D[i,i] = np.sum(W[i,:])
+        return D
+
     def _d(self, Rxi,Rxj):
         bestd = float('inf')
         perms = it.permutations(range(self.k))
         for p in perms:
-            Rxjp = self. get_perm(Rxj, p)
+            Rxjp = self.get_perm(Rxj, p)
             gamma1 = np.trace(np.dot(Rxi.T, Rxjp))/np.trace(np.dot(Rxi.T, Rxi))
             gamma2 = np.trace(np.dot(Rxjp.T,Rxi))/np.trace(np.dot(Rxjp.T, Rxjp))
             d = min(np.linalg.norm(Rxjp-gamma1*Rxi, ord='fro'),
@@ -106,3 +149,37 @@ class UMA:
         Rpp = Rp[:,p]
         return Rpp
 
+    def plot(self, X, Y, eeX, eeY):
+        import matplotlib.pyplot as plt
+        newY = (Y-self.meanY)/self.varY
+        Xhat = np.dot(newY, self.t_to_s)*self.varX+self.meanX
+        nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(X)
+        distances, indices = nbrs.kneighbors(Xhat)
+        distances_2, indices_2 = nbrs.kneighbors(Xhat)
+
+        # indices = np.reshape(indices, (num_conds, num_samples, T_extended))
+        # dO_robot0 = obs_extended_full[0].shape[-1]
+        # obs_full_reshaped = np.reshape(obs_extended_full[0], (num_conds*num_samples*T_extended,dO_robot0))
+        for i in range(X.shape[0]):
+            x = eeX[i][0]
+            y = eeX[i][2]
+            nnbr_currpoint = indices[i][0]
+            x_nbr = eeY[nnbr_currpoint][0]
+            y_nbr = eeY[nnbr_currpoint][2]
+            print("X: " + str([x,x_nbr]))
+            print("Y: " + str([y,y_nbr]))
+            lines = plt.plot([x,x_nbr], [y,y_nbr])
+        import IPython
+        IPython.embed()
+        # plt.show()
+        for i in range(X.shape[0]):
+            x = eeX[i][0]
+            y = eeX[i][2]
+            nnbr_currpoint = i#indices[i][0]
+            x_nbr = eeY[nnbr_currpoint][0]
+            y_nbr = eeY[nnbr_currpoint][2]
+            print("X: " + str([x,x_nbr]))
+            print("Y: " + str([y,y_nbr]))
+            lines = plt.plot([x,x_nbr], [y,y_nbr])
+        import IPython
+        IPython.embed()

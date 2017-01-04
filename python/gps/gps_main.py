@@ -77,7 +77,7 @@ class GPSMain(object):
         if 'save_wts' in self._hyperparams:
             self.save_wts = self._hyperparams['save_wts']
         else: self.save_wts = False
-        self.UMA =UMA(6, k=6)
+        self.UMA =UMA(6, k=4)
         
 
 
@@ -93,7 +93,7 @@ class GPSMain(object):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         itr_costs = []
-        seed = 869#np.random.randint(1999)
+        seed = 984573#np.random.randint(1999)
         import random, shutil
         # if os.path.exists(self._hyperparams['common']['data_files_dir']):
         #     shutil.move(self._hyperparams['common']['data_files_dir'], self._hyperparams['common']['data_files_dir'][:-1] + str(seed))
@@ -144,6 +144,15 @@ class GPSMain(object):
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
                 if rf:
                     np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
+            traj_distr = {}
+            for ag in range(self.num_robots):
+                name = self.agent[ag]._hyperparams['filename'][0]
+                print name
+                traj_distr[name] = []
+                for cond in  self._train_idx[ag]:
+                    print ag, cond
+                    traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
+            self.data_logger.pickle(self._data_files_dir+"traj_distr.pkl", traj_distr)
 
             # if itr > 3:
             #     import IPython
@@ -223,8 +232,8 @@ class GPSMain(object):
         Returns: None
         """
 
-        traj_distr = self.data_logger.unpickle("btndata.pkl")
-        # traj_distr = self.data_logger.unpickle("multiproxy_data.pkl")
+        # traj_distr = self.data_logger.unpickle("btndata.pkl")
+        traj_distr= self.data_logger.unpickle(self._data_files_dir+"traj_distr.pkl")
         # import IPython          #
         # IPython.embed()
         for ag in range(self.num_robots):
@@ -261,63 +270,93 @@ class GPSMain(object):
         next_obs_full = []
         tgt_actions_full = []
         obs_complete_time_full = []
-        # for robot_number in range(self.num_robots):
-        #     dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T 
-        #     T_extended = T 
-        #     obs_data, next_obs_data, tgt_actions = np.zeros((0, T, dO)), np.zeros((0, T, dO)), np.zeros((0, T, dU))
-        #     obs_complete_time = np.zeros((len(self._train_idx[robot_number]), self._hyperparams['num_samples'], T_extended, dO))
-        #     for m in self._train_idx[robot_number]:
-        #         samples = traj_sample_lists[robot_number][m]
-        #         X = samples.get_X()
-        #         N = len(samples)
-        #         traj = self.algorithm[robot_number].cur[m].traj_distr
-        #         mu = np.zeros((N, T, dU))
-        #         for t in range(T):
-        #             for i in range(N):
-        #                 mu[i, t, :] = \
-        #                         (traj.K[t, :, :].dot(X[i, t, :]) + traj.k[t, :]) 
-        #         tgt_actions = np.concatenate((tgt_actions, mu))
-        #         obs_data = np.concatenate((obs_data, samples.get_obs()[:, :, :]))
-        #         next_obs_data = np.concatenate((next_obs_data, samples.get_obs()[:, :, :]))
-        #         obs_complete_time[m] = samples.get_obs()
-
-        #     obs_data = obs_data[:, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
-        #     next_obs_data = next_obs_data[:, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
-        #     obs_complete_time = obs_complete_time[:, :, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
-        #     obs_full.append(obs_data)
-        #     next_obs_full.append(next_obs_data)
-        #     tgt_actions_full.append(tgt_actions)
-        #     obs_complete_time_full.append(obs_complete_time)
-        full_dict = pickle.load(open("multiproxy_data.pkl", "rb"))
-        tasks = ['reach']#, 'push', 'peg']
-        obs_full = []
-        next_obs_full = []
-        tgt_actions_full = []
+        ee_full = []
         for robot_number in range(self.num_robots):
-            obs = []
-            next_obs = []
-            tgt_actions = []
-            for task in tasks:
-                obs.append(full_dict[task]['obs_full'][robot_number][:, :, :[6, 8][robot_number]])
-                next_obs.append(full_dict[task]['next_obs_full'][robot_number][:, :, :[6, 8][robot_number]])
-                tgt_actions.append(full_dict[task]['action_full'][robot_number])
-            obs = np.concatenate(obs, axis=0)
-            next_obs = np.concatenate(next_obs, axis=0)
-            tgt_actions = np.concatenate(tgt_actions, axis=0)
-            obs_full.append(obs)
-            next_obs_full.append(next_obs)
+            dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T 
+            T_extended = T 
+            ee_data = np.zeros((0, T, 3))
+            obs_data, next_obs_data, tgt_actions = np.zeros((0, T, dO)), np.zeros((0, T, dO)), np.zeros((0, T, dU))
+            obs_complete_time = np.zeros((len(self._train_idx[robot_number]), self._hyperparams['num_samples'], T_extended, dO))
+            for m in self._train_idx[robot_number]:
+                samples = traj_sample_lists[robot_number][m]
+                X = samples.get_X()
+                N = len(samples)
+                traj = self.algorithm[robot_number].cur[m].traj_distr
+                mu = np.zeros((N, T, dU))
+                for t in range(T):
+                    for i in range(N):
+                        mu[i, t, :] = \
+                                (traj.K[t, :, :].dot(X[i, t, :]) + traj.k[t, :]) 
+                tgt_actions = np.concatenate((tgt_actions, mu))
+                obs_data = np.concatenate((obs_data, samples.get_obs()[:, :, :]))
+                ee_data = np.concatenate((ee_data, samples.get(3)[:, :, :3]))
+                next_obs_data = np.concatenate((next_obs_data, samples.get_obs()[:, :, :]))
+                obs_complete_time[m] = samples.get_obs()
+
+            obs_data = obs_data[:, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
+            next_obs_data = next_obs_data[:, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
+            obs_complete_time = obs_complete_time[:, :, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
+            obs_full.append(obs_data)
+            ee_full.append(ee_data)
+            next_obs_full.append(next_obs_data)
             tgt_actions_full.append(tgt_actions)
+            obs_complete_time_full.append(obs_complete_time)
+
+        # full_dict = pickle.load(open("multiproxy_data.pkl", "rb"))
+        # tasks = ['reach', 'push', 'peg']
+        # obs_full = []
+        # next_obs_full = []
+        # tgt_actions_full = []
+        # for robot_number in range(self.num_robots):
+        #     obs = []
+        #     next_obs = []
+        #     tgt_actions = []
+        #     for task in tasks:
+        #         obs.append(full_dict[task]['obs_full'][robot_number][:, :, :[6, 8][robot_number]])
+        #         next_obs.append(full_dict[task]['next_obs_full'][robot_number][:, :, :[6, 8][robot_number]])
+        #         tgt_actions.append(full_dict[task]['action_full'][robot_number])
+        #     obs = np.concatenate(obs, axis=0)
+        #     next_obs = np.concatenate(next_obs, axis=0)
+        #     tgt_actions = np.concatenate(tgt_actions, axis=0)
+        #     obs_full.append(obs)
+        #     next_obs_full.append(next_obs)
+        #     tgt_actions_full.append(tgt_actions)
         X,Y = obs_full
+
+        eeX, eeY = ee_full
+        # X = X[0:28*3:7]
+        # Y = Y[0:28*3:7]
+        X = X[[1,-1]]
+        Y = Y[[1,-1]]
+        eeX = eeX[[1,-1]]
+        eeY = eeY[[1,-1]]
+
+
+        print X.shape
         N = X.shape[0]
         T = X.shape[1]
+        print "N", N, "T", T
         X = np.reshape(X, [N*T, -1])
         Y = np.reshape(Y, [N*T, -1])
+        eeX = np.reshape(eeX, [N*T, -1])
+        eeY = np.reshape(eeY, [N*T, -1])
+        # X = np.concatenate((X, eeX[:,:1], eeX[:,2:]), axis=1)
+        # Y = np.concatenate((Y, eeY[:,:1], eeY[:,2:]), axis=1)
+        import IPython
+        IPython.embed()
+        # X = np.concatenate((X[:,:4], X[:,6:]), axis=1)
+        # Y = np.concatenate((Y[:,:5], Y[:,6:]), axis=1)
+        print X.shape
         self.UMA.align(X,Y)
-        # X, Y= self.policy_opt.cca(obs_full)
-        self.data_logger.pickle('multiproxy_uma.pkl', self.UMA)
-        # self.policy_opt.fitted_cca = self.data_logger.unpickle('multiproxy_uma.pkl')
-        # r0 = self.policy_opt.run_cca(obs_full)
-        # np.save('3link_uma.npy', np.reshape(r0, (2, 7, T, -1)))
+        self.data_logger.pickle('multiproxy_uma_ee_lm_6.pkl', self.UMA)
+
+        # self.UMA = self.data_logger.unpickle('multiproxy_uma_01mu.pkl')
+        self.UMA.plot( X, Y, eeX, eeY)
+
+        # import IPython
+        # IPython.embed()
+        # r0 = X
+        # np.save('3link_uma_ee.npy', np.reshape(r0, (2, 7, T, -1)))
         # self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)
         import IPython
         IPython.embed()

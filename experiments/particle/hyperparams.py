@@ -36,20 +36,20 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
 from gps.gui.config import generate_experiment_info
 
 SENSOR_DIMS = [{
-    JOINT_ANGLES: 4,
-    JOINT_VELOCITIES: 4,
-    END_EFFECTOR_POINTS: 9,
-    END_EFFECTOR_POINT_VELOCITIES: 9,
-    ACTION: 3,
+    JOINT_ANGLES: 2,
+    JOINT_VELOCITIES: 2,
+    END_EFFECTOR_POINTS: 3,
+    END_EFFECTOR_POINT_VELOCITIES: 3,
+    ACTION: 2,
     RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
     RGB_IMAGE_SIZE: 3,
 },
 {
-    JOINT_ANGLES: 5,
-    JOINT_VELOCITIES: 5,
-    END_EFFECTOR_POINTS: 9,
-    END_EFFECTOR_POINT_VELOCITIES: 9,
-    ACTION: 4,
+    JOINT_ANGLES: 2,
+    JOINT_VELOCITIES: 2,
+    END_EFFECTOR_POINTS: 3,
+    END_EFFECTOR_POINT_VELOCITIES: 3,
+    ACTION: 2,
     RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
     RGB_IMAGE_SIZE: 3,
 }]
@@ -57,7 +57,7 @@ SENSOR_DIMS = [{
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([ 1.0, 1.0, 1.0, 1.0])]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
-EXP_DIR = BASE_DIR + '/../experiments/button_invariant/'
+EXP_DIR = BASE_DIR + '/../experiments/particle/'
 INIT_POLICY_DIR = '/home/abhigupta/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
@@ -69,9 +69,9 @@ common = {
     'data_files_dir': EXP_DIR + 'data_files/',
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
-    'conditions': 4,
+    'conditions': 2,
     'train_conditions': [0, 1],
-    'test_conditions': [2,3],
+    'test_conditions': [],
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
@@ -119,26 +119,29 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = [{
     'type': AgentMuJoCo,
-    'filename': ['./mjc_models/3link_button.xml', './mjc_models/3link_button_left.xml', './mjc_models/3link_button.xml', './mjc_models/3link_button_left.xml'],
-    'x0': np.zeros((8,)),
+    'filename': ['./mjc_models/particle2d.xml', './mjc_models/particle2d_2.xml'],
+    'x0': np.zeros((4,)),
     'dt': 0.05,
     'substeps': 5,
+    'smooth_noise': True,
+    'smooth_noise_var': 10.0,
+    'smooth_noise_renormalize': True,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
-    'pos_body_offset': [
-                        [np.array([.5, 0.0, 1]),np.array([ 0.0,0.0,0.0])],
-                        [np.array([.5, 0.0, -1]),np.array([0.0,0.0,0.0])],
-                        [np.array([-0.9, 0.0, 0.7]),np.array([0.5, 0.0, 1.4])],
-                        [np.array([-0.7, 0.0, -0.6]),np.array([0.8, 0.0, -1.4])],
+    # 'pos_body_offset': [
+    #                     [np.array([.5, 0.0, 1]),np.array([ 0.0,0.0,0.0])],
+    #                     [np.array([.5, 0.0, -1]),np.array([0.0,0.0,0.0])],
+    #                     # [np.array([-0.9, 0.0, 0.7]),np.array([0.5, 0.0, 1.4])],
+    #                     # [np.array([-0.7, 0.0, -0.6]),np.array([0.8, 0.0, -1.4])],
 
-                        # [np.array([-0.3, 0.0, 0.6]),np.array([0.5, 0.0, 0.9])],
-                        # [np.array([-0.4, 0.0, -0.5]),np.array([0.5, 0.0, -0.75])],
-                        # [np.array([-0.3, 0.0, 0.6]),np.array([0.6, 0.0, 0.85])],
-                        # [np.array([-0.4, 0.0, -0.6]),np.array([0.45, 0.0, -0.95])],
-                        ],
-    'pos_body_idx': np.array([6,8]),
-    'conditions': 4,
+    #                     # [np.array([-0.3, 0.0, 0.6]),np.array([0.5, 0.0, 0.9])],
+    #                     # [np.array([-0.4, 0.0, -0.5]),np.array([0.5, 0.0, -0.75])],
+    #                     # [np.array([-0.3, 0.0, 0.6]),np.array([0.6, 0.0, 0.85])],
+    #                     # [np.array([-0.4, 0.0, -0.6]),np.array([0.45, 0.0, -0.95])],
+    #                     ],
+    # 'pos_body_idx': np.array([6,8]),
+    'conditions': 2,
     'train_conditions': [0, 1],
-    'test_conditions': [2, 3],
+    'test_conditions': [],
     'image_width': IMAGE_WIDTH,
     'image_height': IMAGE_HEIGHT,
     'image_channels': IMAGE_CHANNELS,
@@ -154,26 +157,29 @@ agent = [{
          },
          {
     'type': AgentMuJoCo,
-    'filename': ['./mjc_models/4link_button.xml', './mjc_models/4link_button_left.xml', './mjc_models/4link_button_left.xml', './mjc_models/4link_gripper_strike.xml'],
-    'x0': np.zeros((10,)),
+    'filename': ['./mjc_models/particle2d.xml', './mjc_models/particle2d_2.xml'],
+    'x0': np.zeros((4,)),
     'dt': 0.05,
     'substeps': 5,
+    'smooth_noise': False,
+    'smooth_noise_var': 10.0,
+    'smooth_noise_renormalize': False,
     # [np.array([1.2, 0.0, 0.4]),np.array([1.2, 0.0, 0.9])]
-    'pos_body_offset': [
-                        [np.array([.5, 0.0, 1]),np.array([ 0.0,0.0,0.0])],
-                        [np.array([.5, 0.0, -1]),np.array([0.0,0.0,0.0])],
-                        [np.array([-0.9, 0.0, 0.7]),np.array([0.5, 0.0, 1.4])],
-                        [np.array([-0.7, 0.0, -0.6]),np.array([0.8, 0.0, -1.4])],
+    # 'pos_body_offset': [
+    #                     [np.array([.5, 0.0, 1]),np.array([ 0.0,0.0,0.0])],
+    #                     [np.array([.5, 0.0, -1]),np.array([0.0,0.0,0.0])],
+    #                     [np.array([-0.9, 0.0, 0.7]),np.array([0.5, 0.0, 1.4])],
+    #                     [np.array([-0.7, 0.0, -0.6]),np.array([0.8, 0.0, -1.4])],
 
-                        # [np.array([-0.3, 0.0, 0.6]),np.array([0.5, 0.0, 0.9])],
-                        # [np.array([-0.4, 0.0, -0.5]),np.array([0.5, 0.0, -0.75])],
-                        # [np.array([-0.3, 0.0, 0.6]),np.array([0.6, 0.0, 0.85])],
-                        # [np.array([-0.4, 0.0, -0.6]),np.array([0.45, 0.0, -0.95])],
-                        ],
-    'pos_body_idx': np.array([7,9]),
-    'conditions': 4,
+    #                     # [np.array([-0.3, 0.0, 0.6]),np.array([0.5, 0.0, 0.9])],
+    #                     # [np.array([-0.4, 0.0, -0.5]),np.array([0.5, 0.0, -0.75])],
+    #                     # [np.array([-0.3, 0.0, 0.6]),np.array([0.6, 0.0, 0.85])],
+    #                     # [np.array([-0.4, 0.0, -0.6]),np.array([0.45, 0.0, -0.95])],
+    #                     ],
+    # 'pos_body_idx': np.array([7,9]),
+    'conditions': 2,
     'train_conditions': [0, 1],
-    'test_conditions': [2, 3],
+    'test_conditions': [],
     'image_width': IMAGE_WIDTH,
     'image_height': IMAGE_HEIGHT,
     'image_channels': IMAGE_CHANNELS,
@@ -246,81 +252,37 @@ algorithm[1]['init_traj_distr'] = {
 
 fk_cost_1 = [{
     'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0,0,0]), 
-                                           [np.array([.5, 0.0, 1.5]), np.array([.5, 0.0, -1.5])][i] + agent[0]['pos_body_offset'][i][1],
-                                           np.array([0,0,0])]),
-    'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+    'target_end_effector': [np.array([1.5,0,0.5]), np.array([1.0, 0, 1])][i],
+    'wp': np.array([1, 1, 1]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
     'ramp_option': RAMP_QUADRATIC
 } for i in agent[0]['train_conditions']]
-
-
-fk_cost_blocktouch = [
-{
-    'type': CostFK,
-    'target_end_effector': np.concatenate([[np.array([0.5, 0.0, 0.95]), np.array([0.5, 0.0, -0.95])][i],
-                                           np.array([0,0,0]), 
-                                           np.array([0,0,0])]),
-    'wp': np.array([1, 1, 1, 0, 0, 0,0,0,0]),
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'ramp_option': RAMP_MIDDLE_DRAWER
-}
-# {
-#     'type': CostFKBlock,
-#     'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
-#     'l1': 0.1,
-#     'l2': 10.0,
-#     'alpha': 1e-5,
-# }
- for i in agent[0]['train_conditions']]
 
 algorithm[0]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i], fk_cost_blocktouch[i]],
-    'weights': [1.0, 5.0],
+    'costs': [fk_cost_1[i]],
+    'weights': [1.0],
 } for i in agent[0]['train_conditions']]
 
-fk_cost_2 = [{
-    'type': CostFK,
-    'target_end_effector': np.concatenate([np.array([0,0,0]), 
-                                           np.array([0.05, 0.05, 0.05]) + agent[1]['pos_body_offset'][i][1],
-                                           np.array([0,0,0])]),
-    'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'ramp_option': RAMP_QUADRATIC
-} for i in agent[1]['train_conditions']]
-
-# fk_cost_blocktouch2 = [{
-#     'type': CostFKBlock,
-#     'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
-#     'l1': 0.1,
-#     'l2': 10.0,
-#     'alpha': 1e-5,
-# } for i in agent[1]['train_conditions']]
-
-load_trajs = np.load("3link_uma.npy")
+load_trajs = np.load("3link_uma_same.npy")
 print load_trajs.shape
 # load_trajs = load_trajs[:, 0, :, :]
 #load_trajs = np.load('3link_feats.npy')
-test_cost = [{
-    'type': CostBouAmmar,
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'target_feats': np.mean(load_trajs[i], axis=0),
-} for i in agent[0]['train_conditions']]
+# test_cost = [{
+#     'type': CostBouAmmar,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'target_feats': np.mean(load_trajs[i], axis=0),
+# } for i in agent[0]['train_conditions']]
 
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_1[i], test_cost[i]],#, fk_cost_blocktouch[i]],
-    'weights': [1.0, 5.0],
+    'costs': [fk_cost_1[i]],#, test_cost[i]],#, fk_cost_blocktouch[i]],
+    'weights': [1.0],
 } for i in agent[0]['train_conditions']]
 
 
@@ -382,8 +344,8 @@ algorithm[1]['policy_prior'] = {
 
 config = {
     'iterations': 25,
-    'num_samples': 1,
-    'verbose_trials': 7,
+    'num_samples': 3,
+    'verbose_trials': 1,
     'verbose_policy_trials': 5,
     'save_wts': True,
     'common': common,
@@ -398,8 +360,8 @@ config = {
     'robot_iters': [range(25), range(0,25,2)],
     # 'robot0_file': '/home/abhigupta/gps/experiments/blockstrike/data_files/traj_sample_itr_07_rn_00.pkl',
     # 'robot1_file': '/home/abhigupta/gps/experiments/4link_blockstrike/data_files/traj_sample_itr_13_rn_00.pkl',
-    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7)]),
-    'r1_index_list': np.concatenate([np.arange(0,4), np.arange(5,9)]),
+    'r0_index_list': np.concatenate([np.arange(0,5), np.arange(6,7)]),
+    'r1_index_list': np.concatenate([np.arange(0,5), np.arange(6,7)]),
 }
 
 common['info'] = generate_experiment_info(config)
