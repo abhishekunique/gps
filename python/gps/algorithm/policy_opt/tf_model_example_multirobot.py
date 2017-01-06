@@ -1175,6 +1175,72 @@ def transition_reward_model(dim_input_state=[27, 27], dim_input_action=[27, 27],
 
     return nnets, other
 
+def transition_reward_model_simple(dim_input_state=[27, 27], dim_input_action=[27, 27], batch_size=25, network_config=None, ncond=0):
+    state_features_list = []
+    state_inputs = []
+    nnets = []
+    other = {}
+    #defining layer sizes [TOOD: Get from hyperparams]
+    num_hidden = 4
+    layer_size = 30
+    dim_hidden = [layer_size]*num_hidden
+    
+    all_losses = []
+    all_variables = []
+    
+
+    for robot_number, robot_params in enumerate(network_config):
+        #defining input placeholders
+        state_input = tf.placeholder("float", [None, dim_input_state[robot_number]], name='nn_input_state' + str(robot_number))
+        #appending into lists
+        state_inputs.append(state_input)
+        #DEFINING STATE VARIABLES
+        w0_state = init_weights((dim_input_state[robot_number], dim_hidden[0]), name='w0_state' + str(robot_number))
+        b0_state = init_bias((dim_hidden[0],), name='b0_state'+str(robot_number))
+        w1_state = init_weights((dim_hidden[0], dim_hidden[1]), name='w1_state' + str(robot_number))
+        b1_state = init_bias((dim_hidden[1],), name='b1_state' + str(robot_number))
+        w2_state = init_weights((dim_hidden[1], dim_hidden[2]), name='w2_state' + str(robot_number))
+        b2_state = init_bias((dim_hidden[2],), name='b2_state' + str(robot_number))
+
+        w3_state_ae = init_weights((dim_hidden[2], dim_hidden[3]), name='w3_state_ae' + str(robot_number))
+        b3_state_ae = init_bias((dim_hidden[3],), name='b3_state_ae' + str(robot_number))
+        w4_state_ae = init_weights((dim_hidden[3], dim_input_state[robot_number]), name='w4_state_ae' + str(robot_number))
+        b4_state_ae = init_bias((dim_input_state[robot_number],), name='b4_state_ae' + str(robot_number))
+
+        all_variables += [w0_state, b0_state]
+        all_variables += [w1_state, b1_state]
+        all_variables += [w2_state, b2_state]
+        all_variables += [w3_state_ae, b3_state_ae]
+        all_variables += [w4_state_ae, b4_state_ae]
+        #END DEFINING STATE VARIABLES
+
+        ### STATE EMBEDDING ###
+        layer0_state = tf.nn.relu(tf.matmul(state_input, w0_state) + b0_state)
+        layer1_state = tf.nn.relu(tf.matmul(layer0_state, w1_state) + b1_state)
+        layer2_state = tf.matmul(layer1_state, w2_state) + b2_state
+        state_features = layer2_state
+        state_features_list.append(state_features)
+        #autoencoding output#
+        layer3_state_ae = tf.nn.relu(tf.matmul(layer2_state, w3_state_ae) + b3_state_ae)
+        output_state_ae = tf.matmul(layer3_state_ae, w4_state_ae) + b4_state_ae
+        ### END STATE EMBEDDING ###
+
+        loss_ae_state = tf.nn.l2_loss(output_state_ae - state_input)
+        all_losses += [loss_ae_state]
+        if robot_number == 1:
+            loss_contrastive_state = tf.nn.l2_loss(state_features_list[0] - state_features_list[1])
+            all_losses += [loss_contrastive_state]
+        nnets.append(TfMap.init_from_lists([None, None, None], [None], [None], None, None))
+
+    all_variables_dict = {}
+    for v in all_variables:
+        all_variables_dict[v.name] = v
+    other['all_losses'] = all_losses
+    other['all_variables'] = all_variables_dict
+    other['state_inputs'] = state_inputs
+    other['state_features_list'] = state_features_list
+    return nnets, other
+
 # def transition_reward_model_domainconfusion(dim_input_state=[27, 27], dim_input_action=[27, 27], batch_size=25, network_config=None, ncond=0):
 #     state_features_list = []
 #     action_features_list = []

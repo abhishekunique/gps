@@ -22,7 +22,7 @@ from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd, init_from_fil
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, transition_reward_model
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, transition_reward_model, transition_reward_model_simple
 from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC, RAMP_MIDDLE_DRAWER
 from gps.utility.data_logger import DataLogger
 
@@ -74,7 +74,7 @@ common = {
     'num_robots':2,
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': transition_reward_model,
+        'network_model': transition_reward_model_simple,
         'run_feats': False,
         'invariant_train': True,
         'load_weights': '/home/abhigupta/gps/subspace_newweights.pkl',
@@ -104,6 +104,8 @@ common = {
             'batch_size': 25,
             # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
         }],
+        'init_iterations':10000,
+        'em_iterations':5000,
         'iterations': 60000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
