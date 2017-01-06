@@ -239,7 +239,7 @@ class PolicyOptTf(PolicyOpt):
                 all_losses = np.zeros((len(self.other['all_losses']),))
 
         #starting EM. Alternate between performing DTW using learned metric space, and doing metric space learning using correspondences from DTW
-        em_iter = 5
+        em_iter = 3
         while em_iter >= 0:
             pairings = {}
             for cond in range(num_conds):
@@ -275,7 +275,7 @@ class PolicyOptTf(PolicyOpt):
                             xs.append(x)
                             ys.append(y)
                         plt.plot([xs[0], xs[1]], [ys[0], ys[1]])
-            plt.show()
+            # plt.show()
             obs_reshaped.append(np.asarray(obs_source))
             obs_reshaped.append(np.asarray(obs_target))
 
@@ -303,13 +303,13 @@ class PolicyOptTf(PolicyOpt):
                     print("--------------------------")
                     average_loss = 0
                     all_losses = np.zeros((len(self.other['all_losses']),))
-
+            em_iter -= 1
 
         var_dict = {}
         for k, v in self.other['all_variables'].items():
             var_dict[k] = self.sess.run(v)
         pickle.dump(var_dict, open("subspace_state.pkl", "wb"))
-
+        num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
         cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
         cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 30))
         l2_loss = 0
@@ -326,20 +326,20 @@ class PolicyOptTf(PolicyOpt):
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
         distances, indices = nbrs.kneighbors(cond_feats_other)
         indices = np.reshape(indices, (num_conds, num_samples, T_extended))
-        dO_robot0 = obs_uncut_actual[0].shape[-1]
-        obs_full_reshaped = np.reshape(obs_uncut_actual[0], (num_conds*num_samples*T_extended,dO_robot0))
+        T, dO_robot0 = obs_uncut_actual[0].shape[-2:]
+        obs_full_reshaped = np.reshape(obs_uncut_actual[0], (num_conds*num_samples*T,dO_robot0))
         print("CHECK NN")
         import IPython
         IPython.embed()
         for cond in range(num_conds):
             for s_no in range(num_samples):
                 color = ['r', 'b'][robot_number]
-                for t in range(T_extended):
-                    x = obs_uncut_actual[1][cond, s_no, t, 8]
-                    y = obs_extended_full[1][cond, s_no, t, 10]
+                for t in range(T):
+                    x = obs_uncut_actual[1][cond, s_no, t, 10]
+                    y = obs_uncut_actual[1][cond, s_no, t, 12]
                     nnbr_currpoint = indices[cond, s_no, t]
-                    x_nbr = obs_full_reshaped[nnbr_currpoint][6]
-                    y_nbr = obs_full_reshaped[nnbr_currpoint][8]
+                    x_nbr = obs_full_reshaped[nnbr_currpoint][8]
+                    y_nbr = obs_full_reshaped[nnbr_currpoint][10]
                     print("X: " + str([x,x_nbr]))
                     print("Y: " + str([y,y_nbr]))
                     lines = plt.plot([x,x_nbr], [y,y_nbr])

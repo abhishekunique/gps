@@ -260,7 +260,7 @@ class GPSMain(object):
             
 
         full_dict = pickle.load(open("multiproxy_data.pkl", "rb"))
-        tasks = ['reach']
+        tasks = ['reach', 'push', 'peg']
         obs_full = []
         obs_uncut_proxy = []
         #obs_full is the joint angles and velocities for the proxy task
@@ -277,7 +277,7 @@ class GPSMain(object):
             obs_uncut = np.concatenate(obs_uncut, axis=0)  
             obs_full.append(obs)
             obs_uncut_proxy.append(obs_uncut)
-        self.policy_opt.train_invariant_autoencoder(obs_full, obs_complete_time_full, obs_uncut_proxy, obs_uncut_actual)
+        self.policy_opt.train_invariant_autoencoder(obs_full, obs_complete_time_full, obs_uncut_proxy, obs_uncut_actual_full)
         import IPython
         IPython.embed()
         
