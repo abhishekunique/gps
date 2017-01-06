@@ -17,67 +17,6 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import plot, ion, show
 from matplotlib.backends.backend_pdf import PdfPages
 from sklearn.neighbors import NearestNeighbors
-class MLPlotter:
-    """
-    Plot/save machine learning data
-    """
-    def __init__(self, title):
-        self.error_generator = []
-        self.error_discriminator = []
-        self.error_generator_only = []
-        ### setup plot figure
-        self.f, self.axes = plt.subplots(1, 3, figsize=(15,7))
-        mng = plt.get_current_fig_manager()
-        plt.suptitle(title)
-        plt.show(block=False)
-
-    def plot(self):
-        f, axes = self.f, self.axes
-
-        for ax in axes:
-                ax.clear()
-
-        axes[0].plot(*zip(*self.error_generator), color='k', linestyle='-', label='Train')
-        axes[1].plot(*zip(*self.error_discriminator), color='r', linestyle='--', label='Val')
-        axes[2].plot(*zip(*self.error_generator_only), color='r', linestyle='--', label='Val')
-
-        axes[0].set_title('Error')
-        axes[0].set_ylabel('Percentage')
-        axes[0].set_xlabel('Epoch')
-
-        axes[1].set_title('Error')
-        axes[1].set_ylabel('Percentage')
-        axes[1].set_xlabel('Epoch')
-
-        axes[2].set_title('Error')
-        axes[2].set_ylabel('Percentage')
-        axes[2].set_xlabel('Epoch')
-
-        f.canvas.draw()
-
-        plt.legend()
-        plt.pause(0.01)
-
-    def add_generator(self, itr, err):
-        self.error_generator.append((itr, err))
-
-    def add_discriminator(self, itr, err):
-        self.error_discriminator.append((itr, err))
-
-    def add_generator_only(self, itr, err):
-        self.error_generator_only.append((itr, err))
-
-    def save(self, save_dir):
-        with open(os.path.join(save_dir, 'plotter.pkl'), 'w') as f:
-            pickle.dump({'error_generator':self.error_generator,
-                         'error_discriminator':self.error_discriminator,
-                         'error_generator_only':self.error_generator_only},
-                        f)
-
-        self.f.savefig(os.path.join(save_dir, 'training.png'))
-
-    def close(self):
-        plt.close(self.f)
 
 class PolicyOptTf(PolicyOpt):
     """ Policy optimization using tensor flow for DAG computations/nonlinear function approximation. """
@@ -201,268 +140,167 @@ class PolicyOptTf(PolicyOpt):
                               weight_decay=self._hyperparams['weight_decay'],
                               vars_to_opt=self.other['all_variables'].values())
 
-        # self.dc_solver =TfSolver(loss_scalar=tf.add_n(self.other['dc_loss']),
-        #                       solver_name=self._hyperparams['solver_type'],
-        #                       base_lr=0.0005, #self._hyperparams['lr'],
-        #                       lr_policy=self._hyperparams['lr_policy'],
-        #                       momentum=self._hyperparams['momentum'],
-        #                       weight_decay=self._hyperparams['weight_decay'],
-        #                       vars_to_opt=self.other['dc_variables'].values())
+    def DTW(self, X, Y):
+        N = len(X)
+        M = len(Y)
+        D = np.zeros((N, M))
+        C = np.zeros((N, M))
+        for i in range(N):
+            for j in range(M):
+                C[i,j] = np.linalg.norm(X[i] - Y[j])
+        runsum = 0
+        pointers = np.zeros((N,M,2))
+        for i in range(N):
+            runsum += C[i, 0]
+            D[i,0] = runsum
+            pointers[i,0] = np.array([i-1, 0])
+        runsum = 0
+        for i in range(M):
+            runsum += C[0, i]
+            D[0,i] = runsum
+            pointers[0,i] = np.array([0, i-1])
+        
+        for i in range(1,N):
+            for j in range(1,M):
+                print((i,j))
+                D[i,j] = np.min([D[i-1, j-1], D[i-1,j], D[i, j-1]]) + C[i,j]
+                prev = np.argmin([D[i-1, j-1], D[i-1,j], D[i, j-1]])
+                if prev == 0:
+                    pointers[i,j,0] = i-1
+                    pointers[i,j,1] = j-1
+                elif prev == 1:
+                    pointers[i,j,0] = i-1
+                    pointers[i,j,1] = j
+                elif prev == 2:
+                    pointers[i,j,0] = i
+                    pointers[i,j,1] = j-1
+        #force last time steps to align
 
-    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full):
+        pairs = [(N-1, M-1)]
+        init = pointers[-1, -1]
+        while not np.all(init == np.zeros((2,))):
+            pairs.append((init[0], init[1]))
+            init = pointers[init[0], init[1]]
+        pairs.append((0.0,0.0))
+        print(pairs)
+        import IPython
+        IPython.embed()
+        return D, pointers, pairs
+
+    def train_invariant_autoencoder(self, obs_full, obs_extended_full, obs_uncut_proxy, obs_uncut_actual):
         import matplotlib.pyplot as plt
         num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
+        #obs_full is proxy task data with only joint angles
+        #obs_extended_full is the actual task data with only joint angles
+        #obs_uncut_proxy is the full thing with end effectors for proxy task
+        #obs_uncut_actual is the full thing with end effectors for actual task
+        #Plotting the initial correspondences and end effector trajectories.
+        for cond in range(num_conds):
+            for s_no in range(num_samples):
+                xs = []
+                ys = []
+                for robot_number in range(self.num_robots):
+                    color = ['r', 'b'][robot_number]
+                    x = obs_uncut_proxy[robot_number][cond, s_no, :, 6+2*robot_number]
+                    y = obs_uncut_proxy[robot_number][cond, s_no, :, 8+2*robot_number]
+                    plt.scatter(x, y, c=color)
+                    xs.append(x)
+                    ys.append(y)
+                plt.plot([xs[0], xs[1]], [ys[0], ys[1]])
+        plt.show()
 
-        
-        # for cond in range(num_conds):
-        #     for s_no in range(num_samples):
-        #         xs = []
-        #         ys = []
-        #         for robot_number in range(self.num_robots):
-        #             color = ['r', 'b'][robot_number]
-        #             x = obs_extended_full[robot_number][cond, s_no, :, 6+2*robot_number]
-        #             y = obs_extended_full[robot_number][cond, s_no, :, 8+2*robot_number]
-        #             plt.scatter(x, y, c=color)
-        #             xs.append(x)
-        #             ys.append(y)
-        #         plt.plot([xs[0], xs[1]], [ys[0], ys[1]])
-        # plt.show()
-        # import IPython
-        # IPython.embed()
-
+        #Reshaping data to train initial metric space before EM
         obs_reshaped = []
-        next_obs_reshaped = []
-        action_reshaped = []
-        #TODO: [SCALE OBSERVATIONS BACK DOWN TO REASONABLE RANGE]
         for robot_number in range(self.num_robots):
-
             obs = obs_full[robot_number]
-            N, T = obs.shape[:2]
-
-            dO = obs.shape[2]
-            dU = self._dU[robot_number]
-
-            obs = np.reshape(obs, (N*T, dO))
-
-            next_obs = next_obs_full[robot_number]
-            next_obs = np.reshape(next_obs, (N*T, dO))
-            
-
-            action = action_full[robot_number]
-            action = np.reshape(action, (N*T, dU))
-
+            cond, N, T, dO = obs.shape[:4]
+            obs = np.reshape(obs, (cond*N*T, dO))
             obs_reshaped.append(obs)
-            next_obs_reshaped.append(next_obs)
-            action_reshaped.append(action)
 
+        #passing in data to initial training to establish metric space for DTW
         idx = range(N*T)
         np.random.shuffle(idx)
         batches_per_epoch = np.floor(N*T / self.batch_size)
         average_loss = 0
         all_losses = np.zeros((len(self.other['all_losses']),))
-        for i in range(self._hyperparams['iterations']):
+        for i in range(self._hyperparams['init_iterations']):
             feed_dict = {}
             start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
             idx_i = idx[start_idx:start_idx+self.batch_size]
             for robot_number in range(self.num_robots):
                 feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
-                feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
-                feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
             all_losses += self.sess.run(self.other['all_losses'], feed_dict)
-
             average_loss += train_loss
-
             if i % 1000 == 0 and i != 0:
-                LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 100)
                 print 'supervised tf loss is '
                 print (average_loss/1000)
                 print (all_losses/1000)
                 print("--------------------------")
                 average_loss = 0
                 all_losses = np.zeros((len(self.other['all_losses']),))
-        import IPython
-        IPython.embed()
-        var_dict = {}
-        for k, v in self.other['all_variables'].items():
-            var_dict[k] = self.sess.run(v)
-        pickle.dump(var_dict, open("subspace_state.pkl", "wb"))
 
+        #starting EM. Alternate between performing DTW using learned metric space, and doing metric space learning using correspondences from DTW
+        em_iter = 5
+        while em_iter >= 0:
+            pairings = {}
+            for cond in range(num_conds):
+                for sample_num in range(num_samples):
+                    #get features to pass into DTW
+                    feed_dict = {self.other['state_inputs'][0]: obs_full[0][cond][sample_num], 
+                                self.other['state_inputs'][1]: obs_full[1][cond][sample_num]}
+                    source_feats = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+                    target_feats = self.sess.run(self.other['state_features_list'][1], feed_dict=feed_dict)
+                    #get pairs from DTW
+                    D, pointers, pairs = self.DTW(source_feats, target_feats)
+                    pairings[(cond, sample_num)] = copy.copy(pairs)
 
+            #generate paired data to feed into the M step of EM, in order to relearn metric space
+            obs_reshaped = []
+            obs_source = []
+            obs_target = []
+            for cond in range(num_conds):
+                for sample_num in range(num_samples):
+                    pairs = pairings[(cond, sample_num)]
+                    for pair in pairs:
+                        source_index = pair[0]
+                        target_index = pair[1]
+                        obs_source.append(obs_full[0][cond][sample_num][source_index])
+                        obs_target.append(obs_full[0][cond][sample_num][target_index])
+            obs_reshaped.append(obs_source)
+            obs_reshaped.append(obs_target)
 
-        # num_conds, num_samples, T_extended, dO = obs_extended_full[0].shape
-        # cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
-        # for cond in range(num_conds):
-        #     for sample_num in range(num_samples):
-        #         feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num]}
-        #         cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
-        # np.save("3link_feats.npy", np.asarray(cond_feats))
-
-
-
-        cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
-        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 30))
-        l2_loss = 0
-        for cond in range(num_conds):
-            for sample_num in range(num_samples):
-                feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num], 
-                            self.other['state_inputs'][1]: obs_extended_full[1][cond][sample_num]}
-                cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
-                cond_feats_other[cond, sample_num] = self.sess.run(self.other['state_features_list'][1], feed_dict=feed_dict)
-                l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
-        print(l2_loss)
-        print("RAN THROUGH FEATURES")
-        import IPython
-        IPython.embed()
-        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,30))
-        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,30))
-        nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
-        distances, indices = nbrs.kneighbors(cond_feats_other)
-        indices = np.reshape(indices, (num_conds, num_samples, T_extended))
-        dO_robot0 = obs_extended_full[0].shape[-1]
-        obs_full_reshaped = np.reshape(obs_extended_full[0], (num_conds*num_samples*T_extended,dO_robot0))
-        print("CHECK NN")
-        import IPython
-        IPython.embed()
-        # for cond in range(num_conds):
-        #     for s_no in range(num_samples):
-        #         color = ['r', 'b'][robot_number]
-        #         for t in range(T_extended):
-        #             x = obs_extended_full[1][cond, s_no, t, 8]
-        #             y = obs_extended_full[1][cond, s_no, t, 10]
-        #             nnbr_currpoint = indices[cond, s_no, t]
-        #             x_nbr = obs_full_reshaped[nnbr_currpoint][6]
-        #             y_nbr = obs_full_reshaped[nnbr_currpoint][8]
-        #             print("X: " + str([x,x_nbr]))
-        #             print("Y: " + str([y,y_nbr]))
-        #             lines = plt.plot([x,x_nbr], [y,y_nbr])
-        # plt.show()
-        # import IPython
-        # IPython.embed()
-        np.save("3link_feats.npy", np.asarray(cond_feats))
-
-        print("done training invariant autoencoder and saving weights")
-
-    def train_invariant_dc(self, obs_full, next_obs_full, action_full, obs_extended_full):
-        num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
-
-        
-        for cond in range(num_conds):
-            for s_no in range(num_samples):
+            #train EM metric space again
+            idx = range(N*T)
+            np.random.shuffle(idx)
+            batches_per_epoch = np.floor(N*T / self.batch_size)
+            average_loss = 0
+            all_losses = np.zeros((len(self.other['all_losses']),))
+            for i in range(self._hyperparams['em_iterations']):
+                feed_dict = {}
+                start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
+                idx_i = idx[start_idx:start_idx+self.batch_size]
                 for robot_number in range(self.num_robots):
-                    color = ['r', 'b'][robot_number]
-                    x = obs_extended_full[robot_number][cond, s_no, :, 6+2*robot_number]
-                    y = obs_extended_full[robot_number][cond, s_no, :, 8+2*robot_number]
-                    plt.scatter(x, y, c=color)
-        import IPython
-        IPython.embed()
-        obs_reshaped = []
-        next_obs_reshaped = []
-        action_reshaped = []
-        #TODO: [SCALE OBSERVATIONS BACK DOWN TO REASONABLE RANGE]
-        for robot_number in range(self.num_robots):
+                    feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
+                train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
+                all_losses += self.sess.run(self.other['all_losses'], feed_dict)
 
-            obs = obs_full[robot_number]
-            N, T = obs.shape[:2]
+                average_loss += train_loss
 
-            dO = obs.shape[2]
-            dU = self._dU[robot_number]
-
-            obs = np.reshape(obs, (N*T, dO))
-
-            next_obs = next_obs_full[robot_number]
-            next_obs = np.reshape(next_obs, (N*T, dO))
-            
-
-            action = action_full[robot_number]
-            action = np.reshape(action, (N*T, dU))
-
-            obs_reshaped.append(obs)
-            next_obs_reshaped.append(next_obs)
-            action_reshaped.append(action)
-
-        idx = range(N*T)
-        np.random.shuffle(idx)
-        batches_per_epoch = np.floor(N*T / self.batch_size)
+                if i % 1000 == 0 and i != 0:
+                    print 'supervised tf loss is '
+                    print (average_loss/1000)
+                    print (all_losses/1000)
+                    print("--------------------------")
+                    average_loss = 0
+                    all_losses = np.zeros((len(self.other['all_losses']),))
 
 
-
-
-        dc_loss = 0
-        pred_error = 0
-        average_loss = 0
-        all_losses = np.zeros((len(self.other['all_losses']),))
-        gen_loss = np.zeros((len(self.other['gen_loss']),))
-        all_losses_dc = np.zeros((len(self.other['dc_loss']),))
-        mlplt = MLPlotter("Learning curves")
-        robot0_classification = np.zeros((self.batch_size,))
-        robot1_classification = np.ones((self.batch_size,))
-        for i in range(self._hyperparams['iterations']):
-            feed_dict = {}
-            start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
-            idx_i = idx[start_idx:start_idx+self.batch_size]
-            for robot_number in range(self.num_robots):
-                feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
-                feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
-                feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
-            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
-            all_losses += self.sess.run(self.other['all_losses'], feed_dict)
-            gen_loss += self.sess.run(self.other['gen_loss'], feed_dict)
-            predictions_full = self.sess.run(self.other['predictions_full'], feed_dict)
-            for robot_number in range(self.num_robots):
-                for pred in predictions_full[robot_number]:
-                    pred_error += np.sum(pred != [robot0_classification, robot1_classification][robot_number])
-            average_loss += train_loss
-            if i % 200 == 0 and i != 0:
-
-                print 'supervised tensorflow loss is '
-                print (average_loss/200)
-                print (all_losses/200)
-                print (gen_loss/200)
-
-                mlplt.add_generator(i, average_loss / 200)
-                mlplt.add_generator_only(i, np.sum(all_losses) / 200)
-                print("PREDICTION ERROR:")
-                print(pred_error/(2.0*self.batch_size*200))
-                mlplt.add_discriminator(i, pred_error/(2.0*self.batch_size*200))
-                pred_error = 0
-                print("--------------------------")
-                average_loss = 0
-                all_losses = np.zeros((len(self.other['all_losses']),))
-                gen_loss = np.zeros((len(self.other['gen_loss']),))
-
-            # if i > 1000:
-            dc_feed_dict = {}
-            start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
-            idx_i = idx[start_idx:start_idx+self.batch_size]
-            for robot_number in range(self.num_robots):
-                dc_feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
-                dc_feed_dict[self.other['next_state_inputs'][robot_number]] = next_obs_reshaped[robot_number][idx_i]
-                dc_feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
-            dc_loss += self.dc_solver(dc_feed_dict, self.sess, device_string=self.device_string)
-            all_losses_dc += self.sess.run(self.other['dc_loss'], dc_feed_dict)
-
-            if i % 200 == 0 and i != 0:
-                print 'supervised dc loss is '
-                print (dc_loss/200)
-                print (all_losses_dc/200)
-                print("--------------------------")
-                dc_loss = 0
-                all_losses_dc = np.zeros((len(self.other['dc_loss']),))
-        mlplt.plot()
-        raw_input()
-        mlplt.close()
-        import IPython
-        IPython.embed()
         var_dict = {}
         for k, v in self.other['all_variables'].items():
             var_dict[k] = self.sess.run(v)
         pickle.dump(var_dict, open("subspace_state.pkl", "wb"))
 
-
-
-        
         cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
         cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 30))
         l2_loss = 0
@@ -474,16 +312,13 @@ class PolicyOptTf(PolicyOpt):
                 cond_feats_other[cond, sample_num] = self.sess.run(self.other['state_features_list'][1], feed_dict=feed_dict)
                 l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
         print(l2_loss)
-        print("RAN THROUGH FEATURES")
-        import IPython
-        IPython.embed()
         cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,30))
         cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,30))
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
         distances, indices = nbrs.kneighbors(cond_feats_other)
         indices = np.reshape(indices, (num_conds, num_samples, T_extended))
-        dO_robot0 = obs_extended_full[0].shape[-1]
-        obs_full_reshaped = np.reshape(obs_extended_full[0], (num_conds*num_samples*T_extended,dO_robot0))
+        dO_robot0 = obs_uncut_actual[0].shape[-1]
+        obs_full_reshaped = np.reshape(obs_uncut_actual[0], (num_conds*num_samples*T_extended,dO_robot0))
         print("CHECK NN")
         import IPython
         IPython.embed()
@@ -491,7 +326,7 @@ class PolicyOptTf(PolicyOpt):
             for s_no in range(num_samples):
                 color = ['r', 'b'][robot_number]
                 for t in range(T_extended):
-                    x = obs_extended_full[1][cond, s_no, t, 8]
+                    x = obs_uncut_actual[1][cond, s_no, t, 8]
                     y = obs_extended_full[1][cond, s_no, t, 10]
                     nnbr_currpoint = indices[cond, s_no, t]
                     x_nbr = obs_full_reshaped[nnbr_currpoint][6]
@@ -502,9 +337,9 @@ class PolicyOptTf(PolicyOpt):
         plt.show()
         import IPython
         IPython.embed()
-        cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T_extended, 30))
         np.save("3link_feats.npy", np.asarray(cond_feats))
-        print("done training invariant DC and saving weights")
+
+        print("done training invariant autoencoder and saving weights")
 
     def run_features_forward(self, obs, robot_number):
         feed_dict = {}

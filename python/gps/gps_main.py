@@ -243,59 +243,42 @@ class GPSMain(object):
             ]
 
         
-        # Compute target mean, cov, and weight for each sample.
-        obs_full = []
-        next_obs_full = []
-        tgt_actions_full = []
+        #obs_complete_time_full is just joint angles and velocities for actual task
+        #obs_uncut_actual_full is full state including ee for actual task 
         obs_complete_time_full = []
+        obs_uncut_actual_full = []
         for robot_number in range(self.num_robots):
-            dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T - 1
-            T_extended = T + 1
-            obs_data, next_obs_data, tgt_actions = np.zeros((0, T, dO)), np.zeros((0, T, dO)), np.zeros((0, T, dU))
+            dU, dO, T_extended = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T
             obs_complete_time = np.zeros((len(self._train_idx[robot_number]), self._hyperparams['num_samples'], T_extended, dO))
             for m in self._train_idx[robot_number]:
                 samples = traj_sample_lists[robot_number][m]
-                X = samples.get_X()
-                N = len(samples)
-                traj = self.algorithm[robot_number].cur[m].traj_distr
-                mu = np.zeros((N, T, dU))
-                for t in range(T):
-                    for i in range(N):
-                        mu[i, t, :] = \
-                                (traj.K[t, :, :].dot(X[i, t, :]) + traj.k[t, :]) 
-                tgt_actions = np.concatenate((tgt_actions, mu))
-                obs_data = np.concatenate((obs_data, samples.get_obs()[:, :-1, :]))
-                next_obs_data = np.concatenate((next_obs_data, samples.get_obs()[:, 1:, :]))
                 obs_complete_time[m] = samples.get_obs()
+            obs_uncut_actual = copy.copy(obs_complete_time)
+            obs_uncut_actual_full.append(obs_uncut_actual)
 
-            obs_data = obs_data[:, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
-            next_obs_data = next_obs_data[:, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
             obs_complete_time = obs_complete_time[:, :, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
-            obs_full.append(obs_data)
-            next_obs_full.append(next_obs_data)
-            tgt_actions_full.append(tgt_actions)
             obs_complete_time_full.append(obs_complete_time)
+            
+
         full_dict = pickle.load(open("multiproxy_data.pkl", "rb"))
-        tasks = ['reach', 'push', 'peg']
+        tasks = ['reach']
         obs_full = []
-        next_obs_full = []
-        tgt_actions_full = []
+        obs_uncut_proxy = []
+        #obs_full is the joint angles and velocities for the proxy task
+        #obs_uncut_proxy is the full state for the proxy task
         for robot_number in range(self.num_robots):
             obs = []
-            next_obs = []
-            tgt_actions = []
+            obs_uncut = []
             for task in tasks:
-                obs.append(full_dict[task]['obs_full'][robot_number][:, :, :[6, 8][robot_number]])
-                next_obs.append(full_dict[task]['next_obs_full'][robot_number][:, :, :[6, 8][robot_number]])
-                tgt_actions.append(full_dict[task]['action_full'][robot_number])
-            obs = np.concatenate(obs, axis=0)
-            next_obs = np.concatenate(next_obs, axis=0)
-            tgt_actions = np.concatenate(tgt_actions, axis=0)
+                unshaped_data = full_dict[task]['obs_full'][robot_number]
+                reshaped_data = np.reshape(unshaped_data, (4,7,100,12))
+                obs.append(reshaped_data[:, :, :[6, 8][robot_number]])
+                obs_uncut.append(copy.copy(reshaped_data))
+            obs = np.concatenate(obs, axis=0)  
+            obs_uncut = np.concatenate(obs_uncut, axis=0)  
             obs_full.append(obs)
-            next_obs_full.append(next_obs)
-            tgt_actions_full.append(tgt_actions)
-            
-        self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)
+            obs_uncut_proxy.append(obs_uncut)
+        self.policy_opt.train_invariant_autoencoder(obs_full, obs_complete_time_full, obs_uncut_proxy, obs_uncut_actual)
         import IPython
         IPython.embed()
         
