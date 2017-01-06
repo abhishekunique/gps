@@ -267,6 +267,17 @@ class PolicyOptTf(PolicyOpt):
                         target_index = pair[1]
                         obs_source.append(obs_full[0][cond][sample_num][source_index])
                         obs_target.append(obs_full[0][cond][sample_num][target_index])
+                        xs = []
+                        ys = []
+                        for robot_number in range(self.num_robots):
+                            color = ['r', 'b'][robot_number]
+                            x = obs_uncut_proxy[robot_number][cond, sample_num, source_index, 6+2*robot_number]
+                            y = obs_uncut_proxy[robot_number][cond, sample_num, target_index, 8+2*robot_number]
+                            plt.scatter(x, y, c=color)
+                            xs.append(x)
+                            ys.append(y)
+                        plt.plot([xs[0], xs[1]], [ys[0], ys[1]])
+            plt.show()
             obs_reshaped.append(obs_source)
             obs_reshaped.append(obs_target)
 
