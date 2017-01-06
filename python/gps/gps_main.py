@@ -212,8 +212,7 @@ class GPSMain(object):
         """
 
         traj_distr = self.data_logger.unpickle("btndata.pkl")
-        import IPython
-        IPython.embed()
+
         for ag in range(self.num_robots):
             name = self.agent[ag]._hyperparams['filename'][0]
             print(name)
@@ -271,8 +270,8 @@ class GPSMain(object):
             obs_uncut = []
             for task in tasks:
                 unshaped_data = full_dict[task]['obs_full'][robot_number]
-                reshaped_data = np.reshape(unshaped_data, (4,7,100,12))
-                obs.append(reshaped_data[:, :, :[6, 8][robot_number]])
+                reshaped_data = np.reshape(unshaped_data, (4,7,99,[12,14][robot_number]))
+                obs.append(reshaped_data[:, :, :, :[6, 8][robot_number]])
                 obs_uncut.append(copy.copy(reshaped_data))
             obs = np.concatenate(obs, axis=0)  
             obs_uncut = np.concatenate(obs_uncut, axis=0)  

@@ -176,20 +176,18 @@ class PolicyOptTf(PolicyOpt):
                     pointers[i,j,1] = j-1
         #force last time steps to align
 
-        pairs = [(N-1, M-1)]
+        pairs = [(int(N-1), int(M-1))]
         init = pointers[-1, -1]
         while not np.all(init == np.zeros((2,))):
-            pairs.append((init[0], init[1]))
+            pairs.append((int(init[0]), int(init[1])))
             init = pointers[init[0], init[1]]
-        pairs.append((0.0,0.0))
+        pairs.append((0,0))
         print(pairs)
-        import IPython
-        IPython.embed()
         return D, pointers, pairs
 
     def train_invariant_autoencoder(self, obs_full, obs_extended_full, obs_uncut_proxy, obs_uncut_actual):
         import matplotlib.pyplot as plt
-        num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
+        num_conds, num_samples, T_extended, _ = obs_full[0].shape
         #obs_full is proxy task data with only joint angles
         #obs_extended_full is the actual task data with only joint angles
         #obs_uncut_proxy is the full thing with end effectors for proxy task
@@ -266,7 +264,7 @@ class PolicyOptTf(PolicyOpt):
                         source_index = pair[0]
                         target_index = pair[1]
                         obs_source.append(obs_full[0][cond][sample_num][source_index])
-                        obs_target.append(obs_full[0][cond][sample_num][target_index])
+                        obs_target.append(obs_full[1][cond][sample_num][target_index])
                         xs = []
                         ys = []
                         for robot_number in range(self.num_robots):
@@ -278,8 +276,8 @@ class PolicyOptTf(PolicyOpt):
                             ys.append(y)
                         plt.plot([xs[0], xs[1]], [ys[0], ys[1]])
             plt.show()
-            obs_reshaped.append(obs_source)
-            obs_reshaped.append(obs_target)
+            obs_reshaped.append(np.asarray(obs_source))
+            obs_reshaped.append(np.asarray(obs_target))
 
             #train EM metric space again
             idx = range(N*T)
