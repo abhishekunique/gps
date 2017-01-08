@@ -351,6 +351,28 @@ class PolicyOptTf(PolicyOpt):
 
     #     print("done training invariant autoencoder and saving weights")
 
+    def cca(self,obs_full):
+        from sklearn.cross_decomposition import CCA
+        num_components = 6
+        self.fitted_cca = CCA(num_components)
+        Y, X = obs_full
+        N = X.shape[0]
+        T = X.shape[1]
+        X = np.reshape(X, [N*T, -1])
+        Y = np.reshape(Y, [N*T, -1])
+        self.fitted_cca.fit(X,Y)
+        return X,Y
+    def run_cca(self,obs_full):
+        from sklearn.cross_decomposition import CCA
+        Y, X = obs_full
+        N = X.shape[0]
+        T = X.shape[1]
+        X = np.reshape(X, [N*T, -1])
+        Y = np.reshape(Y, [N*T, -1])
+        r0 = np.dot(Y,self.fitted_cca.y_weights_)
+        # r1, r0 = self.fitted_cca.transform(X,Y)
+        return r0
+
     def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full, obs_uncut_full):
         import matplotlib.pyplot as plt
         num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape

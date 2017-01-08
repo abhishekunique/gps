@@ -12,6 +12,7 @@ from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_state import CostState
 from gps.algorithm.cost.cost_dev_rs_tendon import CostDevRs
 from gps.algorithm.cost.cost_action import CostAction
+from gps.algorithm.cost.cost_cca import CostCCA
 from gps.algorithm.cost.cost_sum import CostSum
 from gps.algorithm.cost.cost_sum_decreasing import CostSumDecrease
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
@@ -200,10 +201,10 @@ fk_cost_2 = [{
     'ramp_option': RAMP_MIDDLE_DRAWER
 }]
 
-load_trajs = np.load("3link_feats.npy")
-load_trajs = np.reshape(load_trajs, (2,10,100,60))
+load_trajs = np.load("3link_random.npy")
+#load_trajs = np.reshape(load_trajs, (2,10,100,60))
 test_cost = [{
-    'type': CostDevRs,
+    'type': CostCCA,
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,

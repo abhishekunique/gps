@@ -193,9 +193,10 @@ class GPSMain(object):
                 iteration, and resumes training at the next iteration.
         Returns: None
         """
-
+        np.random.seed(34597)
         # traj_distr = [self.data_logger.unpickle("joint_reach_3link_new.pkl"), self.data_logger.unpickle("tendon_reach_3link_final.pkl")]
-        traj_distr = [self.data_logger.unpickle("joint_reach_3link_morepos.pkl"), self.data_logger.unpickle("tendon_reach_3link_morepos.pkl")]
+        # traj_distr = [self.data_logger.unpickle("joint_reach_3link_morepos.pkl"), self.data_logger.unpickle("tendon_reach_3link_morepos.pkl")]
+        traj_distr = [self.data_logger.unpickle("joint_pull_3link_final.pkl"), self.data_logger.unpickle("tendon_reach_3link_morepos.pkl")]
 
         for ag in range(self.num_robots):
             name = self.agent[ag]._hyperparams['filename'][0]
@@ -288,9 +289,44 @@ class GPSMain(object):
         # tgt_actions_full = dict_data['action_full'] 
         # obs_complete_time_full = dict_data['obs_extended_full'] 
         # obs_uncut = dict_data['obs_uncut_full']
-       
+        # import IPython
+        # IPython.embed()
+
+
+        # self.policy_opt.cca(obs_full)
+        # x_weights = self.policy_opt.fitted_cca.x_weights_
+        # random_proj = np.random.random_sample(x_weights.shape)#*np.std(x_weights)+np.mean(x_weights)
+        # norm = np.linalg.norm(random_proj, axis = 0)
+        # for p in range(random_proj.shape[1]):
+        #     random_proj[:,p] /= norm[p]
+        # self.policy_opt.fitted_cca.x_weights = random_proj
+        # print random_proj
+        # y_weights = self.policy_opt.fitted_cca.y_weights_
+        # random_proj = np.random.random_sample(y_weights.shape)#*np.std(y_weights)+np.mean(y_weights)
+        # norm = np.linalg.norm(random_proj, axis = 0)
+        # for p in range(random_proj.shape[1]):
+        #     random_proj[:,p] /= norm[p]
+        # print random_proj
+        # self.policy_opt.fitted_cca.y_weights = random_proj
+        # r0 = self.policy_opt.run_cca(obs_full)
+        # weights = [self.policy_opt.fitted_cca.x_weights, self.policy_opt.fitted_cca.y_weights]
+        # self.data_logger.pickle('random_proj.pkl', weights)
+        import IPython
+        IPython.embed()
+        Y = obs_complete_time_full[0]
+        T =100
+        with open('random_proj.pkl', 'rb') as f:
+            import pickle
+            x_weights, y_weights = pickle.load(f)
+        Y = Y.reshape((20*T,6))
+        r0 = np.dot(Y, y_weights)
+        r1 =  np.reshape(r0, (2*10, T, 6))
+        r2 = r1[0:20:10]
+        r2 =  np.reshape(r2, (2,1, T, 6))
+        np.save('3link_random.npy', r2)
+
+
         
-        self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full, obs_uncut)
         import IPython
         IPython.embed()
 
