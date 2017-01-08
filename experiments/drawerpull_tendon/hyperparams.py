@@ -11,6 +11,8 @@ from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_state import CostState
 from gps.algorithm.cost.cost_dev_rs_tendon import CostDevRs
+from gps.algorithm.cost.cost_dev_rs_iso import CostISO
+from gps.algorithm.cost.cost_cca import CostCCA
 from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
 from gps.algorithm.cost.cost_sum_decreasing import CostSumDecrease
@@ -142,7 +144,7 @@ algorithm = [{
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
-    'iterations': 25,
+    'iterations': 75,
     'num_robots': common['num_robots'],
 },]
 # {
@@ -213,10 +215,48 @@ test_cost = [{
 
 #put a shaping here
 
+# load_trajs = np.load("3link_feats.npy")
+# import IPython
+# IPython.embed()
+# print load_trajs.shape
+# load_trajs = np.reshape(load_trajs, (2,10,100,6))
+# load_trajs_full = np.zeros((2,10,100,32))
+# load_trajs_full[:,:,:,8:11] = load_trajs[:,:,:,:3]
+# load_trajs_full[:,:,:,11:14] = load_trajs[:,:,:,3:6]
+# shaped_cost = [{
+#     'type': CostISO,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'data_type': [TENDON_LENGTHS, TENDON_VELOCITIES],
+#     'wp': np.concatenate([np.ones(3)]),
+#     'target_feats': np.mean(load_trajs[i], axis=0),
+#     'load_file': 'subspace_state.pkl'
+# } for i in agent[0]['train_conditions']]
+
+# load_trajs = np.load("3link_cca.npy")
+# print load_trajs.shape
+# load_trajs = np.reshape(load_trajs, (2,12,100,6))
+# # load_trajs_full = np.zeros((2,10,100,32))
+# # load_trajs_full[:,:,:,8:11] = load_trajs[:,:,:,:3]
+# # load_trajs_full[:,:,:,11:14] = load_trajs[:,:,:,3:6]
+
+# shaped_cost = [{
+#     'type': CostCCA,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     # 'data_type': [TENDON_LENGTHS, TENDON_VELOCITIES],
+#     # 'wp': np.concatenate([np.ones(3)]),
+#     'target_feats': np.mean(load_trajs[i], axis=0),
+#     'load_file': 'subspace_state.pkl'
+# } for i in agent[0]['train_conditions']]
+
+
 algorithm[0]['cost'] = [{
     'type': CostSumDecrease,
-    'costs': [state_cost_1[i], test_cost[i]],
-    'weights': [2.0, 10.0],
+    'costs': [state_cost_1[i]],
+    'weights': [2.0],
 } for i in agent[0]['train_conditions']]
 
 
@@ -248,7 +288,7 @@ algorithm[0]['policy_prior'] = {
 }
 
 config = {
-    'iterations': 25,
+    'iterations': 75,
     'num_samples': 12,
     'verbose_trials': 12,
     'verbose_policy_trials': 5,

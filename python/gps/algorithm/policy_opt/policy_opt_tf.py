@@ -171,7 +171,8 @@ class PolicyOptTf(PolicyOpt):
             dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])]
         else:
             dO = self._dO
-        tf_maps, other = tf_map_generator(dim_input_state=dO, dim_input_action=self._dU, batch_size=self.batch_size,
+        dU = [3,3]
+        tf_maps, other = tf_map_generator(dim_input_state=dO, dim_input_action=dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
@@ -350,7 +351,7 @@ class PolicyOptTf(PolicyOpt):
        
 
     #     print("done training invariant autoencoder and saving weights")
-
+    
     def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full, obs_uncut_full):
         import matplotlib.pyplot as plt
         num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
@@ -464,8 +465,9 @@ class PolicyOptTf(PolicyOpt):
         print("RAN THROUGH FEATURES")
         import IPython
         IPython.embed()
-        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,60))
-        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,60))
+        dim1 = 60
+        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,dim1))
+        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,dim1))
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
         distances, indices = nbrs.kneighbors(cond_feats_other)
         indices = np.reshape(indices, (num_conds, num_samples, T_extended))
@@ -494,7 +496,107 @@ class PolicyOptTf(PolicyOpt):
         np.save("3link_feats.npy", np.asarray(cond_feats))
 
         print("done training invariant autoencoder and saving weights")
+    """
+    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full, ee_full):
+        import matplotlib.pyplot as plt
+        num_conds, num_samples, T_extended, dim0 = obs_extended_full[0].shape
+        num_conds, num_samples, T_extended, dim1 = obs_extended_full[1].shape
+        obs_reshaped = []
+        next_obs_reshaped = []
+        action_reshaped = []
+        #TODO: [SCALE OBSERVATIONS BACK DOWN TO REASONABLE RANGE]
+        for robot_number in range(self.num_robots):
 
+            obs = obs_full[robot_number]
+            N, T = obs.shape[:2]
+
+            dO = obs.shape[2]
+            dU = self._dU[robot_number]
+
+            obs = np.reshape(obs, (N*T, dO))
+
+            next_obs = next_obs_full[robot_number]
+            next_obs = np.reshape(next_obs, (N*T, dO))
+            
+
+            action = action_full[robot_number]
+            action = np.reshape(action, (N*T, dU))
+
+            obs_reshaped.append(obs)
+            next_obs_reshaped.append(next_obs)
+            action_reshaped.append(action)
+
+        idx = range(N*T)
+        np.random.shuffle(idx)
+        batches_per_epoch = np.floor(N*T / self.batch_size)
+        average_loss = 0
+        all_losses = np.zeros((len(self.other['all_losses']),))
+        for i in range(self._hyperparams['iterations']):
+            feed_dict = {}
+            start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
+            idx_i = idx[start_idx:start_idx+self.batch_size]
+            for robot_number in range(self.num_robots):
+                feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
+                feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
+            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
+            all_losses += self.sess.run(self.other['all_losses'], feed_dict)
+
+            average_loss += train_loss
+
+            if i % 1000 == 0 and i != 0:
+                LOGGER.debug('tensorflow iteration %d, average loss %f',
+                             i, average_loss / 100)
+                print 'supervised tf loss is '
+                print(i)
+                print (average_loss/1000)
+                print (all_losses/1000)
+                print("--------------------------")
+                average_loss = 0
+                all_losses = np.zeros((len(self.other['all_losses']),))
+        var_dict = {}
+        for k, v in self.other['all_variables'].items():
+            var_dict[k] = self.sess.run(v)
+        pickle.dump(var_dict, open("subspace_state.pkl", "wb"))
+
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, dim1))
+        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, dim1))
+        l2_loss = 0
+        for cond in range(num_conds):
+            for sample_num in range(num_samples):
+                feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num]}
+                cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+                cond_feats_other[cond, sample_num] = obs_extended_full[1][cond][sample_num]
+                l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
+        print(l2_loss)
+        print("RAN THROUGH FEATURES")
+        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,dim1))
+        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,dim1))
+        nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
+        distances, indices = nbrs.kneighbors(cond_feats_other)
+        indices = np.reshape(indices, (num_conds, num_samples, T_extended))
+        # dO_robot0 = ee_full[0].shape[-1]
+        ee_full_reshaped = np.reshape(ee_full[0], (num_conds*num_samples*T_extended,-1))
+        print("CHECK NN")
+        import IPython
+        IPython.embed()
+        for cond in range(num_conds):
+            for s_no in range(num_samples):
+                color = ['r', 'b'][robot_number]
+                for t in range(T_extended):
+                    x = ee_full[1][cond, s_no, t, 12]
+                    y = ee_full[1][cond, s_no, t, 14]
+                    nnbr_currpoint = indices[cond, s_no, t]
+                    x_nbr = ee_full_reshaped[nnbr_currpoint][6]
+                    y_nbr = ee_full_reshaped[nnbr_currpoint][8]
+                    print("X: " + str([x,x_nbr]))
+                    print("Y: " + str([y,y_nbr]))
+                    lines = plt.plot([x,x_nbr], [y,y_nbr])
+        plt.show()
+        np.save("3link_feats.npy", np.asarray(cond_feats))
+
+        print("done training invariant autoencoder and saving weights")
+    """
+    
     def run_invariant_autoencoder_forward(self, obs_extended_full):
         # import pickle
         # dict_data = pickle.load(open("scalebias.pkl", "rb"))
@@ -510,6 +612,104 @@ class PolicyOptTf(PolicyOpt):
                 cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
         np.save("3link_feats.npy", np.asarray(cond_feats))
         print("done saving features")
+
+    def run_invariant_autoencoder_forward_plot(self, obs_extended_full, ee_full):
+        # import pickle
+        # dict_data = pickle.load(open("scalebias.pkl", "rb"))
+        # scales = dict_data['scale'] 
+        # biases = dict_data['bias']
+
+
+
+        num_conds, num_samples, T_extended, dim0 = obs_extended_full[0].shape
+        num_conds, num_samples, T_extended, dim1 = obs_extended_full[1].shape
+        for cond in range(num_conds):
+            for s_no in range(num_samples):
+                xs = []
+                ys = []
+                for robot_number in range(self.num_robots):
+                    color = ['r', 'b'][robot_number] 
+                    if robot_number == 0:
+                        x_plot_idx = 8
+                        y_plot_idx = 10
+                    else:
+                        x_plot_idx = 14
+                        y_plot_idx = 16
+                    x = ee_full[robot_number][cond, s_no, :, x_plot_idx]
+                    y = ee_full[robot_number][cond, s_no, :, y_plot_idx]
+                    plt.scatter(x, y, c=color)
+                    xs.append(x)
+                    ys.append(y)
+                plt.plot([xs[0], xs[1]], [ys[0], ys[1]])
+        plt.show()
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, dim1))
+        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, dim1))
+        l2_loss = 0
+        for cond in range(num_conds):
+            for sample_num in range(num_samples):
+                feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num]}
+                cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+                cond_feats_other[cond, sample_num] = obs_extended_full[1][cond][sample_num]
+                l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
+        print(l2_loss)
+        print("RAN THROUGH FEATURES")
+        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,dim1))
+        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,dim1))
+        nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
+        distances, indices = nbrs.kneighbors(cond_feats_other)
+        indices = np.reshape(indices, (num_conds, num_samples, T_extended))
+        dO_robot0 = ee_full[0].shape[-1]
+        ee_full_reshaped = np.reshape(ee_full[0], (num_conds*num_samples*T_extended,dO_robot0))
+        print("CHECK NN")
+        import IPython
+        IPython.embed()
+        for cond in range(num_conds):
+            for s_no in range(num_samples):
+                color = ['r', 'b'][robot_number]
+                for t in range(T_extended):
+                    x = ee_full[1][cond, s_no, t, 14]
+                    y = ee_full[1][cond, s_no, t, 16]
+                    nnbr_currpoint = indices[cond, s_no, t]
+                    x_nbr = ee_full_reshaped[nnbr_currpoint][8]
+                    y_nbr = ee_full_reshaped[nnbr_currpoint][10]
+                    print("X: " + str([x,x_nbr]))
+                    print("Y: " + str([y,y_nbr]))
+                    lines = plt.plot([x,x_nbr], [y,y_nbr])
+        plt.show()
+        np.save("3link_feats.npy", np.asarray(cond_feats))
+
+
+
+        # cond_feats = np.zeros((num_conds, num_samples, T_extended, 6))
+        # for cond in range(num_conds):
+        #     for sample_num in range(num_samples):
+        #         # obs_extended_full[0][cond][sample_num] = obs_extended_full[0][cond][sample_num].dot(scales[0]) + biases[0]
+        #         feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num]}
+        #         cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+        # np.save("3link_feats.npy", np.asarray(cond_feats))
+        print("done saving features")
+
+    def cca(self,obs_full):
+        from sklearn.cross_decomposition import CCA
+        num_components = 6
+        self.fitted_cca = CCA(num_components)
+        Y, X = obs_full
+        N = X.shape[0]
+        T = X.shape[1]
+        X = np.reshape(X, [N*T, -1])
+        Y = np.reshape(Y, [N*T, -1])
+        self.fitted_cca.fit(X,Y)
+        return X,Y
+
+    def run_cca(self,obs_full):
+        from sklearn.cross_decomposition import CCA
+        Y, X = obs_full
+        N = X.shape[0]
+        T = X.shape[1]
+        X = np.reshape(X, [N*T, -1])
+        Y = np.reshape(Y, [N*T, -1])
+        r1, r0 = self.fitted_cca.transform(X,Y)
+        return r0
 
     def train_invariant_dc(self, obs_full, next_obs_full, action_full, obs_extended_full):
         num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape

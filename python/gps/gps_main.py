@@ -233,8 +233,10 @@ class GPSMain(object):
         obs_complete_time_full = []
         obs_uncut = []
         for robot_number in range(self.num_robots):
-            dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T - 1
-            T_extended = T + 1
+            # dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T - 1
+            # T_extended = T + 1
+            dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T 
+            T_extended = T
             obs_data, next_obs_data, tgt_actions = np.zeros((0, T, dO)), np.zeros((0, T, dO)), np.zeros((0, T, dU))
             obs_complete_time = np.zeros((len(self._train_idx[robot_number]), self._hyperparams['num_samples'], T_extended, dO))
             obs_uncut_list = np.zeros((len(self._train_idx[robot_number]), self._hyperparams['num_samples'], T_extended, dO))
@@ -249,8 +251,8 @@ class GPSMain(object):
                         mu[i, t, :] = \
                                 (traj.K[t, :, :].dot(X[i, t, :]) + traj.k[t, :]) 
                 tgt_actions = np.concatenate((tgt_actions, mu))
-                obs_data = np.concatenate((obs_data, samples.get_obs()[:, :-1, :]))
-                next_obs_data = np.concatenate((next_obs_data, samples.get_obs()[:, 1:, :]))
+                obs_data = np.concatenate((obs_data, samples.get_obs()[:, :, :]))
+                next_obs_data = np.concatenate((next_obs_data, samples.get_obs()[:, :, :]))
                 obs_complete_time[m] = samples.get_obs()
                 obs_uncut_list[m] = samples.get_obs()
 
@@ -288,11 +290,23 @@ class GPSMain(object):
         # tgt_actions_full = dict_data['action_full'] 
         # obs_complete_time_full = dict_data['obs_extended_full'] 
         # obs_uncut = dict_data['obs_uncut_full']
-       
+        # print("ABOUT to CCA")
+        # import IPython
+        # IPython.embed()
+        # X, Y= self.policy_opt.cca(obs_full)
         
+        # self.data_logger.pickle('multiproxy_cca.pkl', self.policy_opt.fitted_cca)
+        # print("DONE CCA")
+        # self.policy_opt.fitted_cca = self.data_logger.unpickle('multiproxy_cca.pkl')
+        # r0 = self.policy_opt.run_cca(obs_full)
+        # np.save('3link_cca.npy', np.reshape(r0, (2, 7, T, -1)))
+        # self.data_logger.pickle("obs_complete_time_full.pkl", obs_complete_time_full)
+        # self.data_logger.pickle("obs_uncut.pkl", obs_uncut)
+        # print("DONE saving")
+        # raw_input()
         self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full, obs_uncut)
-        import IPython
-        IPython.embed()
+        # import IPython
+        # IPython.embed()
 
 
     def run_subspace_learning_forward(self, itr_load=None):
@@ -304,7 +318,22 @@ class GPSMain(object):
         Returns: None
         """
         print("RUNNING FORWARD")
-        traj_distr = [self.data_logger.unpickle("joint_pull_3link_final.pkl")]
+        # traj_distr = [ self.data_logger.unpickle("joint_pull_3link_final.pkl"),self.data_logger.unpickle("tendon_pull_3link_working.pkl")]
+        # for ag in range(self.num_robots):
+        #     name = self.agent[ag]._hyperparams['filename'][0]
+        #     print(name)
+        #     if name in traj_distr[ag]:
+        #         for cond in  self._train_idx[ag]:
+        #             print ag, cond
+        #             self.algorithm[ag].cur[cond].traj_distr = traj_distr[ag][name][cond]
+        #     else:
+        #         print name, "not in traj_distr"
+        for robot_number in range(self.num_robots):
+            itr_start = self._initialize(itr_load, robot_number=robot_number)
+
+        # traj_distr = [self.data_logger.unpickle("joint_reach_3link_morepos.pkl"), self.data_logger.unpickle("tendon_reach_3link_morepos.pkl")]
+        traj_distr = [self.data_logger.unpickle("joint_pull_3link_final.pkl"),self.data_logger.unpickle("tendon_pull_3link_working.pkl")]
+
         for ag in range(self.num_robots):
             name = self.agent[ag]._hyperparams['filename'][0]
             print(name)
@@ -314,8 +343,6 @@ class GPSMain(object):
                     self.algorithm[ag].cur[cond].traj_distr = traj_distr[ag][name][cond]
             else:
                 print name, "not in traj_distr"
-        for robot_number in range(self.num_robots):
-            itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         traj_sample_lists = {}
         for robot_number in range(self.num_robots):
@@ -330,17 +357,46 @@ class GPSMain(object):
 
         
         # Compute target mean, cov, and weight for each sample.
+         # Compute target mean, cov, and weight for each sample.
+        obs_full = []
+        next_obs_full = []
+        tgt_actions_full = []
         obs_complete_time_full = []
+        obs_uncut = []
         for robot_number in range(self.num_robots):
-            dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T - 1
-            T_extended = T + 1
+            # dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T - 1
+            # T_extended = T + 1
+            dU, dO, T = self.algorithm[robot_number].dU, self.algorithm[robot_number].dO, self.algorithm[robot_number].T 
+            T_extended = T
+            obs_data, next_obs_data, tgt_actions = np.zeros((0, T, dO)), np.zeros((0, T, dO)), np.zeros((0, T, dU))
             obs_complete_time = np.zeros((len(self._train_idx[robot_number]), self._hyperparams['num_samples'], T_extended, dO))
+            obs_uncut_list = np.zeros((len(self._train_idx[robot_number]), self._hyperparams['num_samples'], T_extended, dO))
             for m in self._train_idx[robot_number]:
                 samples = traj_sample_lists[robot_number][m]
+                X = samples.get_X()
+                N = len(samples)
+                traj = self.algorithm[robot_number].cur[m].traj_distr
+                mu = np.zeros((N, T, dU))
+                for t in range(T):
+                    for i in range(N):
+                        mu[i, t, :] = \
+                                (traj.K[t, :, :].dot(X[i, t, :]) + traj.k[t, :]) 
+                tgt_actions = np.concatenate((tgt_actions, mu))
+                obs_data = np.concatenate((obs_data, samples.get_obs()[:, :, :]))
+                next_obs_data = np.concatenate((next_obs_data, samples.get_obs()[:, :, :]))
                 obs_complete_time[m] = samples.get_obs()
+                obs_uncut_list[m] = samples.get_obs()
+
+            obs_data = obs_data[:, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
+            next_obs_data = next_obs_data[:, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
             obs_complete_time = obs_complete_time[:, :, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
+            obs_uncut.append(obs_uncut_list)
+            obs_full.append(obs_data)
+            next_obs_full.append(next_obs_data)
+            tgt_actions_full.append(tgt_actions)
             obs_complete_time_full.append(obs_complete_time)
 
+        # np.save('demos_3link_tendon.npy', obs_uncut[1])
 
         import pickle
         val_vars = pickle.load(open('subspace_state.pkl', 'rb'))
@@ -349,9 +405,20 @@ class GPSMain(object):
                 print(k)
                 assign_op = v.assign(val_vars[k])
                 self.policy_opt.sess.run(assign_op)
+
+        # self.policy_opt.fitted_cca = self.data_logger.unpickle('multiproxy_cca.pkl')
+        # reshaped_0 = [np.reshape(obs_complete_time_full[0], (24, 100, 6)), np.reshape(obs_complete_time_full[1], (24, 100, 6))]
+        # r0 = self.policy_opt.run_cca(reshaped_0)
+        # np.save('3link_cca.npy', np.reshape(r0, (2, 12, T, -1)))
+        # np.save('3link_cca.npy', np.reshape(obs_complete_time_full[1], (2, 12, T, -1)))
+        # import IPython
+        # IPython.embed()
+        # obs_complete_time_full = self.data_logger.unpickle("obs_complete_time_full.pkl")
+        # obs_uncut = self.data_logger.unpickle("obs_uncut.pkl")
+        print("about to save")
         self.policy_opt.run_invariant_autoencoder_forward(obs_complete_time_full)
-        import IPython
-        IPython.embed()
+        # import IPython
+        # IPython.embed()
         
 
     def _take_reward_shaping(self):
@@ -797,8 +864,8 @@ def main():
         #0 works - bottom is gret, top is meh
         #1 works
         #2 doesn't work
-        random.seed(3)
-        np.random.seed(3)
+        random.seed(14)
+        np.random.seed(14)
 
         gps = GPSMain(hyperparams.config)
         if args.recordfeats:

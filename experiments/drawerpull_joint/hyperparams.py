@@ -18,7 +18,7 @@ from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
 from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, simple_transition_reward_model, simple_vae_model
+from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, simple_transition_reward_model, simple_vae_model, isomorphism_baseline
 from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC,RAMP_MIDDLE_DRAWER
 
 
@@ -81,8 +81,8 @@ common = {
         'iterations': 60000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-        'r0_index_list': np.concatenate([np.arange(0,3), np.arange(3,6),]),
-        'r1_index_list': np.concatenate([np.arange(6,9), np.arange(9,12)])
+        'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7),]),
+        'r1_index_list': np.concatenate([np.arange(8,11), np.arange(11,14)])
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
     }
 }
@@ -218,8 +218,8 @@ config = {
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
-    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(3,6),]),
-    'r1_index_list': np.concatenate([np.arange(6,9), np.arange(9,12)]),
+    'r0_index_list': np.concatenate([np.arange(0,3), np.arange(4,7),]),
+    'r1_index_list': np.concatenate([np.arange(8,11), np.arange(11,14)]),
     'inner_iterations': 4,
     'to_log': [],
 }
