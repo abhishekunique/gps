@@ -344,7 +344,7 @@ algorithm[1]['policy_prior'] = {
 
 config = {
     'iterations': 25,
-    'num_samples': 3,
+    'num_samples': 2,
     'verbose_trials': 1,
     'verbose_policy_trials': 5,
     'save_wts': True,
@@ -360,8 +360,8 @@ config = {
     'robot_iters': [range(25), range(0,25,2)],
     # 'robot0_file': '/home/abhigupta/gps/experiments/blockstrike/data_files/traj_sample_itr_07_rn_00.pkl',
     # 'robot1_file': '/home/abhigupta/gps/experiments/4link_blockstrike/data_files/traj_sample_itr_13_rn_00.pkl',
-    'r0_index_list': np.concatenate([np.arange(0,5), np.arange(6,7)]),
-    'r1_index_list': np.concatenate([np.arange(0,5), np.arange(6,7)]),
+    'r0_index_list': np.concatenate([np.arange(0,4)]),# np.arange(6,7)]),
+    'r1_index_list': np.concatenate([np.arange(0,4)]),# np.arange(6,7)]),
 }
 
 common['info'] = generate_experiment_info(config)

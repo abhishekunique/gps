@@ -77,7 +77,7 @@ class GPSMain(object):
         if 'save_wts' in self._hyperparams:
             self.save_wts = self._hyperparams['save_wts']
         else: self.save_wts = False
-        self.UMA =UMA(6, k=4)
+        self.UMA =UMA(1, k=4)
         
 
 
@@ -93,7 +93,7 @@ class GPSMain(object):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         itr_costs = []
-        seed = 984573#np.random.randint(1999)
+        seed = 53746#np.random.randint(1999)
         import random, shutil
         # if os.path.exists(self._hyperparams['common']['data_files_dir']):
         #     shutil.move(self._hyperparams['common']['data_files_dir'], self._hyperparams['common']['data_files_dir'][:-1] + str(seed))
@@ -232,8 +232,8 @@ class GPSMain(object):
         Returns: None
         """
 
-        # traj_distr = self.data_logger.unpickle("btndata.pkl")
-        traj_distr= self.data_logger.unpickle(self._data_files_dir+"traj_distr.pkl")
+        traj_distr = self.data_logger.unpickle("btndata.pkl")
+        # traj_distr= self.data_logger.unpickle(self._data_files_dir+"traj_distr.pkl")
         # import IPython          #
         # IPython.embed()
         for ag in range(self.num_robots):
@@ -321,15 +321,17 @@ class GPSMain(object):
         #     obs_full.append(obs)
         #     next_obs_full.append(next_obs)
         #     tgt_actions_full.append(tgt_actions)
-        X,Y = obs_full
 
-        eeX, eeY = ee_full
+        X,Y = obs_full
+        # np.random.seed(80)
+        # X = np.random.rand(100,1,2)
+        eeX, eeY = ee_full #np.random.rand(100,1,3), np.random.rand(100,1,3)#ee_full
         # X = X[0:28*3:7]
         # Y = Y[0:28*3:7]
-        X = X[[1,-1]]
-        Y = Y[[1,-1]]
-        eeX = eeX[[1,-1]]
-        eeY = eeY[[1,-1]]
+        # X = X[:1]
+        # Y = Y[:1]
+        # eeX = eeX[:1]
+        # eeY = eeY[:1]
 
 
         print X.shape
@@ -338,25 +340,25 @@ class GPSMain(object):
         print "N", N, "T", T
         X = np.reshape(X, [N*T, -1])
         Y = np.reshape(Y, [N*T, -1])
-        eeX = np.reshape(eeX, [N*T, -1])
-        eeY = np.reshape(eeY, [N*T, -1])
+        # eeX = np.reshape(eeX, [N*T, -1])
+        # eeY = np.reshape(eeY, [N*T, -1])
         # X = np.concatenate((X, eeX[:,:1], eeX[:,2:]), axis=1)
         # Y = np.concatenate((Y, eeY[:,:1], eeY[:,2:]), axis=1)
-        import IPython
-        IPython.embed()
-        # X = np.concatenate((X[:,:4], X[:,6:]), axis=1)
-        # Y = np.concatenate((Y[:,:5], Y[:,6:]), axis=1)
+        # X = np.concatenate((X[:,:1], X[:,2:]), axis=1)
+        # Y = np.concatenate((Y[:,:1], Y[:,2:]), axis=1)
+        # import scipy.io
+        # scipy.io.savemat("ee_data_particleX.mat",{'X': X, 'Y':Y})
         print X.shape
-        self.UMA.align(X,Y)
+        # self.UMA.align(X,Y)
         self.data_logger.pickle('multiproxy_uma_ee_lm_6.pkl', self.UMA)
 
         # self.UMA = self.data_logger.unpickle('multiproxy_uma_01mu.pkl')
-        self.UMA.plot( X, Y, eeX, eeY)
+        # self.UMA.plot( X, Y, eeX, eeY)
 
         # import IPython
         # IPython.embed()
-        # r0 = X
-        # np.save('3link_uma_ee.npy', np.reshape(r0, (2, 7, T, -1)))
+        r0 = X
+        np.save('3link_uma.npy', np.reshape(r0, (2, 1, T, -1)))
         # self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)
         import IPython
         IPython.embed()
