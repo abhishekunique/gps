@@ -1,0 +1,909 @@
+<mujoco model="AdroitTwirl-v1.31(Pnuematics)">
+	<compiler 	inertiafromgeom="false"
+				meshdir ="Meshes\"
+				strippath="false"
+				coordinate="local" 
+				angle="radian"/>
+
+	<size 	njmax="400"
+			nconmax="100"
+			nuser_jnt="1"
+			nuser_site="1"
+			nuser_tendon="1"
+			nuser_actuator="16"
+			nstack="600000"/>
+			
+	<option	timestep="0.002"
+			iterations="20">
+	</option>
+	
+	<asset>
+		<mesh file="arm_base.stl"/>
+		<mesh file="arm_trunk_asmbly.stl"/>
+		<mesh file="upper_arm_asmbl+shoulder.stl"/>
+		<mesh file="elbow_flex.stl"/>
+		<mesh file="elbow_rotate_muscle.stl"/>
+		<mesh name="forearm_muscle" file="forearm_Cy_PlateAsmbly(muscle cone).stl"/>
+		<mesh file="forearm_simple.stl"/>
+		<mesh file="wrist.stl"/>
+		<mesh file="palm.stl"/>
+		<mesh file="knuckle.stl"/>
+		<mesh file="F3.stl"/>
+		<mesh file="F2.stl"/>
+		<mesh file="F1.stl"/>
+		<mesh file="lfmetacarpal.stl"/>
+		<mesh file="TH3_z.stl"/>
+		<mesh file="TH2_z.stl"/>
+		<mesh file="TH1_z.stl"/>
+
+		<material name="MatColl" specular="1" shininess=".3" reflectance="0.5" rgba=".4 .5 .6 1"/>
+		<material name="MatViz" specular="0.75" shininess=".1" reflectance="0.5" rgba="0.9 .7 .5 1"/>
+		<material name="MatGnd" specular=".3" shininess=".3" reflectance="0.3" rgba=".5 .55 .5 1"/>
+	</asset>
+
+	<default>
+		<geom friction="1 0.005 0.001" condim="3" margin="0.003" contype="0" conaffinity="0"/>
+		<joint limited="true" damping="0.05" armature=".001" margin="0.01" frictional="true" frictionloss="0.001"/>
+		<tendon limited="true"/>
+		<mesh scale="0.001 0.001 0.001"/>
+		<site size="0.005" rgba=".4 .9 .4 1"/>
+		
+		<!--Touch geoms-->
+		<default class="D_Touch">
+			<site type="box" size="0.009 0.004 0.013" pos="0 -.004 .018" rgba=".8 .8 .8 .25" group="2"/>
+		</default>
+		
+		<!--Collission geoms-->
+		<default class="DC_Hand">
+			<geom material="MatColl" contype="1" conaffinity="0" group="0"/>
+		</default>
+		
+		<!--Meshes-->
+		<default class="D_Vizual"> 
+			<geom material="MatViz" contype="0" conaffinity="0" group="1" type="mesh"/>
+		</default>
+
+		<!--EQUIVALENT JOINT MOTORS-->
+		<general ctrllimited="true" ctrlrange="-1 1" dyntype="none" gaintype="fixed" user="0.0 1.0 0.025 .093971070967613 .513477320952826 0.035877578312754 1.235977874629122 8.404091015001519 0.485030592118657 6.042436037292539 1.021871164868839 0.175296791929956 0.121642029266126"/>
+	</default>
+		
+	<contact>
+		<!--Thumb-->
+		<pair geom1="C_ffdistal" geom2="C_thdistal" condim="1"/>	
+		<pair geom1="C_ffmiddle" geom2="C_thdistal" condim="1"/>	
+		<pair geom1="C_ffproximal" geom2="C_thdistal" condim="1"/>
+		<pair geom1="C_mfproximal" geom2="C_thdistal" condim="1"/>
+		<pair geom1="C_mfdistal" geom2="C_thdistal" condim="1"/>	
+		<pair geom1="C_rfdistal" geom2="C_thdistal" condim="1"/>	
+		<pair geom1="C_lfdistal" geom2="C_thdistal" condim="1"/>
+		<pair geom1="C_palm0" geom2="C_thdistal" condim="1"/>
+		
+		<!--Distals with Distals-->
+		<pair geom1="C_mfdistal" geom2="C_ffdistal" condim="1"/>	
+		<pair geom1="C_rfdistal" geom2="C_mfdistal" condim="1"/>	
+		<pair geom1="C_lfdistal" geom2="C_rfdistal" condim="1"/>	
+
+		<!--Proximals with Proximals-->
+		<pair geom1="C_mfproximal" geom2="C_ffproximal" condim="1"/>	
+		<pair geom1="C_rfproximal" geom2="C_mfproximal" condim="1"/>	
+		<pair geom1="C_lfproximal" geom2="C_rfproximal" condim="1"/>	
+		
+		<!--little finger -->
+		<pair geom1="C_lfdistal" geom2="C_rfdistal" condim="1"/>	
+		<pair geom1="C_lfdistal" geom2="C_mfdistal" condim="1"/>	
+		<pair geom1="C_lfdistal" geom2="C_rfmiddle" condim="1"/>
+		<pair geom1="C_lfmiddle" geom2="C_rfdistal" condim="1"/>
+		<pair geom1="C_lfmiddle" geom2="C_rfmiddle" condim="1"/>
+	</contact>
+	
+	
+	
+	<!-- ======= WORLD ======= -->
+    <worldbody>
+	
+		<light directional="true" cutoff="4" exponent="20" diffuse=".5 .5 .5" specular="0 0 0" pos=".2 .3 1.5" dir="-.2 -.1 -0.5 "/>
+	
+		<!-- ======= Ground ======= -->
+		<geom name="ground" type="plane" pos="0 0 0" material="MatGnd" size="1 1 2" contype="1" conaffinity="1"/>
+		<geom type="cylinder" fromto="0 0 0 .1 0 0" size="0.01" rgba="1 0 0 1"/>
+		<geom type="cylinder" fromto="0 0 0 0 .1 0" size="0.01" rgba="0 1 0 1"/>
+	
+		<!-- ======= Base ======= -->
+       <!-- <body name="arm_base" pos="0 0 1.25">
+            <inertial pos="-0.000 0.000 -0.01" quat="0.498 0.502 -0.498 0.502" mass="0.4" diaginertia="0.001 0.001 0.001" />
+            <geom class="D_Vizual" name="V_arm_base" axisangle="0 1 0 3.14" mesh="arm_base" rgba="0.6 0.6 0.6 1"/>
+
+			
+			
+			<!{1}** ======= Trunk ======= **{1}>
+            <body name="arm_trunk" pos="0 0 -0.015">
+                <inertial pos="0.000 0.012 -0.291" quat="0.000 -0.000 -1.000 -0.015" mass="5" diaginertia="0.238 0.237 0.022" />
+                <joint name="ARJ3" type="hinge" pos="0 0 0" axis="0 0 1" range="-1.571 0.785" damping="0.01" armature=".005" user="1127"/>
+                <geom class="D_Vizual" name="V_arm_trunk" axisangle="0 1 0 3.14" mesh="arm_trunk_asmbly"/>
+				<geom class="DC_Hand" name="C_arm_trunk" type="capsule" pos="0.000 0.013 -0.27" size=".09 .24"/>
+
+				
+				
+				<!{1}** ======= Upper Arm ======= **{1}>
+                <body name="arm_upper" pos="0 -0.134 -0.5255">
+                    <inertial pos="0.144 -0.001 -0.000" quat="0.265 0.655 -0.265 0.655" mass="2" diaginertia="0.0845 0.0522 0.0356" />
+                    <joint name="ARJ2" type="hinge" pos="0 0 0" axis="0 1 0" range="0 2.88" damping="0.01" armature=".005" user="1126"/>
+                    <geom class="D_Vizual" name="V_arm_upper" pos="0 0.068 0"  mesh="upper_arm_asmbl+shoulder" />
+                    <geom class="DC_Hand" name="C_arm_upper" type="capsule" pos="0.175 -0.001 -0.000" axisangle="0 1 0 1.57" size=".075 .19"/>
+					
+					
+					
+					<!{1}** ======= Elbow ======= **{1}>
+					<!{1}** Flex**{1}>
+                    <body name="arm_elbow" pos="0.369 0 0" euler="0 -0.785 0">
+                        <inertial pos="0.025 0 -0.040" quat="0.669 -0.228 -0.228 0.669" mass="0.800" diaginertia="0.002 0.001 0.001" />
+                        <joint name="ARJ1" type="hinge" pos="0 0 0" axis="0 -1 0" range="0 2.094" damping="0.01" armature=".005" user="1125"/>
+                        <geom class="D_Vizual" name="V_arm_elbow" pos="0.0324 0 -0.03" mesh="elbow_flex"/>
+                        <geom class="DC_Hand" name="C_arm_elbow" type="capsule" pos="0.06 0 -0.07" quat="0.707 0 -0.707 0" size=".045 .03"/>
+
+						
+						
+						<!{1}** ======= Lower Arm ======= **{1}>
+						<!{1}** Roll**{1}>
+                        <body name="arm_lower" pos="0.131 0 -0.08">
+                            <inertial pos="-0.014 0.000 0.000" quat="0.707 0.707 -0.001 -0.001" mass="1.7" diaginertia="0.001 0.001 0.001" />
+                            <joint name="ARJ0" type="hinge" pos="0 0 0" axis="1 0 0" range="-1.5 1.5" damping="0.01" armature=".005" user="1124"/>
+                            <geom class="D_Vizual" name="V_arm_lower" pos="-0.04 0.000 0.000" quat="0.707 0.707 -0.001 -0.001" mesh="elbow_rotate_muscle"/>
+							
+							
+							
+							
+							<!{1}** ======= Forearm/ Hand Actuation ======= **{1}>
+							<body name="forearm" pos="0 0 0" quat="0.5 0.5 0.5 0.5">  <!{1}**Use this for Adroit model**{1}>
+							<inertial pos="0.001 -0.002 0.098" quat="0.982 -0.016 0.000 -0.188" mass="4" diaginertia="0.541 0.541 0.034" /><!{1}**Use this for Adroit model**{1}>
+							<geom class="D_Vizual" name="V_forearm"  mesh="forearm_muscle"/><!{1}**Use this for Adroit model**{1}>
+							<geom class="DC_Hand" name="C_forearm0" type="cylinder" pos="0 0 0.055" size=".112 .065"/><!{1}**Use this for Adroit model**{1}>
+							<geom class="DC_Hand" name="C_forearm1" type="capsule" pos="0 0 0.25" size=".05 .08"/><!{1}**Use this for Adroit model**{1}>-->
+								
+							<body name="forearm" pos="0 0 0" euler="-.87 0 0"> <!--Use this for Adroit-hand model-->
+								<inertial pos="0.001 -0.002 0.29" quat="0.982 -0.016 0.000 -0.188" mass="4" diaginertia="0.01 0.01 0.0075" /> <!--Use this for Adroit-hand model-->
+								<!-- <joint name="base" type="free" islimited="false"/> --> <!--Use this for Adroit-hand model-->
+								<geom class="D_Vizual" pos="0 0 .213" name="V_forearm"  mesh="forearm_simple" euler="1.57 0 0"/> <!--Use this for Adroit-hand model-->
+								<geom class="DC_Hand" name="C_forearm1" type="capsule" pos="0 0 0.29" size=".05 .033"/> <!--Use this for Adroit-hand model-->
+								
+								
+								<!--<site name="S_CY36" pos=" 0.034 -0.023 0.123" group="0" />
+								<site name="S_CY38" pos="-0.036  0.009 0.123" group="0" />-->
+								
+				
+						
+								<!-- ======= Wrist ======= -->
+								<body name="wrist" pos="0 0 0.396">
+									<inertial pos="0.003 0.000 0.016" quat="0.504 0.496 0.495 0.504" mass="0.3" diaginertia="0.001 0.001 0.001" />
+									<joint name="WRJ1" type="hinge" pos="0 0 0" axis="0 1 0" range="-0.00524 0.00175" damping=".5" armature=".005" user="1123"/>
+									<geom class="D_Vizual" name="V_wrist" mesh="wrist"/>
+									<geom class="DC_Hand" name="C_wrist" type="capsule" pos="0 0 0"  quat=".707 .707 0 0" size=".015 .01"/>
+									<!--<site name="S_WRJ1l" pos=" 0.0380 0 0.01625" group="0"/>
+									<site name="S_WRJ1r" pos="-0.0326 0 0.01625" group="0"/>-->
+					
+									
+									
+									<!-- ======= Palm ======= -->
+									<body name="palm" pos="0 0 0.034">
+										<inertial pos="0.006 -0.000 0.036" quat="0.716 0.044 0.075 0.693" mass="0.3" diaginertia="0.001 0.001 0.001" />
+										<joint name="WRJ0" type="hinge" pos="0 0 0" axis="1 0 0" range="-0.785 0.611" damping=".5" armature=".005" user="1122"/>
+										<geom class="D_Vizual" name="V_palm" mesh="palm"/>
+										<geom class="DC_Hand" name="C_palm0" type="box" pos="0.011 0 0.038" size=".032 .0111 .049"/>
+										<geom class="DC_Hand" name="C_palm1" type="box" pos="-.032 0 0.014" size=".011 .0111 .025"/>
+										<!--<site name="S_grasp" 	 pos=".007 -.04 0.07" quat="0.0087 -0.6 -0.0034 -0.81  " group="4"/>-->
+										
+										
+										<!-- ======= First Finger ======= -->
+										<body name="ffknuckle" pos="0.033 0 0.095">
+											<inertial pos="-0.000 0.000 0.000" quat="0.520 0.854 0.006 -0.003" mass="0.008" diaginertia="0.00001 0.00001 0.00001"/>
+											<joint name="FFJ3" type="hinge" pos="0 0 0" axis="0 1 0" range="-0.436 0.436"  user="1103"/>
+											<geom class="D_Vizual" name="V_ffknuckle" mesh="knuckle"/>
+											<!--Proximal-->
+											<body name="ffproximal" pos="0 0 0">
+												<inertial pos="0.000 0.000 0.023" quat="0.707 -0.004 0.004 0.707" mass="0.014" diaginertia="0.00001 0.00001 0.00001"/>
+												<joint name="FFJ2" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.571"  user="1102"/>
+												<geom class="D_Vizual" name="V_ffproximal" mesh="F3"/>
+												<geom class="DC_Hand" name="C_ffproximal" type="capsule" pos="0 0 .0225" size=".01 .0225"/>
+												<!--middle-->
+												<body name="ffmiddle" pos="0 0 0.045">
+													<inertial pos="-0.000 -0.000 0.011" quat="0.707 0.000 -0.000 0.707" mass="0.012" diaginertia="0.00001 0.00001 0.00001"/>
+													<joint name="FFJ1" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.571"  user="1101"/>
+													<geom class="D_Vizual" name="V_ffmiddle" mesh="F2"/>
+													<geom class="DC_Hand" name="C_ffmiddle" type="capsule" pos="0 0 .0125" size=".00805 .0125"/>
+													<!--distal-->
+													<body name="ffdistal" pos="0 0 0.025">
+														<inertial pos="0 -0.000 0.015" quat="0.707 -0.003 0.003 0.707" mass="0.010" diaginertia="0.00001 0.00001 0.00001"/>
+														<joint name="FFJ0" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.571"  user="1100"/>
+														<geom class="D_Vizual" name="V_ffdistal" pos="0 0 .001" mesh="F1"/>
+														<geom class="DC_Hand" name="C_ffdistal" type="capsule" pos="0 0 .012" size=".00705 .012"  condim="4"/>
+														<!--<site name="S_fftip" pos="0.000 0 0.026" group="1"/>
+														<site class="D_Touch" name="Tch_fftip"/>-->
+													</body>
+												</body>
+											</body>
+										</body> <!--First Finger End-->
+										
+										
+										
+										<!-- ======= Middle Finger ======= -->
+										<body name="mfknuckle" pos="0.011 0 0.099">
+											<inertial pos="-0.000 0.000 0.000" quat="0.520 0.854 0.006 -0.003" mass="0.008" diaginertia="0.00001 0.00001 0.00001"/>
+											<joint name="MFJ3" type="hinge" pos="0 0 0" axis="0 1 0" range="-0.436 0.436"  user="1107"/>
+											<geom class="D_Vizual" name="V_mfknuckle" mesh="knuckle"/>
+											<!--Proximal-->
+											<body name="mfproximal" pos="0 0 0">
+												<inertial pos="0.000 0.000 0.023" quat="0.707 -0.004 0.004 0.707" mass="0.014" diaginertia="0.00001 0.00001 0.00001"/>
+												<joint name="MFJ2" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.571"  user="1106"/>
+												<geom class="D_Vizual" name="V_mfproximal" mesh="F3"/>
+												<geom class="DC_Hand" name="C_mfproximal" type="capsule" pos="0 0 .0225" size=".01 .0225"/>
+												<!--Middle-->
+												<body name="mfmiddle" pos="0 0 0.045">
+													<inertial pos="-0.000 -0.000 0.012" quat="0.707 0.000 -0.000 0.707" mass="0.012" diaginertia="0.00001 0.00001 0.00001"/>
+													<joint name="MFJ1" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.571"  user="1105"/>
+													<geom class="D_Vizual" name="V_mfmiddle" mesh="F2"/>
+													<geom class="DC_Hand" name="C_mfmiddle" type="capsule" pos="0 0 .0125" size=".00805 .0125"/>
+													<!--Distal-->
+													<body name="mfdistal" pos="0 0 0.025">
+														<inertial pos="0 -0.000 0.015" quat="0.707 -0.003 0.003 0.707" mass="0.010" diaginertia="0.00001 0.00001 0.00001"/>
+														<joint name="MFJ0" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.571"  user="1104"/>
+														<geom class="D_Vizual" name="V_mfdistal" mesh="F1"/>
+														<geom class="DC_Hand" name="C_mfdistal" type="capsule" pos="0 0 .012" size=".00705 .012" condim="4"/>
+														<!--<site name="S_mftip" 	pos="0.000 0 0.026"	group="1"/>
+														<site class="D_Touch" name="Tch_mftip"/>-->
+													</body>
+												</body>
+											</body>
+										</body> <!--Middle Finger End-->
+										
+										
+										
+										<!-- ======= Ring Finger ======= -->
+										<body name="rfknuckle" pos="-0.011 0 0.095">
+											<inertial pos="-0.000 0.000 0.000" quat="0.520 0.854 0.006 -0.003" mass="0.008" diaginertia="0.00001 0.00001 0.00001"/>
+											<joint name="RFJ3" type="hinge" pos="0 0 0" axis="0 1 0" range="-0.436 0.436"  user="1111"/>
+											<geom class="D_Vizual" name="V_rfknuckle" mesh="knuckle"/>
+											<!--Proximal-->
+											<body name="rfproximal" pos="0 0 0">
+												<inertial pos="0.000 0.000 0.023" quat="0.707 -0.004 0.004 0.707" mass="0.014" diaginertia="0.00001 0.00001 0.00001"/>
+												<joint name="RFJ2" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.571"  user="1110"/>
+												<geom class="D_Vizual" name="V_rfproximal" mesh="F3"/>
+												<geom class="DC_Hand" name="C_rfproximal" type="capsule" pos="0 0 .0225" size=".01 .0225"/>
+												<!--Middle-->
+												<body name="rfmiddle" pos="0 0 0.045">
+													<inertial pos="-0.000 -0.000 0.012" quat="0.707 0.000 -0.000 0.707" mass="0.012" diaginertia="0.00001 0.00001 0.00001"/>
+													<joint name="RFJ1" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.571"  user="1109"/>
+													<geom class="D_Vizual" name="V_rfmiddle" mesh="F2"/>
+													<geom class="DC_Hand" name="C_rfmiddle" type="capsule" pos="0 0 .0125" size=".00805 .0125"/>
+													<!--Distal-->
+													<body name="rfdistal" pos="0 0 0.025">
+														<inertial pos="0 -0.000 0.015" quat="0.707 -0.003 0.003 0.707" mass="0.010" diaginertia="0.00001 0.00001 0.00001"/>
+														<joint name="RFJ0" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.571"  user="1108"/>
+														<geom class="D_Vizual" name="V_rfdistal" mesh="F1" pos="0 0 .001"/>
+														<geom class="DC_Hand" name="C_rfdistal" type="capsule" pos="0 0 .012" size=".00705 .012" condim="4"/>
+														<!--<site name="S_rftip" 	pos="0.000 0 0.026"	group="1"/>
+														<site class="D_Touch" name="Tch_rftip"/>-->
+													</body>
+												</body>
+											</body>
+										</body> <!--Ring Finger End-->
+										
+										
+										
+										<!-- ======= Little Finger ======= -->
+										<body name="lfmetacarpal" pos="-0.017 0 0.044">
+											<inertial pos="-0.014 0.001 0.014" quat="0.709 -0.092 -0.063 0.696" mass="0.075" diaginertia="0.00001 0.00001 0.00001"/>
+											<joint name="LFJ4" type="hinge" pos="0 0 0" axis="0.571 0 0.821" range="0 0.698"  user="1116"/>
+											<!--<joint name="LFJ4" type="hinge" pos="0 0 0" axis="0.571 0 0.821" range="0 0.0698"  user="1116"/>-->
+											<geom class="D_Vizual" name="V_lfmetacarpal" pos="-0.016 0.000 -0.023" mesh="lfmetacarpal"/>
+											<geom class="DC_Hand" name="C_lfmetacarpal" type="box" pos="-.0165 0 0.01" size=".0095 .0111 .025"/>
+											<!--Knuckle-->
+											<body name="lfknuckle" pos="-0.017 0 0.044">
+												<inertial pos="-0.000 0.000 0.000" quat="0.520 0.854 0.006 -0.003" mass="0.008" diaginertia="0.00001 0.00001 0.00001"/>
+												<joint name="LFJ3" type="hinge" pos="0 0 0" axis="0 1 0" range="-0.436 0.436"  user="1115"/>
+												<geom class="D_Vizual" name="V_lfknuckle" mesh="knuckle"/>
+												<!--Proximal-->
+												<body name="lfproximal" pos="0 0 0">
+													<inertial pos="0.000 0.000 0.023" quat="0.707 -0.004 0.004 0.707" mass="0.014" diaginertia="0.00001 0.00001 0.00001"/>
+													<joint name="LFJ2" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.571"  user="1114"/>
+													<geom class="D_Vizual" name="V_lfproximal" mesh="F3"/>
+													<geom class="DC_Hand" name="C_lfproximal" type="capsule" pos="0 0 .0225" size=".01 .0225"/>
+													<!--Middle-->
+													<body name="lfmiddle" pos="0 0 0.045">
+														<inertial pos="-0.000 -0.000 0.012" quat="0.707 0.000 -0.000 0.707" mass="0.012" diaginertia="0.00001 0.00001 0.00001"/>
+														<joint name="LFJ1" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.571"  user="1113"/>
+														<geom class="D_Vizual" name="V_lfmiddle" mesh="F2"/>
+														<geom class="DC_Hand" name="C_lfmiddle" type="capsule" pos="0 0 .0125" size=".00805 .0125"/>
+														<!--Distal-->
+														<body name="lfdistal" pos="0 0 0.025">
+															<inertial pos="0 -0.000 0.015" quat="0.707 -0.003 0.003 0.707" mass="0.010" diaginertia="0.00001 0.00001 0.00001"/>
+															<joint name="LFJ0" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.571"  user="1112"/>
+															<geom class="D_Vizual" name="V_lfdistal" mesh="F1" pos="0 0 .001"/>
+															<geom class="DC_Hand" name="C_lfdistal" type="capsule" pos="0 0 .012" size=".00705 .012" condim="4"/>
+															<!--<site name="S_lftip" 	pos="0.000 0 0.026"	group="1"/>
+															<site class="D_Touch" name="Tch_lftip"/>-->
+														</body>
+													</body>
+												</body>
+											</body>
+										</body> <!--Little Finger End-->
+										
+										
+										
+										<!-- ======= Thumb Finger ======= -->
+										<body name="thbase" pos="0.034 -0.009 0.029" axisangle="0  1 0  0.785" >
+											<inertial pos="0 0 0" mass="0.010" diaginertia="0.00001 0.00001 0.00001"/>
+											<joint name="THJ4" type="hinge" pos="0 0 0" axis="0 0 -1" range="-1.047 1.047"  user="1121"/>
+											<geom name="V_thbase" type="box" group="1" pos="0 0 0" size="0.001 0.001 0.001" />
+											<!--Proximal-->
+											<body name="thproximal" pos="0 0 0">
+												<inertial pos="-0.000 -0.000 0.017" quat="0.982 -0.000 0.001 0.191" mass="0.016" diaginertia="0.00001 0.00001 0.00001"/>
+												<joint name="THJ3" type="hinge" pos="0 0 0" axis="1 0 0" range="0 1.309"  user="1120"/>
+												<geom class="D_Vizual" name="V_thproximal" mesh="TH3_z"/>
+												<geom class="DC_Hand" name="C_thproximal" type="capsule" pos="0 0 .019" size=".013 .019"/>
+												<!--Hub-->
+												<body name="thhub" pos="0 0 0.038">
+													<inertial pos="0 0 0" mass="0.002" diaginertia="0.00001 0.00001 0.00001"/>
+													<joint name="THJ2" type="hinge" pos="0 0 0" axis="1 0 0" range="-0.262 0.262"  user="1119"/>
+													<geom name="V_thhub" type="box" group="1" pos="0 0 0" size="0.001 0.001 0.001"/>
+													<!--Middle-->
+													<body name="thmiddle" pos="0 0 0">
+														<inertial pos="0.000 -0.000 0.016" quat="1.000 -0.001 -0.007 0.003" mass="0.016" diaginertia="0.00001 0.00001 0.00001"/>
+														<joint name="THJ1" type="hinge" pos="0 0 0" axis="0 1 0" range="-0.524 0.524"  user="1118"/>
+														<geom class="D_Vizual" name="V_thmiddle" mesh="TH2_z"/>
+														<geom class="DC_Hand" name="C_thmiddle" type="capsule" pos="0 0 .016" size=".011 .016"/>
+														<!--Distal-->
+														<body name="thdistal" pos="0 0 0.032">
+															<inertial pos="0.000 -0.000 0.016" quat="0.999 -0.005 -0.047 0.005" mass="0.016" diaginertia="0.00001 0.00001 0.00001"/>
+															<joint name="THJ0" type="hinge" pos="0 0 0" axis="0 1 0" range="-1.571 0"  user="1117"/>
+															<geom class="D_Vizual" name="V_thdistal" mesh="TH1_z"/>
+															<geom class="DC_Hand" name="C_thdistal" type="capsule" pos="0 0 .013" size=".00918 .013" condim="4"/>
+															<site name="S_thtip" 	pos="0.000 0 0.0275" group="1"/>
+															<!--<site class="D_Touch" name="Tch_thtip" geomsize="0.005 0.011 0.016" pos="-.005 0 0.02" />-->
+														</body>
+													</body>
+												</body>
+											</body>
+										</body> <!--Thumb Finger End-->
+									</body> <!--Palm Ends-->
+								</body> <!--Wrist Ends-->
+							</body> <!--Forearm/ Hand Actuation Ends-->
+                        <!--</body>
+                     </body>
+                </body>
+            </body>
+        </body>	<!{1}**Trunk Ends**{1}>-->
+		
+
+		<body name="pen" pos="0 0 0" euler="0 0 0"> 
+			<!--  OBJECTS -->
+			<inertial pos="0 0 0" quat="0.707388 0 0.706825 0" mass="0.176788" diaginertia="0.00200323 0.00200323 2.70707e-05" />
+			<geom name="C_bottle"  type="capsule" group="1" size="0.0175 0.175"  rgba=".6 .6 .7 1" contype="0" conaffinity="1" pos="0 0 0" euler="0 1.57 0"/>
+			<geom name="C_bottleZ"  type="capsule" group="3" size="0.005 0.015"  rgba="0.5 0.5 0.6 1" contype="0" conaffinity="0" pos="-.175 0 0.02" euler="0 0 0"/>
+			
+			<joint name="JbottleTX" type="slide" axis="1 0 0" pos="0 0 0" limited="false" damping="0.0001" armature="0"/>
+			<joint name="JbottleTY" type="slide" axis="0 1 0" pos="0 0 0" limited="false" damping="0.0001" armature="0"/>
+			<joint name="JbottleTZ" type="slide" axis="0 0 1" pos="0 0 0" limited="false" damping="0.0001" armature="0"/>
+			                                                              
+			<joint name="JbottleRX" type="hinge" axis="1 0 0" pos="0 0 0" limited="false" damping="0.0001" armature="0"/>
+			<joint name="JbottleRY" type="hinge" axis="0 1 0" pos="0 0 0" limited="false" damping="0.0001" armature="0"/>
+			<joint name="JbottleRZ" type="hinge" axis="0 0 1" pos="0 0 0" limited="false" damping="0.0001" armature="0"/>
+			
+			<site name="bottle_handle" pos="0 0 0" group="2" euler="0 0 0"/>
+		</body>
+
+		
+    </worldbody>
+	 
+	<tendon>		
+		<!-- ======= Arm ======= -->
+		<!--<fixed name="T_ARJ3a" range="-.050 0.050" user="1246">
+			<joint joint="ARJ3"  coef="0.015"/>
+		</fixed>
+		<fixed name="T_ARJ3c" range="-.050 0.050" user="1247">
+			<joint joint="ARJ3"  coef="-0.015"/>
+		</fixed>
+		<fixed name="T_ARJ2u" range="0 0.200" user="1244">
+			<joint joint="ARJ2"  coef="0.068"/>
+		</fixed>
+		<fixed name="T_ARJ2d" range="-.200 0" user="1245">
+			<joint joint="ARJ2"  coef="-0.068"/>
+		</fixed>
+		<fixed name="T_ARJ1u" range="-.200 0.025" user="1242">
+			<joint joint="ARJ1"  coef="0.055"/>
+		</fixed>
+		<fixed name="T_ARJ1d" range="-.025 0.200" user="1243">
+			<joint joint="ARJ1"  coef="-0.055"/>
+		</fixed>
+		<fixed name="T_ARJ0a" range="-.062 0.063" user="1240">
+			<joint joint="ARJ0"  coef="0.028"/>
+		</fixed>
+		<fixed name="T_ARJ0c" range="-.062 0.063" user="1241">
+			<joint joint="ARJ0"  coef="-0.028"/>
+		</fixed>-->
+		
+		
+		<!-- ======= Wrist ======= -->
+		<!--<spatial name="T_WRJ1r" range="0.25 0.314" user="1238">
+			<site site = "S_CY38"/>
+			<site site = "S_WRJ1r"/>
+		</spatial>
+		<spatial name="T_WRJ1l" range="0.25 0.314" user="1239">
+			<site site = "S_CY36"/>
+			<site site = "S_WRJ1l"/>
+		</spatial>-->
+		<fixed name="T_WRJ1r" range="-.032 0.032" user="1236">
+			<joint joint="WRJ1"  coef="0.018"/>
+		</fixed>
+		<fixed name="T_WRJ1l" range="-.032 0.032" user="1237">
+			<joint joint="WRJ1"  coef="-0.018"/>
+		</fixed>
+		
+		<fixed name="T_WRJ0u" range="-.032 0.032" user="1236">
+			<joint joint="WRJ0"  coef="0.018"/>
+		</fixed>
+		<fixed name="T_WRJ0d" range="-.032 0.032" user="1237">
+			<joint joint="WRJ0"  coef="-0.018"/>
+		</fixed>
+		
+		<!-- ======= First Finger ======= -->
+		<fixed name="T_FFJ3r" range="-0.018 0.018" user="1204">
+			<joint joint="FFJ3"  coef="0.010"/>
+		</fixed>
+		<fixed name="T_FFJ3l" range="-0.018 0.018" user="1205">
+			<joint joint="FFJ3"  coef="-0.010"/>
+		</fixed>
+		<fixed name="T_FFJ2u" range="-0.007 0.030" user="1202">
+			<joint joint="FFJ2"  coef="0.010"/>
+		</fixed>
+		<fixed name="T_FFJ2d" range="-0.030 0.007" user="1203">
+			<joint joint="FFJ2"  coef="-0.010"/>
+		</fixed>
+		<!--coupler tendon-->
+		<fixed name="T_FFJ1c" range ="-0.0010 0.0010"> 
+			<joint joint="FFJ0"  coef="0.00705"/>
+			<joint joint="FFJ1"  coef="-0.00805"/>
+		</fixed>
+		<fixed name="T_FFJ1u" range="-0.007 0.030" user="1200">
+			<joint joint="FFJ0"  coef="0.00705"/>
+			<joint joint="FFJ1"  coef="0.00805"/>
+		</fixed>
+		<fixed name="T_FFJ1d" range="-0.030 0.007" user="1201">
+			<joint joint="FFJ0"  coef="-0.00705"/>
+			<joint joint="FFJ1"  coef="-0.00805"/>
+		</fixed>
+		
+		<!-- ======= Middle Finger ======= -->
+		<fixed name="T_MFJ3r" range="-0.018 0.018" user="1210">
+			<joint joint="MFJ3"  coef="0.010"/>
+		</fixed>
+		<fixed name="T_MFJ3l" range="-0.018 0.018" user="1211">
+			<joint joint="MFJ3"  coef="-0.010"/>
+		</fixed>
+		<fixed name="T_MFJ2u" range="-0.007 0.030" user="1208">
+			<joint joint="MFJ2"  coef="0.010"/>
+		</fixed>
+		<fixed name="T_MFJ2d" range="-0.030 0.007" user="1209">
+			<joint joint="MFJ2"  coef="-0.010"/>
+		</fixed>
+		<!--coupler tendon-->
+		<fixed name="T_MFJ1c" range ="-0.001 0.001"> 
+			<joint joint="MFJ0"  coef="0.00705"/>
+			<joint joint="MFJ1"  coef="-0.00805"/>
+		</fixed>
+		<fixed name="T_MFJ1u" range="-0.007 0.030" user="1206">
+			<joint joint="MFJ0"  coef="0.00705"/>
+			<joint joint="MFJ1"  coef="0.00805"/>
+		</fixed>
+		<fixed name="T_MFJ1d" range="-0.030 0.007" user="1207">
+			<joint joint="MFJ0"  coef="-0.00705"/>
+			<joint joint="MFJ1"  coef="-0.00805"/>
+		</fixed>
+		
+		<!-- ======= Ring Finger ======= -->
+		<fixed name="T_RFJ3r" range="-0.018 0.018" user="1216">
+			<joint joint="RFJ3"  coef="0.010"/>
+		</fixed>
+		<fixed name="T_RFJ3l" range="-0.018 0.018" user="1217">
+			<joint joint="RFJ3"  coef="-0.010"/>
+		</fixed>
+		<fixed name="T_RFJ2u" range="-0.007 0.030" user="1214">
+			<joint joint="RFJ2"  coef="0.010"/>
+		</fixed>
+		<fixed name="T_RFJ2d" range="-0.030 0.007" user="1215">
+			<joint joint="RFJ2"  coef="-0.010"/>
+		</fixed>
+		<!--coupler tendon-->
+		<fixed name="T_RFJ1c" range ="-0.001 0.001"> 
+			<joint joint="RFJ0"  coef="0.00705"/>
+			<joint joint="RFJ1"  coef="-0.00805"/>
+		</fixed>
+		<fixed name="T_RFJ1u" range="-0.007 0.030" user="1212">
+			<joint joint="RFJ0"  coef="0.00705"/>
+			<joint joint="RFJ1"  coef="0.00805"/>
+		</fixed>
+		<fixed name="T_RFJ1d" range="-0.030 0.007" user="1213">
+			<joint joint="RFJ0"  coef="-0.00705"/>
+			<joint joint="RFJ1"  coef="-0.00805"/>
+		</fixed>
+				
+		<!-- ======= Little Finger ======= -->
+		<fixed name="T_LFJ4u" range="-0.007 0.030" user="1224">
+			<joint joint="LFJ4"  coef="0.010"/>
+		</fixed>		
+		<fixed name="T_LFJ4d" range="-0.030 0.007" user="1225">
+			<joint joint="LFJ4"  coef="-0.010"/>
+		</fixed>
+		<fixed name="T_LFJ3r" range="-0.018 0.018" user="1222">
+			<joint joint="LFJ3"  coef="0.010"/>
+		</fixed>
+		<fixed name="T_LFJ3l" range="-0.018 0.018" user="1223">
+			<joint joint="LFJ3"  coef="-0.010"/>
+		</fixed>
+		<fixed name="T_LFJ2u" range="-0.007 0.030" user="1220">
+			<joint joint="LFJ2"  coef="0.010"/>
+		</fixed>
+		<fixed name="T_LFJ2d" range="-0.030 0.007" user="1221">
+			<joint joint="LFJ2"  coef="-0.010"/>
+		</fixed>
+		<!--coupler tendon-->
+		<fixed name="T_LFJ1c" range ="-0.001 0.001"> 
+			<joint joint="LFJ0"  coef="0.00705"/>
+			<joint joint="LFJ1"  coef="-0.00805"/>
+		</fixed>
+		<fixed name="T_LFJ1u" range="-0.007 0.030" user="1218">
+			<joint joint="LFJ0"  coef="0.00705"/>
+			<joint joint="LFJ1"  coef="0.00805"/>
+		</fixed>
+		<fixed name="T_LFJ1d" range="-0.030 0.007" user="1219">
+			<joint joint="LFJ0"  coef="-0.00705"/>
+			<joint joint="LFJ1"  coef="-0.00805"/>
+		</fixed>
+		
+		<!-- ======= Thumb Finger ======= -->
+		<fixed name="T_THJ4a" range="-0.018 0.018" user="1234">
+			<joint joint="THJ4"  coef="0.01636"/>
+		</fixed>	
+		<fixed name="T_THJ4c" range="-0.018 0.018" user="1235">
+			<joint joint="THJ4"  coef="-0.01636"/>
+		</fixed>
+		<fixed name="T_THJ3u" range="-0.007 0.030" user="1232">
+			<joint joint="THJ3"  coef="0.010"/>
+		</fixed>
+		<fixed name="T_THJ3d" range="-0.030 0.007" user="1233">
+			<joint joint="THJ3"  coef="-0.010"/>
+		</fixed>
+		<fixed name="T_THJ2u" range="-0.018 0.018" user="1230">
+			<joint joint="THJ2"  coef="0.011"/>
+		</fixed>
+		<fixed name="T_THJ2d" range="-0.018 0.018" user="1231">
+			<joint joint="THJ2"  coef="-0.011"/>
+		</fixed>
+		<fixed name="T_THJ1r" range="-0.018 0.018" user="1228">
+			<joint joint="THJ1"  coef="0.011"/>
+		</fixed>
+		<fixed name="T_THJ1l" range="-0.018 0.018" user="1229">
+			<joint joint="THJ1"  coef="-0.011"/>
+		</fixed>
+		<fixed name="T_THJ0r" range="-0.030 0.007" user="1226">
+			<joint joint="THJ0"  coef="0.009"/>
+		</fixed>
+		<fixed name="T_THJ0l" range="-0.007 0.030" user="1227">
+			<joint joint="THJ0"  coef="-0.009"/>
+		</fixed>
+    </tendon>
+	
+
+
+	<!--<actuator> <!{1}** NOTE: Use Joint Actuator Force Sensors **{1}>
+	<!{1}** ================ EQUIVALENT POSITION MOTORS ====================== **{1}>
+		<!{1}**<position name="A_ARJ3" user="2046" joint="ARJ3" ctrlrange="-1.57 	0.78" kp="50"/>
+		<position name="A_ARJ2" user="2044" joint="ARJ2" ctrlrange="0.0 	2.8 " kp="500"/>
+		<position name="A_ARJ1" user="2042" joint="ARJ1" ctrlrange="0.0 	2.0 " kp="250"/>
+		<position name="A_ARJ0" user="2040" joint="ARJ0" ctrlrange="-1.5   	1.5 " kp="50"/>**{1}>
+		<position name="A_WRJ1" user="2038" joint="WRJ1" ctrlrange="-0.52   0.17" kp="50"/>
+		<position name="A_WRJ0" user="2036" joint="WRJ0" ctrlrange="-0.79   0.61" kp="50"/>
+		<position name="A_FFJ3" user="2004" joint="FFJ3" ctrlrange="-0.44   0.44" kp="1"/>
+        <position name="A_FFJ2" user="2002" joint="FFJ2" ctrlrange="0       1.6 " kp="1"/>
+        <position name="A_FFJ1" user="2000" joint="FFJ1" ctrlrange="0       1.6 " kp="1"/>
+		<position name="A_FFJ0" user="2000" joint="FFJ0" ctrlrange="0       1.6 " kp="1"/>
+		<position name="A_MFJ3" user="2010" joint="MFJ3" ctrlrange="-0.44   0.44" kp="1"/>
+        <position name="A_MFJ2" user="2008" joint="MFJ2" ctrlrange="0       1.6 " kp="1"/>
+        <position name="A_MFJ1" user="2006" joint="MFJ1" ctrlrange="0       1.6 " kp="1"/>
+		<position name="A_MFJ0" user="2006" joint="MFJ0" ctrlrange="0       1.6 " kp="1"/>
+		<position name="A_RFJ3" user="2016" joint="RFJ3" ctrlrange="-0.44   0.44" kp="1"/>
+        <position name="A_RFJ2" user="2014" joint="RFJ2" ctrlrange="0       1.6 " kp="1"/>
+        <position name="A_RFJ1" user="2012" joint="RFJ1" ctrlrange="0       1.6 " kp="1"/>
+		<position name="A_RFJ0" user="2012" joint="RFJ0" ctrlrange="0       1.6 " kp="1"/>
+		<position name="A_LFJ4" user="2024" joint="LFJ4" ctrlrange="0 		0.7	" kp="1"/>
+		<position name="A_LFJ3" user="2022" joint="LFJ3" ctrlrange="-0.44   0.44" kp="1"/>
+		<position name="A_LFJ2" user="2020" joint="LFJ2" ctrlrange="0       1.6 " kp="1"/>
+		<position name="A_LFJ1" user="2018" joint="LFJ1" ctrlrange="0       1.6 " kp="1"/>
+		<position name="A_LFJ0" user="2018" joint="LFJ0" ctrlrange="0       1.6 " kp="1"/>
+        <position name="A_THJ4" user="2034" joint="THJ4" ctrlrange="-1      1   " kp="1"/>
+		<position name="A_THJ3" user="2032" joint="THJ3" ctrlrange="0       1.3 " kp="1"/>
+		<position name="A_THJ2" user="2030" joint="THJ2" ctrlrange="-0.26   0.26" kp="1"/>
+		<position name="A_THJ1" user="2028" joint="THJ1" ctrlrange="-0.52   0.52" kp="1"/>
+		<position name="A_THJ0" user="2026" joint="THJ0" ctrlrange="0       1.6 " kp="1"/>
+	</actuator>-->
+	
+	<!--<actuator> <!{1}** NOTE: Use Joint Actuator Force Sensors **{1}>
+	<!{1}** ================ EQUIVALENT JOINT MOTORS ====================== **{1}>
+	<!{1}** Act_force 	= gainprm * ctrl :: gainprm = cylinder_max_force **{1}>
+	<!{1}** Jnt_torque = trnprm * Act_force :: trnprm = tendon moment **{1}>
+
+		<!{1}**<general name="A_ARJ3" user="2046" joint="ARJ3" gainprm="295" trnprm="0.015"/>
+		<general name="A_ARJ2" user="2044" joint="ARJ2" gainprm="885" trnprm="0.068"/>
+		<general name="A_ARJ1" user="2042" joint="ARJ1" gainprm="590" trnprm="0.055"/>
+		<general name="A_ARJ0" user="2040" joint="ARJ0" gainprm="295" trnprm="0.028"/>**{1}>
+
+		<general name="A_WRJ1" user="2038" joint="WRJ1" gainprm="125" trnprm="0.030"/>
+		<general name="A_WRJ0" user="2036" joint="WRJ0" gainprm="125" trnprm="0.018"/>
+
+		<general name="A_FFJ3" user="2004" joint="FFJ3" gainprm="45" trnprm="0.010"/>
+		<general name="A_FFJ2" user="2002" joint="FFJ2" gainprm="45" trnprm="0.010"/>
+		<general name="A_FFJ1" user="2000" joint="FFJ1" gainprm="45" trnprm="0.008"/>
+
+		<general name="A_MFJ3" user="2010" joint="MFJ3" gainprm="45" trnprm="0.010"/>
+		<general name="A_MFJ2" user="2008" joint="MFJ2" gainprm="45" trnprm="0.010"/>
+		<general name="A_MFJ1" user="2006" joint="MFJ1" gainprm="45" trnprm="0.008"/>
+
+		<general name="A_RFJ3" user="2016" joint="RFJ3" gainprm="45" trnprm="0.010"/>
+		<general name="A_RFJ2" user="2014" joint="RFJ2" gainprm="45" trnprm="0.010"/>
+		<general name="A_RFJ1" user="2012" joint="RFJ1" gainprm="45" trnprm="0.008"/>
+
+		<general name="A_LFJ4" user="2024" joint="LFJ4" gainprm="45" trnprm="0.010"/>
+		<general name="A_LFJ3" user="2022" joint="LFJ3" gainprm="45" trnprm="0.010"/>
+		<general name="A_LFJ2" user="2020" joint="LFJ2" gainprm="45" trnprm="0.010"/>
+		<general name="A_LFJ1" user="2018" joint="LFJ1" gainprm="45" trnprm="0.008"/>
+
+		<general name="A_THJ4" user="2034" joint="THJ4" gainprm="45" trnprm="0.01636"/>
+		<general name="A_THJ3" user="2032" joint="THJ3" gainprm="45" trnprm="0.010"/>
+		<general name="A_THJ2" user="2030" joint="THJ2" gainprm="45" trnprm="0.011"/>
+		<general name="A_THJ1" user="2028" joint="THJ1" gainprm="45" trnprm="0.011"/>
+		<general name="A_THJ0" user="2026" joint="THJ0" gainprm="45" trnprm="0.009"/>
+	</actuator>-->
+	
+	
+	<actuator> <!--Tendon Actuator Force Sensors-->
+	<!-- ================ EQUIVALENT TENDON PNEUMATIC CYLINDERS ====================== -->
+	<!-- Act_force(pull:: -ve) 	= gainprm{i.e.  -1{pull}*cylinder_area*scalePressure2pascal{i.e. 1e6}} * activation{i.e. Pressure} -->
+	<!-- Jnt_force 	= trnprm * Act_force 	:: trnprm  = tendon moment -->
+	<!-- mjBIAS_AFFINE:: prm = [const, kp, kv]; bias = prm[0] + prm[1]*d->actuator_length[i] + prm[2]*velocity[i]-->
+
+	<!--<general name="A_ARJ3a" user="2046" tendon="T_ARJ3a" dyntype="pneumatic" gainprm="-452.50" ctrlrange="-5 5"/>
+	<general name="A_ARJ3c" user="2047" tendon="T_ARJ3c" dyntype="pneumatic" gainprm="-452.50" ctrlrange="-5 5"/>
+	<general name="A_ARJ2u" user="2044" tendon="T_ARJ2u" dyntype="pneumatic" gainprm="-1357.5" ctrlrange="-5 5"/>
+	<general name="A_ARJ2d" user="2045" tendon="T_ARJ2d" dyntype="pneumatic" gainprm="-905.00" ctrlrange="-5 5"/>
+	<general name="A_ARJ1u" user="2042" tendon="T_ARJ1u" dyntype="pneumatic" gainprm="-905.00" ctrlrange="-5 5"/>
+	<general name="A_ARJ1d" user="2043" tendon="T_ARJ1d" dyntype="pneumatic" gainprm="-452.50" ctrlrange="-5 5"/>
+	<general name="A_ARJ0a" user="2040" tendon="T_ARJ0a" dyntype="pneumatic" gainprm="-452.50" ctrlrange="-5 5"/>
+	<general name="A_ARJ0c" user="2041" tendon="T_ARJ0c" dyntype="user" gainprm="-452.50" ctrlrange="-5 5"/>-->
+
+	<general name="A_WRJ1r" tendon="T_WRJ1r" dyntype="user" gainprm="-198.0"  ctrlrange="-1 1"/>
+	<general name="A_WRJ1l" tendon="T_WRJ1l" dyntype="user" gainprm="198.0"   ctrlrange="-1 1"/>
+	<general name="A_WRJ0u" tendon="T_WRJ0u" dyntype="user" gainprm="-198.0"  ctrlrange="-1 1"/>
+	<general name="A_WRJ0d" tendon="T_WRJ0d" dyntype="user" gainprm="-198.0"  ctrlrange="-1 1"/>
+
+	<general name="A_FFJ3r" tendon="T_FFJ3r" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_FFJ3l" tendon="T_FFJ3l" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_FFJ2u" tendon="T_FFJ2u" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_FFJ2d" tendon="T_FFJ2d" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_FFJ1u" tendon="T_FFJ1u" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_FFJ1d" tendon="T_FFJ1d" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+
+	<general name="A_MFJ3r" tendon="T_MFJ3r" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_MFJ3l" tendon="T_MFJ3l" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_MFJ2u" tendon="T_MFJ2u" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_MFJ2d" tendon="T_MFJ2d" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_MFJ1u" tendon="T_MFJ1u" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_MFJ1d" tendon="T_MFJ1d" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+
+	<general name="A_RFJ3r" tendon="T_RFJ3r" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_RFJ3l" tendon="T_RFJ3l" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_RFJ2u" tendon="T_RFJ2u" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_RFJ2d" tendon="T_RFJ2d" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_RFJ1u" tendon="T_RFJ1u" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_RFJ1d" tendon="T_RFJ1d" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+
+	<general name="A_LFJ4u" tendon="T_LFJ4u" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_LFJ4d" tendon="T_LFJ4d" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_LFJ3r" tendon="T_LFJ3r" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_LFJ3l" tendon="T_LFJ3l" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_LFJ2u" tendon="T_LFJ2u" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_LFJ2d" tendon="T_LFJ2d" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_LFJ1u" tendon="T_LFJ1u" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_LFJ1d" tendon="T_LFJ1d" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+
+	<general name="A_THJ4a" tendon="T_THJ4a" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_THJ4c" tendon="T_THJ4c" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_THJ3u" tendon="T_THJ3u" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_THJ3d" tendon="T_THJ3d" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_THJ2u" tendon="T_THJ2u" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_THJ2d" tendon="T_THJ2d" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_THJ1r" tendon="T_THJ1r" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_THJ1l" tendon="T_THJ1l" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_THJ0r" tendon="T_THJ0r" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+	<general name="A_THJ0l" tendon="T_THJ0l" dyntype="user" gainprm="-67.7"   ctrlrange="-1 1"/>
+</actuator>
+	
+	
+	<sensor>
+	
+		<!-- ======= Tendon Actuator Force Sensors ======= -->
+		<!--<actuatorfrc name="Saf_ARJ3c" actuator="A_ARJ3c"/>
+		<actuatorfrc name="Saf_ARJ3a" actuator="A_ARJ3a"/>
+		<actuatorfrc name="Saf_ARJ2u" actuator="A_ARJ2u"/>
+		<actuatorfrc name="Saf_ARJ2d" actuator="A_ARJ2d"/>
+		<actuatorfrc name="Saf_ARJ1u" actuator="A_ARJ1u"/>
+		<actuatorfrc name="Saf_ARJ1d" actuator="A_ARJ1d"/>
+		<actuatorfrc name="Saf_ARJ0c" actuator="A_ARJ0c"/>
+		<actuatorfrc name="Saf_ARJ0a" actuator="A_ARJ0a"/>-->
+		<actuatorfrc name="Saf_WRJ1r" actuator="A_WRJ1r"/>
+		<actuatorfrc name="Saf_WRJ1l" actuator="A_WRJ1l"/>
+		<actuatorfrc name="Saf_WRJ0d" actuator="A_WRJ0d"/>
+		<actuatorfrc name="Saf_WRJ0u" actuator="A_WRJ0u"/>
+		<actuatorfrc name="Saf_FFJ3l" actuator="A_FFJ3l"/>
+		<actuatorfrc name="Saf_FFJ3r" actuator="A_FFJ3r"/>
+		<actuatorfrc name="Saf_FFJ2u" actuator="A_FFJ2u"/>
+		<actuatorfrc name="Saf_FFJ2d" actuator="A_FFJ2d"/>
+		<actuatorfrc name="Saf_FFJ1u" actuator="A_FFJ1u"/>
+		<actuatorfrc name="Saf_FFJ1d" actuator="A_FFJ1d"/>
+		<actuatorfrc name="Saf_MFJ3l" actuator="A_MFJ3l"/>
+		<actuatorfrc name="Saf_MFJ3r" actuator="A_MFJ3r"/>
+		<actuatorfrc name="Saf_MFJ2u" actuator="A_MFJ2u"/>
+		<actuatorfrc name="Saf_MFJ2d" actuator="A_MFJ2d"/>
+		<actuatorfrc name="Saf_MFJ1u" actuator="A_MFJ1u"/>
+		<actuatorfrc name="Saf_MFJ1d" actuator="A_MFJ1d"/>
+		<actuatorfrc name="Saf_RFJ3l" actuator="A_RFJ3l"/>
+		<actuatorfrc name="Saf_RFJ3r" actuator="A_RFJ3r"/>
+		<actuatorfrc name="Saf_RFJ2u" actuator="A_RFJ2u"/>
+		<actuatorfrc name="Saf_RFJ2d" actuator="A_RFJ2d"/>
+		<actuatorfrc name="Saf_RFJ1u" actuator="A_RFJ1u"/>
+		<actuatorfrc name="Saf_RFJ1d" actuator="A_RFJ1d"/>
+		<actuatorfrc name="Saf_LFJ4u" actuator="A_LFJ4u"/>
+		<actuatorfrc name="Saf_LFJ4d" actuator="A_LFJ4d"/>
+		<actuatorfrc name="Saf_LFJ3l" actuator="A_LFJ3l"/>
+		<actuatorfrc name="Saf_LFJ3r" actuator="A_LFJ3r"/>
+		<actuatorfrc name="Saf_LFJ2u" actuator="A_LFJ2u"/>
+		<actuatorfrc name="Saf_LFJ2d" actuator="A_LFJ2d"/>
+		<actuatorfrc name="Saf_LFJ1u" actuator="A_LFJ1u"/>
+		<actuatorfrc name="Saf_LFJ1d" actuator="A_LFJ1d"/>
+		<actuatorfrc name="Saf_THJ4a" actuator="A_THJ4a"/>
+		<actuatorfrc name="Saf_THJ4c" actuator="A_THJ4c"/>
+		<actuatorfrc name="Saf_THJ3u" actuator="A_THJ3u"/>
+		<actuatorfrc name="Saf_THJ3d" actuator="A_THJ3d"/>
+		<actuatorfrc name="Saf_THJ2u" actuator="A_THJ2u"/>
+		<actuatorfrc name="Saf_THJ2d" actuator="A_THJ2d"/>
+		<actuatorfrc name="Saf_THJ1l" actuator="A_THJ1l"/>
+		<actuatorfrc name="Saf_THJ1r" actuator="A_THJ1r"/>
+		<actuatorfrc name="Saf_THJ0l" actuator="A_THJ0l"/>
+		<actuatorfrc name="Saf_THJ0r" actuator="A_THJ0r"/>
+		
+		<!--<!{1}** ======= Joint Actuator Force Sensors ======= **{1}>
+		<!{1}**<actuatorfrc name="Saf_A_ARJ3"  actuator="A_ARJ3"/>
+		<actuatorfrc name="Saf_A_ARJ2"  actuator="A_ARJ2"/>
+		<actuatorfrc name="Saf_A_ARJ1"  actuator="A_ARJ1"/>
+		<actuatorfrc name="Saf_A_ARJ0"  actuator="A_ARJ0"/>**{1}>
+		<actuatorfrc name="Saf_A_WRJ1"  actuator="A_WRJ1"/>
+		<actuatorfrc name="Saf_A_WRJ0"  actuator="A_WRJ0"/>
+		<actuatorfrc name="Saf_A_FFJ3"  actuator="A_FFJ3"/>
+		<actuatorfrc name="Saf_A_FFJ2"  actuator="A_FFJ2"/>
+		<actuatorfrc name="Saf_A_FFJ1"  actuator="A_FFJ1"/>
+		<actuatorfrc name="Saf_A_MFJ3"  actuator="A_MFJ3"/>
+		<actuatorfrc name="Saf_A_MFJ2"  actuator="A_MFJ2"/>
+		<actuatorfrc name="Saf_A_MFJ1"  actuator="A_MFJ1"/>
+		<actuatorfrc name="Saf_A_RFJ3"  actuator="A_RFJ3"/>
+		<actuatorfrc name="Saf_A_RFJ2"  actuator="A_RFJ2"/>
+		<actuatorfrc name="Saf_A_RFJ1"  actuator="A_RFJ1"/>
+		<actuatorfrc name="Saf_A_LFJ4"  actuator="A_LFJ4"/>
+		<actuatorfrc name="Saf_A_LFJ3"  actuator="A_LFJ3"/>
+		<actuatorfrc name="Saf_A_LFJ2"  actuator="A_LFJ2"/>
+		<actuatorfrc name="Saf_A_LFJ1"  actuator="A_LFJ1"/>
+		<actuatorfrc name="Saf_A_THJ4"  actuator="A_THJ4"/>
+		<actuatorfrc name="Saf_A_THJ3"  actuator="A_THJ3"/>
+		<actuatorfrc name="Saf_A_THJ2"  actuator="A_THJ2"/>
+		<actuatorfrc name="Saf_A_THJ1"  actuator="A_THJ1"/>
+		<actuatorfrc name="Saf_A_THJ0"  actuator="A_THJ0"/>-->
+		
+		
+		<!-- ======= Touch Sensors ======= -->
+       <!-- <touch name="ST_Tch_fftip"	site="Tch_fftip"/>
+		<touch name="ST_Tch_mftip"	site="Tch_mftip"/>
+		<touch name="ST_Tch_rftip"	site="Tch_rftip"/>
+		<touch name="ST_Tch_lftip"	site="Tch_lftip"/>
+		<touch name="ST_Tch_thtip"	site="Tch_thtip"/>-->
+		
+		
+		<!-- ======= Joint Sensors ======= -->
+       <!-- <jointpos name="Sjp_ARJ3"	joint="ARJ3"/>
+		<jointpos name="Sjp_ARJ2"	joint="ARJ2"/>
+		<jointpos name="Sjp_ARJ1"	joint="ARJ1"/>
+		<jointpos name="Sjp_ARJ0"	joint="ARJ0"/>-->
+		
+		<jointpos name="Sjp_WRJ1"	joint="WRJ1"/>
+		<jointpos name="Sjp_WRJ0"	joint="WRJ0"/>
+		
+		<jointpos name="Sjp_FFJ3"	joint="FFJ3"/>
+		<jointpos name="Sjp_FFJ2"	joint="FFJ2"/>
+		<jointpos name="Sjp_FFJ1"	joint="FFJ1"/>
+		<jointpos name="Sjp_FFJ0"	joint="FFJ0"/>
+		
+		<jointpos name="Sjp_MFJ3"	joint="MFJ3"/>
+		<jointpos name="Sjp_MFJ2"	joint="MFJ2"/>
+		<jointpos name="Sjp_MFJ1"	joint="MFJ1"/>
+		<jointpos name="Sjp_MFJ0"	joint="MFJ0"/>
+		
+		<jointpos name="Sjp_RFJ3"	joint="RFJ3"/>
+		<jointpos name="Sjp_RFJ2"	joint="RFJ2"/>
+		<jointpos name="Sjp_RFJ1"	joint="RFJ1"/>
+		<jointpos name="Sjp_RFJ0"	joint="RFJ0"/>
+		
+		<jointpos name="Sjp_LFJ4"	joint="LFJ4"/>
+		<jointpos name="Sjp_LFJ3"	joint="LFJ3"/>
+		<jointpos name="Sjp_LFJ2"	joint="LFJ2"/>
+		<jointpos name="Sjp_LFJ1"	joint="LFJ1"/>
+		<jointpos name="Sjp_LFJ0"	joint="LFJ0"/>
+		
+		<jointpos name="Sjp_THJ4"	joint="THJ4"/>
+		<jointpos name="Sjp_THJ3"	joint="THJ3"/>
+		<jointpos name="Sjp_THJ2"	joint="THJ2"/>
+		<jointpos name="Sjp_THJ1"	joint="THJ1"/>
+		<jointpos name="Sjp_THJ0"	joint="THJ0"/>
+		
+		<!-- ======= Tendon Length Sensors ======= -->
+		<!--<tendonpos name="Stp_T_ARJ3c"	tendon="T_ARJ3c"/>
+		<tendonpos name="Stp_T_ARJ3a"	tendon="T_ARJ3a"/>
+		<tendonpos name="Stp_T_ARJ2u"	tendon="T_ARJ2u"/>
+		<tendonpos name="Stp_T_ARJ2d"	tendon="T_ARJ2d"/>
+		<tendonpos name="Stp_T_ARJ1u"	tendon="T_ARJ1u"/>
+		<tendonpos name="Stp_T_ARJ1d"	tendon="T_ARJ1d"/>
+		<tendonpos name="Stp_T_ARJ0c"	tendon="T_ARJ0c"/>
+		<tendonpos name="Stp_T_ARJ0a"	tendon="T_ARJ0a"/>-->
+		
+		<tendonpos name="Stp_T_WRJ1r"	tendon="T_WRJ1r"/>
+		<tendonpos name="Stp_T_WRJ1l"	tendon="T_WRJ1l"/>
+		<tendonpos name="Stp_T_WRJ0d"	tendon="T_WRJ0d"/>
+		<tendonpos name="Stp_T_WRJ0u"	tendon="T_WRJ0u"/>
+		
+		<tendonpos name="Stp_T_FFJ3l"	tendon="T_FFJ3l"/>
+		<tendonpos name="Stp_T_FFJ3r"	tendon="T_FFJ3r"/>
+		<tendonpos name="Stp_T_FFJ2u"	tendon="T_FFJ2u"/>
+		<tendonpos name="Stp_T_FFJ2d"	tendon="T_FFJ2d"/>
+		<tendonpos name="Stp_T_FFJ1u"	tendon="T_FFJ1u"/>
+		<tendonpos name="Stp_T_FFJ1d"	tendon="T_FFJ1d"/>
+		
+		<tendonpos name="Stp_T_MFJ3l"	tendon="T_MFJ3l"/>
+		<tendonpos name="Stp_T_MFJ3r"	tendon="T_MFJ3r"/>
+		<tendonpos name="Stp_T_MFJ2u"	tendon="T_MFJ2u"/>
+		<tendonpos name="Stp_T_MFJ2d"	tendon="T_MFJ2d"/>
+		<tendonpos name="Stp_T_MFJ1u"	tendon="T_MFJ1u"/>
+		<tendonpos name="Stp_T_MFJ1d"	tendon="T_MFJ1d"/>
+		
+		<tendonpos name="Stp_T_RFJ3l"	tendon="T_RFJ3l"/>
+		<tendonpos name="Stp_T_RFJ3r"	tendon="T_RFJ3r"/>
+		<tendonpos name="Stp_T_RFJ2u"	tendon="T_RFJ2u"/>
+		<tendonpos name="Stp_T_RFJ2d"	tendon="T_RFJ2d"/>
+		<tendonpos name="Stp_T_RFJ1u"	tendon="T_RFJ1u"/>
+		<tendonpos name="Stp_T_RFJ1d"	tendon="T_RFJ1d"/>
+		
+		<tendonpos name="Stp_T_LFJ4u"	tendon="T_LFJ4u"/>
+		<tendonpos name="Stp_T_LFJ4d"	tendon="T_LFJ4d"/>
+		<tendonpos name="Stp_T_LFJ3l"	tendon="T_LFJ3l"/>
+		<tendonpos name="Stp_T_LFJ3r"	tendon="T_LFJ3r"/>
+		<tendonpos name="Stp_T_LFJ2u"	tendon="T_LFJ2u"/>
+		<tendonpos name="Stp_T_LFJ2d"	tendon="T_LFJ2d"/>
+		<tendonpos name="Stp_T_LFJ1u"	tendon="T_LFJ1u"/>
+		<tendonpos name="Stp_T_LFJ1d"	tendon="T_LFJ1d"/>
+
+		<tendonpos name="Stp_T_THJ4a"	tendon="T_THJ4a"/>
+		<tendonpos name="Stp_T_THJ4c"	tendon="T_THJ4c"/>
+		<tendonpos name="Stp_T_THJ3u"	tendon="T_THJ3u"/>
+		<tendonpos name="Stp_T_THJ3d"	tendon="T_THJ3d"/>
+		<tendonpos name="Stp_T_THJ2u"	tendon="T_THJ2u"/>
+		<tendonpos name="Stp_T_THJ2d"	tendon="T_THJ2d"/>
+		<tendonpos name="Stp_T_THJ1l"	tendon="T_THJ1l"/>
+		<tendonpos name="Stp_T_THJ1r"	tendon="T_THJ1r"/>
+		<tendonpos name="Stp_T_THJ0l"	tendon="T_THJ0l"/>
+		<tendonpos name="Stp_T_THJ0r"	tendon="T_THJ0r"/>
+	</sensor>
+</mujoco>
