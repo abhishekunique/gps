@@ -479,6 +479,7 @@ class KernelCCA(BaseEstimator):
         self.Y_ = Y.astype('float32')
         KX = self._get_kernel(X)
         KY = self._get_kernel(Y)
+        print KX, KY
 
         if self.center:
             self.kc = KernelCenterer()

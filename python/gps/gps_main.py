@@ -92,9 +92,9 @@ class GPSMain(object):
         itr_costs = []
         seed = np.random.randint(8900)
         import random, shutil
-        if os.path.exists(self._hyperparams['common']['data_files_dir']):
-            shutil.move(self._hyperparams['common']['data_files_dir'], self._hyperparams['common']['data_files_dir'][:-1] + str(seed))
-            os.makedirs(self._hyperparams['common']['data_files_dir'])
+        # if os.path.exists(self._hyperparams['common']['data_files_dir']):
+        #     shutil.move(self._hyperparams['common']['data_files_dir'], self._hyperparams['common']['data_files_dir'][:-1] + str(seed))
+        #     os.makedirs(self._hyperparams['common']['data_files_dir'])
         random.seed(seed)
         np.random.seed(seed)
         np.set_printoptions(suppress=True)
@@ -132,7 +132,7 @@ class GPSMain(object):
             robot_costs = np.sum(robot_costs, axis=-1)
             robot_costs = np.mean(robot_costs, axis = 2)
 
-            np.save("data{},{}.npy".format(seed, self._hyperparams['common']['cost_weight']), np.array(itr_costs))
+            np.save("data{}.npy".format(seed), np.array(itr_costs))
             print "costs", itr, robot_costs
             for robot_number in range(1, self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
@@ -273,6 +273,7 @@ class GPSMain(object):
             obs_full.append(obs)
             next_obs_full.append(next_obs)
             tgt_actions_full.append(tgt_actions)
+        self.data_logger.pickle('kcca_multiproxy_data.pkl', obs_full)
         X, Y= self.policy_opt.cca(obs_full)
         
         self.data_logger.pickle('multiproxy_cca.pkl', self.policy_opt.fitted_cca)
@@ -280,6 +281,7 @@ class GPSMain(object):
         
         # Compute target mean, cov, and weight for each sample.
         obs_full = []
+        obs_all = []
         next_obs_full = []
         tgt_actions_full = []
         obs_complete_time_full = []
@@ -302,7 +304,7 @@ class GPSMain(object):
                 obs_data = np.concatenate((obs_data, samples.get_obs()[:, :, :]))
                 next_obs_data = np.concatenate((next_obs_data, samples.get_obs()[:, :, :]))
                 obs_complete_time[m] = samples.get_obs()
-
+            obs_all.append(obs_complete_time)
             obs_data = obs_data[:, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
             next_obs_data = next_obs_data[:, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
             obs_complete_time = obs_complete_time[:, :, :, [self._hyperparams['r0_index_list'], self._hyperparams['r1_index_list']][robot_number]]
@@ -311,11 +313,13 @@ class GPSMain(object):
             tgt_actions_full.append(tgt_actions)
             obs_complete_time_full.append(obs_complete_time)
         # self.policy_opt.fitted_cca = self.data_logger.unpickle('multiproxy_cca.pkl')
+        self.data_logger.pickle('kcca_btndata.pkl', obs_all)
+        print obs_all[0].shape
         r0 = self.policy_opt.run_cca(obs_full)
         np.save('3link_cca.npy', np.reshape(r0, (2, 7, T, -1)))
         # self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full)
-        import IPython
-        IPython.embed()
+        # import IPython
+        # IPython.embed()
         
 
     def _take_reward_shaping(self):

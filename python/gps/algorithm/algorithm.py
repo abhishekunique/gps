@@ -200,7 +200,8 @@ class Algorithm(object):
                 self._hyperparams['max_step_mult']),
             self._hyperparams['min_step_mult']
         )
-        self.cur[m].step_mult = new_step
+        self.cur[m].step_mult = new_step# self._hyperparams['step_mult']
+        print "step", new_step
 
         if new_mult > 1:
             LOGGER.debug('Increasing step size multiplier to %f', new_step)

@@ -63,7 +63,10 @@ INIT_POLICY_DIR = '/home/abhigupta/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
 
-cost_weight = 3.829637#10 ** (np.random.rand() * 5)
+cost_weight = 5#10 ** (np.random.rand() * 7-4)
+step_mult = 10 ** (np.random.rand() * 3-1)
+zero_lx = np.random.randint(2)
+zero_lxx = np.random.randint(2)
 
 common = {
     'experiment_name': 'my_experiment' + '_' + \
@@ -77,6 +80,9 @@ common = {
     'train_conditions': [0, 1],
     'test_conditions': [2,3],
     'num_robots':2,
+    'zero_lx':zero_lx,
+    'zero_lxx':zero_lxx,
+    'step_mult':step_mult,
     'policy_opt': {
         'type': PolicyOptTf,
         'network_model': transition_reward_model,
@@ -211,6 +217,9 @@ agent = [{
 #     'sample_increase_var': 0.1,
 #     'init_pol_wt': 0.005,
 # }]
+
+
+
 algorithm = [{
     'type': AlgorithmTrajOpt,
     'conditions': agent[0]['conditions'],
@@ -218,6 +227,7 @@ algorithm = [{
     'test_conditions': agent[0]['test_conditions'],
     'num_robots': common['num_robots'],
     'iterations': 25,
+    'step_mult':step_mult,
 },
 {
     'type': AlgorithmTrajOpt,
@@ -226,6 +236,7 @@ algorithm = [{
     'test_conditions': agent[1]['test_conditions'],
     'num_robots': common['num_robots'],
     'iterations': 25,
+    'step_mult':step_mult,
 }]
 
 
@@ -316,7 +327,9 @@ print load_trajs.shape
 test_cost_tf = [{
     'type': CostTF,
     'target_feats': np.mean(load_trajs[i], axis=0),
-    'tf_loss': CostCCA.tf_loss
+    'tf_loss': CostCCA.tf_loss,
+    'zero_lx':0,
+    'zero_lxx':0,
 } for i in common['train_conditions']]
 
 # test_cost = [{
