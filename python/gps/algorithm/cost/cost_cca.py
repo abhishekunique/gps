@@ -28,6 +28,7 @@ class CostCCA(Cost):
         """ Helper method to initialize the tf networks used """
         with open('multiproxy_cca.pkl', 'rb') as f:
             self.cca = pickle.load(f)
+            # self.x_weights = self.cca.X_.T.dot(self.cca.alphas_)
             self.x_weights = self.cca.x_weights_
 
     def eval(self, sample):
@@ -52,6 +53,8 @@ class CostCCA(Cost):
         # x = np.concatenate([x[:, 0:4], x[:, 5:9], x[:, 10:13], x[:, 19:22]], axis=1)
         x = np.concatenate([x[:, 8:11], x[:, 11:14]], axis=1)
         feat_forward = self.cca.transform(x)
+        # import IPython
+        # IPython.embed()
         num_feats = feat_forward.shape[1]
         num_inputs = x.shape[1]
         
@@ -59,7 +62,6 @@ class CostCCA(Cost):
         l = np.zeros((T,))
         ls = np.zeros((T,size_ls))
         lss = np.zeros((T, size_ls, size_ls))
-
         for t in range(T):
             l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(6)/(2.0)).dot(feat_forward[t] - tgt[t])
             grad_mult = (feat_forward[t] - tgt[t]).dot(self.x_weights.T)
@@ -92,7 +94,24 @@ class CostCCA(Cost):
             # lss[t,19:22,19:22] = hess_mult[11:14, 11:14]
 
         final_l += l
-        print np.sum(final_l)
         final_lx += ls
         final_lxx += lss
+        # print "cca", np.sum(final_l), final_lx, final_l.shape, final_lx.shape
         return final_l, final_lx, final_lu, final_lxx, final_luu, final_lux
+
+
+    @classmethod
+    def tf_loss(cls, hyperparams, T, x, u_input, jx_input, ee_input):
+        ncomp = 6
+        x = tf.concat(1, [x[:, 8:11], x[:, 11:14]])
+        with open('multiproxy_cca.pkl', 'rb') as f:
+            cca = pickle.load(f)
+        x -= cca.x_mean_
+        x /= cca.x_std_
+        tgt = hyperparams['target_feats']
+        print cca.x_weights_.shape
+        return tf.reduce_sum((tgt[:, :ncomp] - 
+            #cca.transform_tf(x)[:, :ncomp]
+            tf.matmul(x, cca.x_rotations_.astype('float32'))[:, :ncomp]
+            ) ** 2
+        , 1) / 2, False

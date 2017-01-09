@@ -97,7 +97,8 @@ class GPSMain(object):
         #             self.algorithm[ag].cur[cond].traj_distr = traj_distr[ag][name][cond]
         #     else:
         #         print name, "not in traj_distr"
-
+        seed = np.random.randint(8900)
+        itr_costs = []
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
@@ -125,7 +126,25 @@ class GPSMain(object):
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
                 if rf:
                     np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
+                cond_costs = []
+                for m in self._train_idx[robot_number]:
+                    sample_costs = []
+                    for sample in traj_sample_lists[robot_number][m]:
+                        # import IPython
+                        # IPython.embed()
+                        costs = [costfn.eval(sample)[0] for costfn in self.algorithm[robot_number].cost[m]._costs]
+                        if len(costs)< 2:
+                            costs.append(np.zeros_like(costs[0]))
+                        sample_costs.append(costs)
+                    cond_costs.append(sample_costs)
+                robot_costs.append(cond_costs)
+            itr_costs.append(robot_costs)
+            robot_costs = np.array(robot_costs)
+            robot_costs = np.sum(robot_costs, axis=-1)
+            robot_costs = np.mean(robot_costs, axis = 2)
 
+            np.save("data{}.npy".format(seed), np.array(itr_costs))
+            print "costs", itr, robot_costs
             # if itr % 8 == 0 and itr > 0:
             #     import IPython
             #     IPython.embed()
@@ -290,13 +309,13 @@ class GPSMain(object):
         # tgt_actions_full = dict_data['action_full'] 
         # obs_complete_time_full = dict_data['obs_extended_full'] 
         # obs_uncut = dict_data['obs_uncut_full']
-        # print("ABOUT to CCA")
-        # import IPython
-        # IPython.embed()
-        # X, Y= self.policy_opt.cca(obs_full)
+        print("ABOUT to CCA")
+        import IPython
+        IPython.embed()
+        X, Y= self.policy_opt.cca(obs_full)
         
-        # self.data_logger.pickle('multiproxy_cca.pkl', self.policy_opt.fitted_cca)
-        # print("DONE CCA")
+        self.data_logger.pickle('multiproxy_cca.pkl', self.policy_opt.fitted_cca)
+        print("DONE CCA")
         # self.policy_opt.fitted_cca = self.data_logger.unpickle('multiproxy_cca.pkl')
         # r0 = self.policy_opt.run_cca(obs_full)
         # np.save('3link_cca.npy', np.reshape(r0, (2, 7, T, -1)))
@@ -304,7 +323,7 @@ class GPSMain(object):
         # self.data_logger.pickle("obs_uncut.pkl", obs_uncut)
         # print("DONE saving")
         # raw_input()
-        self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full, obs_uncut)
+        # self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full, obs_uncut)
         # import IPython
         # IPython.embed()
 
@@ -406,17 +425,18 @@ class GPSMain(object):
                 assign_op = v.assign(val_vars[k])
                 self.policy_opt.sess.run(assign_op)
 
-        # self.policy_opt.fitted_cca = self.data_logger.unpickle('multiproxy_cca.pkl')
-        # reshaped_0 = [np.reshape(obs_complete_time_full[0], (24, 100, 6)), np.reshape(obs_complete_time_full[1], (24, 100, 6))]
-        # r0 = self.policy_opt.run_cca(reshaped_0)
-        # np.save('3link_cca.npy', np.reshape(r0, (2, 12, T, -1)))
+        self.policy_opt.fitted_cca = self.data_logger.unpickle('multiproxy_cca.pkl')
+        import IPython
+        IPython.embed()
+        reshaped_0 = [np.reshape(obs_complete_time_full[0], (20, 100, 6)), np.reshape(obs_complete_time_full[0], (20, 100, 6))]
+        r0 = self.policy_opt.run_cca(reshaped_0)
+        np.save('3link_cca.npy', np.reshape(r0, (2, 10, T, -1)))
         # np.save('3link_cca.npy', np.reshape(obs_complete_time_full[1], (2, 12, T, -1)))
-        # import IPython
-        # IPython.embed()
+        
         # obs_complete_time_full = self.data_logger.unpickle("obs_complete_time_full.pkl")
         # obs_uncut = self.data_logger.unpickle("obs_uncut.pkl")
         print("about to save")
-        self.policy_opt.run_invariant_autoencoder_forward(obs_complete_time_full)
+        # self.policy_opt.run_invariant_autoencoder_forward(obs_complete_time_full)
         # import IPython
         # IPython.embed()
         

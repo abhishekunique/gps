@@ -196,7 +196,7 @@ class AgentMuJoCo(Agent):
                     # import IPython
                     # IPython.embed()
                     mj_X, _ = self._world[condition].step(mj_X, mj_U)
-                    print(mj_X)
+                    # print(mj_X)
 
                 #TODO: Some hidden state stuff will go here.
                 self._data = self._world[condition].get_data()
