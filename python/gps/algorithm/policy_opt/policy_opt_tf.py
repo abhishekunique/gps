@@ -134,7 +134,7 @@ class PolicyOptTf(PolicyOpt):
             self.init_feature_space()
 
         config = tf.ConfigProto()
-        config.gpu_options.allow_growth=True
+        # config.gpu_options.allow_growth=True
         self.sess = tf.Session(config=config)
 
         self.policy = []
@@ -529,7 +529,7 @@ class PolicyOptTf(PolicyOpt):
         from sklearn.cross_decomposition import CCA
         num_components = 2
         self.fitted_cca = KernelCCA(n_components=num_components, kernel="rbf",
-            kernel_params={"c": 1, "deg":3, "sigma":6}, eigen_solver='auto',
+            kernel_params={"c": 1, "deg":2, "sigma":1}, eigen_solver='auto',
                  center=True, pgso=True, eta=1e-4, kapa=0.4)#CCA(num_components)
         Y, X = obs_full
         N = X.shape[0]

@@ -11,7 +11,7 @@ import tensorflow as tf
 class CostTF(Cost):
     def __init__(self, hyperparams):
         Cost.__init__(self, hyperparams)
-        self.cca = CostCCA(hyperparams)
+        # self.cca = CostCCA(hyperparams)
         self.initialized = False
 
     def initTFGrad(self, Xshape, Ushape, JXshape, EEshape):
