@@ -480,38 +480,40 @@ class KernelCCA(BaseEstimator):
         KX = self._get_kernel(X)
         KY = self._get_kernel(Y)
         print KX, KY
-
-        if self.center:
-            self.kc = KernelCenterer()
-            self.KXc_ = self.kc.fit_transform(KX)
-            self.KYc_ = self.kc.fit_transform(KY)
-        else:
-            self.KXc_ = KX
-            self.KYc_ = KY
+        self.kc = KernelCenterer()
+        # if self.center:
+        #     # self.kc = KernelCenterer()
+        #     # self.KXc_ = self.kc.fit_transform(KX)
+        #     # self.KYc_ = self.kc.fit_transform(KY)
+        # else:
+        self.KXc_ = KX
+        self.KYc_ = KY
 
         if self.pgso:  # use PGSO to decompose kernel matrix
             self._fit_pgso(self.KXc_, self.KYc_)
         else:
             self._fit(self.KXc_, self.KYc_)
         self.x_weights_ = X.T.dot(self.alphas_)
+        xcomp = self.KXc_.dot(self.alphas_)
+        ycomp = self.KYc_.dot(self.betas_)
+        self.mean_x = np.mean(xcomp, axis=0)
+        self.std_x = np.std(xcomp, axis=0)
+        self.mean_y = np.mean(ycomp, axis=0)
+        self.std_y = np.std(ycomp, axis=0)
         return self
 
     def transform(self, X=None, Y=None):
         if X is not None:
             KX = self._get_kernel(X, self.X_)
-            if self.center:
-                KXc = self.kc.transform(KX)
-            else:
-                KXc = KX
-            xcomp = KXc.dot(self.alphas_)*20
+            xcomp = KX.dot(self.alphas_)
+            xcomp -= self.mean_x
+            xcomp /= self.std_x
 
         if Y is not None:
             KY = self._get_kernel(Y, self.Y_)
-            if self.center:
-                KYc = self.kc.transform(KY)
-            else:
-                KYc = KY
-            ycomp = KYc.dot(self.betas_)*20
+            ycomp = KY.dot(self.betas_)
+            ycomp -= self.mean_y
+            ycomp /= self.std_y
         if Y is not None and X is not None:
             return xcomp, ycomp
         if X is not None:
@@ -521,21 +523,21 @@ class KernelCCA(BaseEstimator):
 
     def __getstate__(self):
         """Return state values to be pickled."""
-        return (self.X_, self.alphas_, self.Y_, self.betas_, self.kc, self.kernel, self.kernel_params, self.center)
+        return (self.mean_x, self.std_x, self.mean_y, self.std_y, self.X_, self.alphas_, self.Y_, self.betas_, self.kc, self.kernel, self.kernel_params, self.center)
 
     def __setstate__(self, state):
         """Restore state from the unpickled state values."""
-        self.X_, self.alphas_, self.Y_, self.betas_, self.kc, self.kernel, self.kernel_params, self.center = state
+        self.mean_x, self.std_x, self.mean_y, self.std_y, self.X_, self.alphas_, self.Y_, self.betas_, self.kc, self.kernel, self.kernel_params, self.center = state
 
     def transform_tf(self, X):
         K = self._get_kernel_tf(X, self.X_)
-        if self.center:
-            K_pred_cols = (tf.reduce_sum(K, 1) /
-                       self.kc.K_fit_rows_.shape[0])[:, np.newaxis]
+        # if self.center:
+            # K_pred_cols = (tf.reduce_sum(K, 1) /
+            #            self.kc.K_fit_rows_.shape[0])[:, np.newaxis]
 
-            K -= self.kc.K_fit_rows_
-            K -= K_pred_cols
-            K += self.kc.K_fit_all_
+            # K -= self.kc.K_fit_rows_
+            # K -= K_pred_cols
+            # K += self.kc.K_fit_all_
         xcomp = tf.matmul(K, self.alphas_.astype('float32'))
-        return xcomp*20
+        return (xcomp - self.mean_x.astype('float32')) / self.std_x.astype('float32')
 

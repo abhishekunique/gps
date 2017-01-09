@@ -28,8 +28,8 @@ class CostCCA(Cost):
         """ Helper method to initialize the tf networks used """
         with open('multiproxy_cca.pkl', 'rb') as f:
             self.cca = pickle.load(f)
-            # self.x_weights = self.cca.X_.T.dot(self.cca.alphas_)
-            self.x_weights = self.cca.x_weights_
+            self.x_weights = self.cca.X_.T.dot(self.cca.alphas_)
+            # self.x_weights = self.cca.x_weights_
 
     def eval(self, sample):
         """
@@ -102,16 +102,16 @@ class CostCCA(Cost):
 
     @classmethod
     def tf_loss(cls, hyperparams, T, x, u_input, jx_input, ee_input):
-        ncomp = 6
+        ncomp = 4
         x = tf.concat(1, [x[:, 8:11], x[:, 11:14]])
         with open('multiproxy_cca.pkl', 'rb') as f:
             cca = pickle.load(f)
-        x -= cca.x_mean_
-        x /= cca.x_std_
+        # x -= cca.x_mean_
+        # x /= cca.x_std_
         tgt = hyperparams['target_feats']
-        print cca.x_weights_.shape
+        # print cca.x_weights_.shape
         return tf.reduce_sum((tgt[:, :ncomp] - 
-            #cca.transform_tf(x)[:, :ncomp]
-            tf.matmul(x, cca.x_rotations_.astype('float32'))[:, :ncomp]
+            cca.transform_tf(x)[:, :ncomp]
+            # tf.matmul(x, cca.x_rotations_.astype('float32'))[:, :ncomp]
             ) ** 2
         , 1) / 2, False

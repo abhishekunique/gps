@@ -320,7 +320,7 @@ class GPSMain(object):
         # r0 = self.policy_opt.run_cca(obs_full)
         # np.save('3link_cca.npy', np.reshape(r0, (2, 7, T, -1)))
         # self.data_logger.pickle("obs_complete_time_full.pkl", obs_complete_time_full)
-        # self.data_logger.pickle("obs_uncut.pkl", obs_uncut)
+        self.data_logger.pickle("kcca_obs.pkl", (obs_uncut, obs_full))
         # print("DONE saving")
         # raw_input()
         # self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full, obs_uncut)

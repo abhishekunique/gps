@@ -17,6 +17,9 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import plot, ion, show
 from matplotlib.backends.backend_pdf import PdfPages
 from sklearn.neighbors import NearestNeighbors
+
+from kernel_cca import KernelCCA
+
 class MLPlotter:
     """
     Plot/save machine learning data
@@ -690,9 +693,20 @@ class PolicyOptTf(PolicyOpt):
         print("done saving features")
 
     def cca(self,obs_full):
-        from sklearn.cross_decomposition import CCA
+        # from sklearn.cross_decomposition import CCA
+        # num_components = 6
+        # self.fitted_cca = CCA(num_components)
+        # Y, X = obs_full
+        # N = X.shape[0]
+        # T = X.shape[1]
+        # X = np.reshape(X, [N*T, -1])
+        # Y = np.reshape(Y, [N*T, -1])
+        # self.fitted_cca.fit(X,Y)
+        # return X,Y
         num_components = 6
-        self.fitted_cca = CCA(num_components)
+        self.fitted_cca = KernelCCA(n_components=num_components, kernel="linear",
+            kernel_params={"c": 1, "deg":2, "sigma":2}, eigen_solver='auto',
+                 center=True, pgso=True, eta=1e-1, kapa=0.1)#CCA(num_components)
         Y, X = obs_full
         N = X.shape[0]
         T = X.shape[1]
