@@ -704,9 +704,9 @@ class PolicyOptTf(PolicyOpt):
         # self.fitted_cca.fit(X,Y)
         # return X,Y
         num_components = 6
-        self.fitted_cca = KernelCCA(n_components=num_components, kernel="poly",
+        self.fitted_cca = KernelCCA(n_components=num_components, kernel="rbf",
             kernel_params={"c": 1, "deg":2, "sigma":1}, eigen_solver='auto',
-                 center=True, pgso=True, eta=1e-1, kapa=0.1)#CCA(num_components)
+                 center=True, pgso=True, eta=0.1, kapa=0.5)#CCA(num_components)
         Y, X = obs_full
         N = X.shape[0]
         T = X.shape[1]

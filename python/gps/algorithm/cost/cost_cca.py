@@ -110,8 +110,8 @@ class CostCCA(Cost):
         # x /= cca.x_std_
         tgt = hyperparams['target_feats']
         # print cca.x_weights_.shape
-        return tf.reduce_sum((tgt[:, :ncomp] - 
-            cca.transform_tf(x)[:, :ncomp]
+        return tf.reduce_sum((tgt[:, 1:ncomp] - 
+            cca.transform_tf(x)[:, 1:ncomp]
             # tf.matmul(x, cca.x_rotations_.astype('float32'))[:, :ncomp]
             ) ** 2
         , 1) / 2, False
