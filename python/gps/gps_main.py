@@ -149,7 +149,7 @@ class GPSMain(object):
             #     import IPython
             #     IPython.embed()
 
-        sys.exit(0)
+        os._exit(0)
         self._end()
 
     def run_badmm(self, itr_load=None, rf=False):
