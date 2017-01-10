@@ -103,7 +103,7 @@ class CostTF(Cost):
         # if self._hyperparams['zero_lx']:
         #     tf_lx = np.zeros_like(tf_lx)
         # if self._hyperparams['zero_lxx']:
-        tf_lxx = np.zeros_like(tf_lxx)
+        #tf_lxx = np.zeros_like(tf_lxx)
         # print (np.linalg.norm(cL-tf_loss), np.linalg.norm(cLx - tf_lx), 
         #     np.linalg.norm(cLu - tf_lu), np.linalg.norm(cLxx - np.zeros_like(tf_lxx)),
         #     np.linalg.norm(cLuu - tf_luu), np.linalg.norm(cLux - tf_lux)) 
