@@ -102,7 +102,7 @@ class CostCCA(Cost):
 
     @classmethod
     def tf_loss(cls, hyperparams, T, x, u_input, jx_input, ee_input):
-        ncomp = 4
+        ncomp = 3
         x = tf.concat(1, [x[:, 8:11], x[:, 11:14]])
         with open('multiproxy_cca.pkl', 'rb') as f:
             cca = pickle.load(f)

@@ -149,7 +149,7 @@ class GPSMain(object):
             #     import IPython
             #     IPython.embed()
 
-
+        sys.exit(0)
         self._end()
 
     def run_badmm(self, itr_load=None, rf=False):
@@ -309,9 +309,9 @@ class GPSMain(object):
         # tgt_actions_full = dict_data['action_full'] 
         # obs_complete_time_full = dict_data['obs_extended_full'] 
         # obs_uncut = dict_data['obs_uncut_full']
-        print("ABOUT to CCA")
-        import IPython
-        IPython.embed()
+        # print("ABOUT to CCA")
+        # import IPython
+        # IPython.embed()
         X, Y= self.policy_opt.cca(obs_full)
         
         self.data_logger.pickle('multiproxy_cca.pkl', self.policy_opt.fitted_cca)

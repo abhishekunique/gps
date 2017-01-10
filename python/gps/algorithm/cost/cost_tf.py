@@ -11,7 +11,7 @@ import tensorflow as tf
 class CostTF(Cost):
     def __init__(self, hyperparams):
         Cost.__init__(self, hyperparams)
-        self.cca = CostCCA(hyperparams)
+        # self.cca = CostCCA(hyperparams)
         self.initialized = False
 
     def initTFGrad(self, Xshape, Ushape, JXshape, EEshape):
@@ -98,14 +98,14 @@ class CostTF(Cost):
             #                          data_types=[JOINT_ANGLES, JOINT_ANGLES])
 
         # print "tf", tf_loss, tf_lx, tf_loss.shape, tf_lx.shape
-        cL, cLx, cLu, cLxx, cLuu, cLux = self.cca.eval(sample)
+        # cL, cLx, cLu, cLxx, cLuu, cLux = self.cca.eval(sample)
         # print "cca", np.linalg.norm(tf_lx), np.linalg.norm(cLx), tf_lx, cLx
         # if self._hyperparams['zero_lx']:
         #     tf_lx = np.zeros_like(tf_lx)
         # if self._hyperparams['zero_lxx']:
         # tf_lxx = np.zeros_like(tf_lxx)
-        print (np.linalg.norm(cL-tf_loss), np.linalg.norm(cLx - tf_lx), 
-            np.linalg.norm(cLu - tf_lu), np.linalg.norm(cLxx - np.zeros_like(tf_lxx)),
-            np.linalg.norm(cLuu - tf_luu), np.linalg.norm(cLux - tf_lux)) 
+        # print (np.linalg.norm(cL-tf_loss), np.linalg.norm(cLx - tf_lx), 
+        #     np.linalg.norm(cLu - tf_lu), np.linalg.norm(cLxx - np.zeros_like(tf_lxx)),
+        #     np.linalg.norm(cLuu - tf_luu), np.linalg.norm(cLux - tf_lux)) 
 
         return tf_loss, tf_lx, tf_lu, tf_lxx, tf_luu, tf_lux

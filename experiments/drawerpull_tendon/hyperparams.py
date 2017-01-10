@@ -299,7 +299,7 @@ algorithm[0]['policy_prior'] = {
 config = {
     'iterations': 25,
     'num_samples': 12,
-    'verbose_trials': 12,
+    'verbose_trials': 0,
     'verbose_policy_trials': 5,
     'common': common,
     'save_wts': True,
