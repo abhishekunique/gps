@@ -11,6 +11,8 @@ import sys
 import copy
 import argparse
 import threading
+import random
+import numpy as np
 import time
 import tensorflow as tf
 # Add gps/python to path so that imports work.
@@ -98,10 +100,10 @@ class GPSMain(object):
         #     else:
         #         print name, "not in traj_distr"
         seed = np.random.randint(8900)
-        
+
         random.seed(seed)
         np.random.seed(seed)
-        
+
         itr_costs = []
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
