@@ -17,8 +17,7 @@ import matplotlib.pyplot as plt
 from matplotlib.pyplot import plot, ion, show
 from matplotlib.backends.backend_pdf import PdfPages
 from sklearn.neighbors import NearestNeighbors
-from pykcca.kcca import KCCA
-from pykcca.kernels import LinearKernel
+
 from kernel_cca import KernelCCA
 
 class MLPlotter:
@@ -132,11 +131,7 @@ class PolicyOptTf(PolicyOpt):
         self.tf_vars = tf.trainable_variables()
         if self._hyperparams['run_feats']:
             self.init_feature_space()
-
-        config = tf.ConfigProto()
-        # config.gpu_options.allow_growth=True
-        self.sess = tf.Session(config=config)
-
+        self.sess = tf.Session()
         self.policy = []
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
             self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string))
@@ -179,7 +174,8 @@ class PolicyOptTf(PolicyOpt):
             dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])]
         else:
             dO = self._dO
-        tf_maps, other = tf_map_generator(dim_input_state=dO, dim_input_action=self._dU, batch_size=self.batch_size,
+        dU = [3,3]
+        tf_maps, other = tf_map_generator(dim_input_state=dO, dim_input_action=dU, batch_size=self.batch_size,
                              network_config=self._hyperparams['network_params'])
         self.obs_tensors = []
         self.action_tensors = []
@@ -217,26 +213,175 @@ class PolicyOptTf(PolicyOpt):
         #                       weight_decay=self._hyperparams['weight_decay'],
         #                       vars_to_opt=self.other['dc_variables'].values())
 
-    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full):
+    # def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full, obs_uncut_full):
+    #     # dict_data = {}
+    #     # dict_data['obs_full'] = obs_full
+    #     # dict_data['next_obs_full'] = next_obs_full
+    #     # dict_data['action_full'] = action_full
+    #     # dict_data['obs_extended_full'] = obs_extended_full
+    #     # dict_data['obs_uncut_full'] = obs_uncut_full
+    #     # import pickle
+    #     # pickle.dump(dict_data, open("stored_data.pkl", "wb"))
+    #     # import pickle
+    #     # val_vars = pickle.load(open('subspace_state.pkl', 'rb'))
+    #     # for k,v in self.other['all_variables'].items():
+    #     #     if k in val_vars:
+    #     #         print(k)
+    #     #         assign_op = v.assign(val_vars[k])
+    #     #         self.sess.run(assign_op)
+
+    #     import matplotlib.pyplot as plt
+    #     num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
+    #     self.batch_size = 25
+    #     training_epochs = 200
+    #     display_step = 5
+    #     obs_reshaped = []
+    #     next_obs_reshaped = []
+    #     action_reshaped = []
+    #     #TODO: [SCALE OBSERVATIONS BACK DOWN TO REASONABLE RANGE]
+    #     for robot_number in range(self.num_robots):
+
+    #         obs = obs_full[robot_number]
+    #         N, T = obs.shape[:2]
+
+    #         dO = obs.shape[2]
+    #         dU = self._dU[robot_number]
+
+    #         obs = np.reshape(obs, (N*T, dO))
+           
+    #         # self.policy[robot_number].x_idx = self.x_idx[robot_number]
+    #         # self.policy[robot_number].scale = np.diag(1.0 / (np.std(obs, axis=0) + 1e-8))
+    #         # self.policy[robot_number].bias = -np.mean(obs.dot(self.policy[robot_number].scale), axis=0)
+    #         # obs = obs.dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
+
+
+    #         next_obs = next_obs_full[robot_number]
+    #         next_obs = np.reshape(next_obs, (N*T, dO))
+    #         # next_obs = next_obs.dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
+            
+
+    #         action = action_full[robot_number]
+    #         action = np.reshape(action, (N*T, dU))
+
+    #         obs_reshaped.append(obs)
+    #         next_obs_reshaped.append(next_obs)
+    #         action_reshaped.append(action)
+    #     dict_data = {}
+    #     dict_data['scale'] = [self.policy[0].scale, self.policy[1].scale]
+    #     dict_data['bias'] = [self.policy[0].bias, self.policy[1].bias]
+    #     import pickle
+    #     pickle.dump(dict_data, open("scalebias.pkl", "wb"))
+    #     idx = range(N*T)
+    #     np.random.shuffle(idx)
+    #     batches_per_epoch = np.floor(N*T / self.batch_size)
+    #     for epoch in range(training_epochs):
+    #         avg_cost = 0.
+    #         all_losses = np.zeros((len(self.other['all_losses'],)))
+    #         total_batch = int(N*T / self.batch_size)
+    #         # Loop over all batches
+    #         for i in range(total_batch):
+    #             start_idx = int(i * self.batch_size)
+    #             idx_i = idx[start_idx:start_idx+self.batch_size]
+    #             feed_dict = {}
+    #             for robot_number in range(self.num_robots):
+    #                 feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
+    #             # Fit training using batch data
+    #             cost = self.solver(feed_dict, self.sess, device_string=self.device_string)
+    #             all_losses_indiv = np.asarray(self.sess.run(self.other['all_losses'], feed_dict))
+    #             # Compute average loss
+    #             avg_cost += cost / (N*T)* self.batch_size
+    #             all_losses += all_losses_indiv/(N*T)* self.batch_size
+
+    #         # Display logs per epoch step
+    #         if epoch % display_step == 0:
+    #             print "Epoch:", '%04d' % (epoch+1), \
+    #                   "cost=", "{:.9f}".format(avg_cost)
+    #             print("all_losses " + str(all_losses))
+
+    #     var_dict = {}
+    #     for k, v in self.other['all_variables'].items():
+    #         var_dict[k] = self.sess.run(v)
+    #     pickle.dump(var_dict, open("subspace_state.pkl", "wb"))
+    #     import IPython
+    #     IPython.embed()
+
+    #     layer_size = 60
+    #     cond_feats = np.zeros((num_conds, num_samples, T_extended, layer_size))
+    #     cond_feats_other = np.zeros((num_conds, num_samples, T_extended, layer_size))
+    #     l2_loss = 0
+
+    #     for cond in range(num_conds):
+    #         for sample_num in range(num_samples):
+    #             # for robot_number in range(self.num_robots):
+    #             #      obs_extended_full[robot_number][cond][sample_num] = obs_extended_full[robot_number][cond][sample_num].dot(self.policy[robot_number].scale) + self.policy[robot_number].bias
+    #             feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num], 
+    #                         self.other['state_inputs'][1]: obs_extended_full[1][cond][sample_num]}
+    #             cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+    #             cond_feats_other[cond, sample_num] = self.sess.run(self.other['state_features_list'][1], feed_dict=feed_dict)
+    #             l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
+    #     print(l2_loss)
+    #     print("RAN THROUGH FEATURES")
+    #     import IPython
+    #     IPython.embed()
+    #     cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,layer_size))
+    #     cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,layer_size))
+    #     nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
+    #     distances, indices = nbrs.kneighbors(cond_feats_other)
+    #     indices = np.reshape(indices, (num_conds, num_samples, T_extended))
+    #     dO_robot0 = obs_extended_full[0].shape[-1]
+    #     obs_full_reshaped = np.reshape(obs_extended_full[0], (num_conds*num_samples*T_extended,dO_robot0))
+    #     dO_robot0_uncut = obs_uncut_full[0].shape[-1]
+    #     obs_uncut_reshaped = np.reshape(obs_uncut_full[0], (num_conds*num_samples*T_extended,dO_robot0_uncut))
+    #     print("CHECK NN")
+    #     import IPython
+    #     IPython.embed()
+    #     for cond in range(num_conds):
+    #         for s_no in range(num_samples):
+    #             color = ['r', 'b'][robot_number]
+    #             for t in range(T_extended):
+    #                 x = obs_uncut_full[1][cond, s_no, t, 12]
+    #                 y = obs_uncut_full[1][cond, s_no, t, 14]
+    #                 nnbr_currpoint = indices[cond, s_no, t]
+    #                 x_nbr = obs_uncut_reshaped[nnbr_currpoint][6]
+    #                 y_nbr = obs_uncut_reshaped[nnbr_currpoint][8]
+    #                 print("X: " + str([x,x_nbr]))
+    #                 print("Y: " + str([y,y_nbr]))
+    #                 lines = plt.plot([x,x_nbr], [y,y_nbr])
+    #     plt.show()
+    #     import IPython
+    #     IPython.embed()
+    #     np.save("3link_feats.npy", np.asarray(cond_feats))
+       
+
+    #     print("done training invariant autoencoder and saving weights")
+    
+    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full, obs_uncut_full):
         import matplotlib.pyplot as plt
         num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
 
-        
-        # for cond in range(num_conds):
-        #     for s_no in range(num_samples):
-        #         xs = []
-        #         ys = []
-        #         for robot_number in range(self.num_robots):
-        #             color = ['r', 'b'][robot_number]
-        #             x = obs_extended_full[robot_number][cond, s_no, :, 6+2*robot_number]
-        #             y = obs_extended_full[robot_number][cond, s_no, :, 8+2*robot_number]
-        #             plt.scatter(x, y, c=color)
-        #             xs.append(x)
-        #             ys.append(y)
-        #         plt.plot([xs[0], xs[1]], [ys[0], ys[1]])
-        # plt.show()
-        # import IPython
-        # IPython.embed()
+        import IPython
+        IPython.embed()
+        for cond in range(num_conds):
+            for s_no in range(num_samples):
+                xs = []
+                ys = []
+                for robot_number in range(self.num_robots):
+                    color = ['r', 'b'][robot_number] 
+                    if robot_number == 0:
+                        x_plot_idx = 6
+                        y_plot_idx = 8
+                    else:
+                        x_plot_idx = 12
+                        y_plot_idx = 14
+                    x = obs_uncut_full[robot_number][cond, s_no, :, x_plot_idx]
+                    y = obs_uncut_full[robot_number][cond, s_no, :, y_plot_idx]
+                    plt.scatter(x, y, c=color)
+                    xs.append(x)
+                    ys.append(y)
+                plt.plot([xs[0], xs[1]], [ys[0], ys[1]])
+        plt.show()
+        import IPython
+        IPython.embed()
 
         obs_reshaped = []
         next_obs_reshaped = []
@@ -309,8 +454,8 @@ class PolicyOptTf(PolicyOpt):
 
 
 
-        cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
-        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 30))
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, 60))
+        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 60))
         l2_loss = 0
         for cond in range(num_conds):
             for sample_num in range(num_samples):
@@ -323,34 +468,262 @@ class PolicyOptTf(PolicyOpt):
         print("RAN THROUGH FEATURES")
         import IPython
         IPython.embed()
-        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,30))
-        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,30))
+        dim1 = 60
+        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,dim1))
+        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,dim1))
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
         distances, indices = nbrs.kneighbors(cond_feats_other)
         indices = np.reshape(indices, (num_conds, num_samples, T_extended))
         dO_robot0 = obs_extended_full[0].shape[-1]
         obs_full_reshaped = np.reshape(obs_extended_full[0], (num_conds*num_samples*T_extended,dO_robot0))
+        dO_robot0_uncut = obs_uncut_full[0].shape[-1]
+        obs_uncut_reshaped = np.reshape(obs_uncut_full[0], (num_conds*num_samples*T_extended,dO_robot0_uncut))
         print("CHECK NN")
         import IPython
         IPython.embed()
-        # for cond in range(num_conds):
-        #     for s_no in range(num_samples):
-        #         color = ['r', 'b'][robot_number]
-        #         for t in range(T_extended):
-        #             x = obs_extended_full[1][cond, s_no, t, 8]
-        #             y = obs_extended_full[1][cond, s_no, t, 10]
-        #             nnbr_currpoint = indices[cond, s_no, t]
-        #             x_nbr = obs_full_reshaped[nnbr_currpoint][6]
-        #             y_nbr = obs_full_reshaped[nnbr_currpoint][8]
-        #             print("X: " + str([x,x_nbr]))
-        #             print("Y: " + str([y,y_nbr]))
-        #             lines = plt.plot([x,x_nbr], [y,y_nbr])
-        # plt.show()
-        # import IPython
-        # IPython.embed()
+        for cond in range(num_conds):
+            for s_no in range(num_samples):
+                color = ['r', 'b'][robot_number]
+                for t in range(T_extended):
+                    x = obs_uncut_full[1][cond, s_no, t, 12]
+                    y = obs_uncut_full[1][cond, s_no, t, 14]
+                    nnbr_currpoint = indices[cond, s_no, t]
+                    x_nbr = obs_uncut_reshaped[nnbr_currpoint][6]
+                    y_nbr = obs_uncut_reshaped[nnbr_currpoint][8]
+                    print("X: " + str([x,x_nbr]))
+                    print("Y: " + str([y,y_nbr]))
+                    lines = plt.plot([x,x_nbr], [y,y_nbr])
+        plt.show()
+        import IPython
+        IPython.embed()
         np.save("3link_feats.npy", np.asarray(cond_feats))
 
         print("done training invariant autoencoder and saving weights")
+    """
+    def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full, ee_full):
+        import matplotlib.pyplot as plt
+        num_conds, num_samples, T_extended, dim0 = obs_extended_full[0].shape
+        num_conds, num_samples, T_extended, dim1 = obs_extended_full[1].shape
+        obs_reshaped = []
+        next_obs_reshaped = []
+        action_reshaped = []
+        #TODO: [SCALE OBSERVATIONS BACK DOWN TO REASONABLE RANGE]
+        for robot_number in range(self.num_robots):
+
+            obs = obs_full[robot_number]
+            N, T = obs.shape[:2]
+
+            dO = obs.shape[2]
+            dU = self._dU[robot_number]
+
+            obs = np.reshape(obs, (N*T, dO))
+
+            next_obs = next_obs_full[robot_number]
+            next_obs = np.reshape(next_obs, (N*T, dO))
+            
+
+            action = action_full[robot_number]
+            action = np.reshape(action, (N*T, dU))
+
+            obs_reshaped.append(obs)
+            next_obs_reshaped.append(next_obs)
+            action_reshaped.append(action)
+
+        idx = range(N*T)
+        np.random.shuffle(idx)
+        batches_per_epoch = np.floor(N*T / self.batch_size)
+        average_loss = 0
+        all_losses = np.zeros((len(self.other['all_losses']),))
+        for i in range(self._hyperparams['iterations']):
+            feed_dict = {}
+            start_idx = int(i * self.batch_size % (batches_per_epoch*self.batch_size))
+            idx_i = idx[start_idx:start_idx+self.batch_size]
+            for robot_number in range(self.num_robots):
+                feed_dict[self.other['state_inputs'][robot_number]] = obs_reshaped[robot_number][idx_i]
+                feed_dict[self.other['action_inputs'][robot_number]] = action_reshaped[robot_number][idx_i]
+            train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
+            all_losses += self.sess.run(self.other['all_losses'], feed_dict)
+
+            average_loss += train_loss
+
+            if i % 1000 == 0 and i != 0:
+                LOGGER.debug('tensorflow iteration %d, average loss %f',
+                             i, average_loss / 100)
+                print 'supervised tf loss is '
+                print(i)
+                print (average_loss/1000)
+                print (all_losses/1000)
+                print("--------------------------")
+                average_loss = 0
+                all_losses = np.zeros((len(self.other['all_losses']),))
+        var_dict = {}
+        for k, v in self.other['all_variables'].items():
+            var_dict[k] = self.sess.run(v)
+        pickle.dump(var_dict, open("subspace_state.pkl", "wb"))
+
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, dim1))
+        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, dim1))
+        l2_loss = 0
+        for cond in range(num_conds):
+            for sample_num in range(num_samples):
+                feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num]}
+                cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+                cond_feats_other[cond, sample_num] = obs_extended_full[1][cond][sample_num]
+                l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
+        print(l2_loss)
+        print("RAN THROUGH FEATURES")
+        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,dim1))
+        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,dim1))
+        nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
+        distances, indices = nbrs.kneighbors(cond_feats_other)
+        indices = np.reshape(indices, (num_conds, num_samples, T_extended))
+        # dO_robot0 = ee_full[0].shape[-1]
+        ee_full_reshaped = np.reshape(ee_full[0], (num_conds*num_samples*T_extended,-1))
+        print("CHECK NN")
+        import IPython
+        IPython.embed()
+        for cond in range(num_conds):
+            for s_no in range(num_samples):
+                color = ['r', 'b'][robot_number]
+                for t in range(T_extended):
+                    x = ee_full[1][cond, s_no, t, 12]
+                    y = ee_full[1][cond, s_no, t, 14]
+                    nnbr_currpoint = indices[cond, s_no, t]
+                    x_nbr = ee_full_reshaped[nnbr_currpoint][6]
+                    y_nbr = ee_full_reshaped[nnbr_currpoint][8]
+                    print("X: " + str([x,x_nbr]))
+                    print("Y: " + str([y,y_nbr]))
+                    lines = plt.plot([x,x_nbr], [y,y_nbr])
+        plt.show()
+        np.save("3link_feats.npy", np.asarray(cond_feats))
+
+        print("done training invariant autoencoder and saving weights")
+    """
+    
+    def run_invariant_autoencoder_forward(self, obs_extended_full):
+        # import pickle
+        # dict_data = pickle.load(open("scalebias.pkl", "rb"))
+        # scales = dict_data['scale'] 
+        # biases = dict_data['bias']
+
+        num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, 60))
+        for cond in range(num_conds):
+            for sample_num in range(num_samples):
+                # obs_extended_full[0][cond][sample_num] = obs_extended_full[0][cond][sample_num].dot(scales[0]) + biases[0]
+                feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num]}
+                cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+        np.save("3link_feats.npy", np.asarray(cond_feats))
+        print("done saving features")
+
+    def run_invariant_autoencoder_forward_plot(self, obs_extended_full, ee_full):
+        # import pickle
+        # dict_data = pickle.load(open("scalebias.pkl", "rb"))
+        # scales = dict_data['scale'] 
+        # biases = dict_data['bias']
+
+
+
+        num_conds, num_samples, T_extended, dim0 = obs_extended_full[0].shape
+        num_conds, num_samples, T_extended, dim1 = obs_extended_full[1].shape
+        for cond in range(num_conds):
+            for s_no in range(num_samples):
+                xs = []
+                ys = []
+                for robot_number in range(self.num_robots):
+                    color = ['r', 'b'][robot_number] 
+                    if robot_number == 0:
+                        x_plot_idx = 8
+                        y_plot_idx = 10
+                    else:
+                        x_plot_idx = 14
+                        y_plot_idx = 16
+                    x = ee_full[robot_number][cond, s_no, :, x_plot_idx]
+                    y = ee_full[robot_number][cond, s_no, :, y_plot_idx]
+                    plt.scatter(x, y, c=color)
+                    xs.append(x)
+                    ys.append(y)
+                plt.plot([xs[0], xs[1]], [ys[0], ys[1]])
+        plt.show()
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, dim1))
+        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, dim1))
+        l2_loss = 0
+        for cond in range(num_conds):
+            for sample_num in range(num_samples):
+                feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num]}
+                cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+                cond_feats_other[cond, sample_num] = obs_extended_full[1][cond][sample_num]
+                l2_loss = np.sum(np.linalg.norm(cond_feats[cond, sample_num] - cond_feats_other[cond, sample_num]))
+        print(l2_loss)
+        print("RAN THROUGH FEATURES")
+        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,dim1))
+        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,dim1))
+        nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
+        distances, indices = nbrs.kneighbors(cond_feats_other)
+        indices = np.reshape(indices, (num_conds, num_samples, T_extended))
+        dO_robot0 = ee_full[0].shape[-1]
+        ee_full_reshaped = np.reshape(ee_full[0], (num_conds*num_samples*T_extended,dO_robot0))
+        print("CHECK NN")
+        import IPython
+        IPython.embed()
+        for cond in range(num_conds):
+            for s_no in range(num_samples):
+                color = ['r', 'b'][robot_number]
+                for t in range(T_extended):
+                    x = ee_full[1][cond, s_no, t, 14]
+                    y = ee_full[1][cond, s_no, t, 16]
+                    nnbr_currpoint = indices[cond, s_no, t]
+                    x_nbr = ee_full_reshaped[nnbr_currpoint][8]
+                    y_nbr = ee_full_reshaped[nnbr_currpoint][10]
+                    print("X: " + str([x,x_nbr]))
+                    print("Y: " + str([y,y_nbr]))
+                    lines = plt.plot([x,x_nbr], [y,y_nbr])
+        plt.show()
+        np.save("3link_feats.npy", np.asarray(cond_feats))
+
+
+
+        # cond_feats = np.zeros((num_conds, num_samples, T_extended, 6))
+        # for cond in range(num_conds):
+        #     for sample_num in range(num_samples):
+        #         # obs_extended_full[0][cond][sample_num] = obs_extended_full[0][cond][sample_num].dot(scales[0]) + biases[0]
+        #         feed_dict = {self.other['state_inputs'][0]: obs_extended_full[0][cond][sample_num]}
+        #         cond_feats[cond, sample_num] = self.sess.run(self.other['state_features_list'][0], feed_dict=feed_dict)
+        # np.save("3link_feats.npy", np.asarray(cond_feats))
+        print("done saving features")
+
+    def cca(self,obs_full):
+        # from sklearn.cross_decomposition import CCA
+        # num_components = 6
+        # self.fitted_cca = CCA(num_components)
+        # Y, X = obs_full
+        # N = X.shape[0]
+        # T = X.shape[1]
+        # X = np.reshape(X, [N*T, -1])
+        # Y = np.reshape(Y, [N*T, -1])
+        # self.fitted_cca.fit(X,Y)
+        # return X,Y
+        num_components = 6
+        self.fitted_cca = KernelCCA(n_components=num_components, kernel="linear",
+            kernel_params={"c": 1, "deg":2, "sigma":1}, eigen_solver='auto',
+                 center=True, pgso=True, eta=1e-1, kapa=0.1)#CCA(num_components)
+        Y, X = obs_full
+        N = X.shape[0]
+        T = X.shape[1]
+        X = np.reshape(X, [N*T, -1])
+        Y = np.reshape(Y, [N*T, -1])
+        self.fitted_cca.fit(X,Y)
+        return X,Y
+
+    def run_cca(self,obs_full):
+        from sklearn.cross_decomposition import CCA
+        Y, X = obs_full
+        N = X.shape[0]
+        T = X.shape[1]
+        X = np.reshape(X, [N*T, -1])
+        Y = np.reshape(Y, [N*T, -1])
+        r1, r0 = self.fitted_cca.transform(X,Y)
+        return r0
 
     def train_invariant_dc(self, obs_full, next_obs_full, action_full, obs_extended_full):
         num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
@@ -471,8 +844,8 @@ class PolicyOptTf(PolicyOpt):
 
 
         
-        cond_feats = np.zeros((num_conds, num_samples, T_extended, 30))
-        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 30))
+        cond_feats = np.zeros((num_conds, num_samples, T_extended, 60))
+        cond_feats_other = np.zeros((num_conds, num_samples, T_extended, 60))
         l2_loss = 0
         for cond in range(num_conds):
             for sample_num in range(num_samples):
@@ -485,8 +858,8 @@ class PolicyOptTf(PolicyOpt):
         print("RAN THROUGH FEATURES")
         import IPython
         IPython.embed()
-        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,30))
-        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,30))
+        cond_feats = np.reshape(cond_feats, (num_conds*num_samples*T_extended,60))
+        cond_feats_other = np.reshape(cond_feats_other, (num_conds*num_samples*T_extended,60))
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(cond_feats)
         distances, indices = nbrs.kneighbors(cond_feats_other)
         indices = np.reshape(indices, (num_conds, num_samples, T_extended))
@@ -510,7 +883,7 @@ class PolicyOptTf(PolicyOpt):
         plt.show()
         import IPython
         IPython.embed()
-        cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T_extended, 30))
+        cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T_extended, 60))
         np.save("3link_feats.npy", np.asarray(cond_feats))
         print("done training invariant DC and saving weights")
 
@@ -524,54 +897,6 @@ class PolicyOptTf(PolicyOpt):
         output = self.sess.run(self.feature_points_feat[robot_number], feed_dict=feed_dict)
         output = np.reshape(output, (N, T, 60))
         return output
-
-    def cca(self,obs_full):
-        from sklearn.cross_decomposition import CCA
-        num_components = 6
-        self.fitted_cca = KernelCCA(n_components=num_components, kernel="rbf",
-            kernel_params={"c": 1, "deg":2, "sigma":2}, eigen_solver='auto',
-                 center=True, pgso=True, eta=1e-1, kapa=0.4)#CCA(num_components)
-        Y, X = obs_full
-        N = X.shape[0]
-        T = X.shape[1]
-        X = np.reshape(X, [N*T, -1])
-        Y = np.reshape(Y, [N*T, -1])
-        self.fitted_cca.fit(X,Y)
-
-        # print "fitting kcca"
-        # self.kcca = KernelCCA(n_components=num_components, kernel="linear", gamma=None,
-        #          degree=3, coef0=1, kernel_params=None, eigen_solver='auto',
-        #          center=True, pgso=True, eta=0, kapa=0.1, nor=2,
-        #          max_iter=500, tol=1e-6, copy=True)
-        # self.kcca.fit(X, Y)
-        # import IPython
-        # IPython.embed()
-        # kernel = LinearKernel()
-        # self.kcca = KCCA(kernel, kernel,
-        #             regularization=0,#1e-5,
-        #             decomp='icd',
-        #             lrank=100,
-        #             method='simplified_hardoon_method',
-        #             scaler1=lambda x:x,
-        #             scaler2=lambda x:x,
-        #             ).fit(X,Y)
-
-
-
-        return X,Y
-
-    def run_cca(self,obs_full):
-        from sklearn.cross_decomposition import CCA
-        Y, X = obs_full
-        N = X.shape[0]
-        T = X.shape[1]
-        X = np.reshape(X, [N*T, -1])
-        Y = np.reshape(Y, [N*T, -1])
-        r1, r0 = self.fitted_cca.transform(X,Y)
-        # y1, y2 = self.kcca.transform(X, Y)
-        # import IPython
-        # IPython.embed()
-        return r0
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """

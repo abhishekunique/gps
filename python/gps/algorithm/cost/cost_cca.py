@@ -29,6 +29,7 @@ class CostCCA(Cost):
         with open('multiproxy_cca.pkl', 'rb') as f:
             self.cca = pickle.load(f)
             self.x_weights = self.cca.X_.T.dot(self.cca.alphas_)
+            # self.x_weights = self.cca.x_weights_
 
     def eval(self, sample):
         """
@@ -47,15 +48,17 @@ class CostCCA(Cost):
         final_lxx = np.zeros((T, Dx, Dx))
         final_lux = np.zeros((T, Du, Dx))
 
-        tgt = self._hyperparams['target_feats']
+        tgt = self._hyperparams['target_feats']#[:, 8:14]
         x = sample.get_obs()
         # x = np.concatenate([x[:, 0:4], x[:, 5:9], x[:, 10:13], x[:, 19:22]], axis=1)
-        x = np.concatenate([x[:, 0:4], x[:, 5:9]], axis=1)
+        x = np.concatenate([x[:, 8:11], x[:, 11:14]], axis=1)
         feat_forward = self.cca.transform(x)
+        # import IPython
+        # IPython.embed()
         num_feats = feat_forward.shape[1]
         num_inputs = x.shape[1]
         
-        size_ls = 28
+        size_ls = 32
         l = np.zeros((T,))
         ls = np.zeros((T,size_ls))
         lss = np.zeros((T, size_ls, size_ls))
@@ -63,12 +66,13 @@ class CostCCA(Cost):
             l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(6)/(2.0)).dot(feat_forward[t] - tgt[t])
             grad_mult = (feat_forward[t] - tgt[t]).dot(self.x_weights.T)
 
-            ls[t, 0:4] = grad_mult[0:4]
-            ls[t, 5:9] = grad_mult[4:8]
+            ls[t, 8:11] = grad_mult[0:3]
+            ls[t, 11:14] = grad_mult[3:6]
             # ls[t, 10:13] = grad_mult[8:11]
             # ls[t, 19:22] = grad_mult[11:14]
             # hess_mult = gradients_all[t].T.dot(gradients_all[t])
 
+            lss[t,8:14,8:14] = self.x_weights.dot(self.x_weights.T)
             # lss[t,0:4,0:4] = hess_mult[0:4, 0:4]
             # lss[t,5:9,0:4] = hess_mult[4:8, 0:4]
             # # lss[t,10:13,0:4] = hess_mult[8:11, 0:4]
@@ -98,9 +102,16 @@ class CostCCA(Cost):
 
     @classmethod
     def tf_loss(cls, hyperparams, T, x, u_input, jx_input, ee_input):
-        ncomp = 2
+        ncomp = 3
         x = tf.concat(1, [x[:, 0:4], x[:, 5:9]])
         with open('multiproxy_cca.pkl', 'rb') as f:
             cca = pickle.load(f)
+        # x -= cca.x_mean_
+        # x /= cca.x_std_
         tgt = hyperparams['target_feats']
-        return tf.reduce_sum((tgt[:, :ncomp] - cca.transform_tf(x)[:, :ncomp]) ** 2, 1) / 2, False
+        # print cca.x_weights_.shape
+        return tf.reduce_sum((tgt[:, :ncomp] - 
+            cca.transform_tf(x)[:, :ncomp]
+            # tf.matmul(x, cca.x_rotations_.astype('float32'))[:, :ncomp]
+            ) ** 2
+        , 1) / 2, False
