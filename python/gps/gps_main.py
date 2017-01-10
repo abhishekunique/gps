@@ -98,6 +98,10 @@ class GPSMain(object):
         #     else:
         #         print name, "not in traj_distr"
         seed = np.random.randint(8900)
+        
+        random.seed(seed)
+        np.random.seed(seed)
+        
         itr_costs = []
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
@@ -426,8 +430,8 @@ class GPSMain(object):
                 self.policy_opt.sess.run(assign_op)
 
         self.policy_opt.fitted_cca = self.data_logger.unpickle('multiproxy_cca.pkl')
-        import IPython
-        IPython.embed()
+        # import IPython
+        # IPython.embed()
         reshaped_0 = [np.reshape(obs_complete_time_full[0], (20, 100, 6)), np.reshape(obs_complete_time_full[0], (20, 100, 6))]
         r0 = self.policy_opt.run_cca(reshaped_0)
         np.save('3link_cca.npy', np.reshape(r0, (2, 10, T, -1)))
@@ -884,8 +888,6 @@ def main():
         #0 works - bottom is gret, top is meh
         #1 works
         #2 doesn't work
-        random.seed(14)
-        np.random.seed(14)
 
         gps = GPSMain(hyperparams.config)
         if args.recordfeats:
