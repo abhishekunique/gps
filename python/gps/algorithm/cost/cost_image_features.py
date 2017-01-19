@@ -181,6 +181,7 @@ class CostImageFeatures(Cost):
         Args:
             sample:  A single sample
         """
+        print "Eval image features"
         # val_vars = pickle.load(open(self._hyperparams['load_file'], 'rb'))
         # with self.graph.as_default():
         #     self.var_list_feat = {}
@@ -204,12 +205,14 @@ class CostImageFeatures(Cost):
 
         
         tgt = self._hyperparams['target_feats']
-        imgs = sample.get_obs()
-        imgs = np.transpose(imgs.reshape(T,3,80,64), [0,2,3,1]).astype(np.uint8)
+        # imgs = sample.get_obs()
+        # imgs = np.transpose(imgs.reshape(T,3,80,64), [0,2,3,1]).astype(np.uint8)
         x = sample.get_X()
         #feed_dict = {self.input: imgs}
         feat_forward = sample.get(IMAGE_FEATURES)#self.session.run(self.feature_layers, feed_dict=feed_dict)
         num_feats = feat_forward.shape[1]
+        import IPython
+        IPython.embed()
         for t in range(T):
             # final_l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(num_feats)/(2.0)).dot(feat_forward[t] - tgt[t])
             final_l[t] = np.sum(np.square(feat_forward[t] - tgt[t]))/2

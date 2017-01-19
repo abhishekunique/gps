@@ -145,16 +145,16 @@ class PolicyOptTf(PolicyOpt):
             self.precision_tensors_action.append(None)
             self.action_tensors_action.append(None)
 
-        if not False: #self._hyperparams['run_feats']:
-            self.init_network()
-            self.init_solver()
-        self.tf_vars = tf.trainable_variables()
-        # if self._hyperparams['run_feats']:
-        #     self.init_feature_space()
-        self.sess = tf.Session()
-        self.policy = []
-        for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
-            self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string))
+        # if not False: #self._hyperparams['run_feats']:
+        #     self.init_network()
+        #     self.init_solver()
+        # self.tf_vars = tf.trainable_variables()
+        # # if self._hyperparams['run_feats']:
+        # #     self.init_feature_space()
+        # self.sess = tf.Session()
+        # self.policy = []
+        # for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
+        #     self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string))
         # List of indices for state (vector) data and image (tensor) data in observation.
         self.x_idx = []
         self.img_idx = []
@@ -177,17 +177,22 @@ class PolicyOptTf(PolicyOpt):
         else:
             self.ent_reg = self._hyperparams['ent_reg']
         init_op = tf.initialize_all_variables()
-        self.sess.run(init_op)
-        if self._hyperparams['load_weights'] and self._hyperparams['run_feats']:
-            import pickle
-            val_vars = pickle.load(open(self._hyperparams['load_weights'], 'rb'))
-            all_vars = self.other['all_variables'].copy()
-            # all_vars.update(self.other['dc_variables'])
-            for k,v in all_vars.items():
-                if k in val_vars:   
-                    print(k)        
-                    assign_op = v.assign(val_vars[k])
-                    self.sess.run(assign_op)
+    #     self.sess.run(init_op)
+    #     if self._hyperparams['load_weights'] and self._hyperparams['run_feats']:
+    #         import pickle
+    #         val_vars = pickle.load(open(self._hyperparams['load_weights'], 'rb'))
+    #         all_vars = self.other['all_variables'].copy()
+    #         # all_vars.update(self.other['dc_variables'])
+    #         for k,v in all_vars.items():
+    #             if k in val_vars:   
+    #                 print(k)        
+    #                 assign_op = v.assign(val_vars[k])
+    #                 self.sess.run(assign_op)
+
+        with open('random_proj.pkl', 'rb') as f:
+            x_weights, y_weights = pickle.load(f)
+            self.x_weights = x_weights
+
 
     def init_network(self):
         """ Helper method to initialize the tf networks used """
@@ -720,9 +725,32 @@ class PolicyOptTf(PolicyOpt):
         feed_dict = {}
         # dO = [len(self._hyperparams['r0_index_list']), len(self._hyperparams['r1_index_list'])][robot_number]
         # dU = self._dU[robot_number]
-        feed_dict[self.other['state_inputs'][robot_number]] = [img]
-        output = self.sess.run(self.other['state_features_list'][robot_number], feed_dict=feed_dict)[0]
-        return output
+        # feed_dict[self.other['state_inputs'][robot_number]] = [img]
+        # output = self.sess.run(self.other['state_features_list'][robot_number], feed_dict=feed_dict)[0]
+        #output = self.fitted_cca.transform(img)
+        output = np.dot(img, self.x_weights)
+        return output#[0]
+    def cca(self,obs_full):
+        from sklearn.cross_decomposition import CCA
+        num_components = 32
+        self.fitted_cca = CCA(num_components)
+        Y, X = obs_full
+        N = X.shape[0]
+        T = X.shape[1]
+        X = np.reshape(X, [N*T, -1])
+        Y = np.reshape(Y, [N*T, -1])
+        self.fitted_cca.fit(X,Y)
+        return X,Y
+    def run_cca(self,obs_full):
+        from sklearn.cross_decomposition import CCA
+        Y, X = obs_full
+        N = X.shape[0]
+        T = X.shape[1]
+        X = np.reshape(X, [N*T, -1])
+        Y = np.reshape(Y, [N*T, -1])
+        r1, r0 = self.fitted_cca.transform(X,Y)
+        return r0
+
 
     def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
         """

@@ -366,7 +366,7 @@ algorithm[1]['policy_prior'] = {
 
 
 config = {
-    'iterations': 25,
+    'iterations': 75,
     'num_samples': 7,
     'verbose_trials': 0,
     'verbose_policy_trials': 5,

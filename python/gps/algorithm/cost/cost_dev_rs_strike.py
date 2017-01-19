@@ -35,7 +35,10 @@ class CostDevRs(Cost):
         dim_hidden = (n_layers - 1)*[layer_size]
         feature_layers = []
         dim_input = 14
-        num_feats = 30
+        num_feats = 60
+        dim_hidden[2] = num_feats
+
+        self.num_feats = num_feats
         with g.as_default():
             nn_input = tf.placeholder("float", [None, dim_input], name='nn_input_state1')
             w0 = init_weights((dim_input ,dim_hidden[0]), name='w0_state1')
@@ -117,7 +120,7 @@ class CostDevRs(Cost):
         ls = np.zeros((T,size_ls))
         lss = np.zeros((T, size_ls, size_ls))
         for t in range(T):
-            l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(30)/(2.0)).dot(feat_forward[t] - tgt[t])
+            l[t] = (feat_forward[t] - tgt[t]).dot(np.eye(self.num_feats)/(2.0)).dot(feat_forward[t] - tgt[t])
             grad_mult = (feat_forward[t] - tgt[t]).dot(gradients_all[t])
 
             ls[t, 0:4] = grad_mult[0:4]

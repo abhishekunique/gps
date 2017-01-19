@@ -16,6 +16,7 @@ from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
 from gps.algorithm.cost.cost_dev_rs_strike import CostDevRs
 from gps.algorithm.cost.cost_image_features import CostImageFeatures
+from gps.algorithm.cost.cost_cca import CostCCA
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
 from gps.algorithm.dynamics.dynamics_prior_gmm import DynamicsPriorGMM
 from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
@@ -270,9 +271,11 @@ fk_cost_blocktouch = [{
     'alpha': 1e-5,
 } for i in agent[0]['train_conditions']]
 
-load_trajs = np.load("3link_feats_reach_blue_fp.npy")
+#load_trajs = np.load("3link_feats_reach_blue_fp.npy")
+load_trajs = np.load("3link_random.npy")
+
 test_cost_1 = [{
-    'type': CostImageFeatures,
+    'type': CostCCA,#CostImageFeatures,
     'l1': 0.1,
     'l2': 10.0,
     'robot_number': 0,
@@ -316,9 +319,9 @@ fk_cost_2 = [{
 #     'alpha': 1e-5,
 # } for i in agent[1]['train_conditions']]
 
-load_trajs = np.load("3link_feats_reach_blue_fp.npy")
+#load_trajs = np.load("3link_feats_reach_blue_fp.npy")
 test_cost = [{
-    'type': CostImageFeatures,
+    'type': CostCCA,#CostImageFeatures,
     'l1': 0.1,
     'l2': 10.0,
     'cond': i,
@@ -332,8 +335,8 @@ test_cost = [{
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_2[i], test_cost[i]],
-    'weights': [1,1],
+    'costs': [fk_cost_2 [i], test_cost[i]],
+    'weights': [1,0.0000005],
 } for i in agent[0]['train_conditions']]
 
 

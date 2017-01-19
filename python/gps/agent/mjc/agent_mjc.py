@@ -235,8 +235,8 @@ class AgentMuJoCo(Agent):
             sample.set(RGB_IMAGE_SIZE, [self._hyperparams['image_channels'],
                                         self._hyperparams['image_width'],
                                         self._hyperparams['image_height']], t=None)
-        if IMAGE_FEATURES in self.obs_data_types or IMAGE_FEATURES in self.x_data_types:
-            sample.set(IMAGE_FEATURES, self.policy_opt.run_one_image_forward(img_data, self._hyperparams['robot_number']), t=0)
+            if IMAGE_FEATURES in self.obs_data_types or IMAGE_FEATURES in self.x_data_types:
+                sample.set(IMAGE_FEATURES, self.policy_opt.run_one_image_forward(img_data, self._hyperparams['robot_number']), t=0)
         return sample
 
     def _set_sample(self, sample, mj_X, t, condition):
