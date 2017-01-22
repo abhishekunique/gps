@@ -62,7 +62,7 @@ SENSOR_DIMS = [{
 
 PR2_GAINS = [np.array([1.0, 1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
-EXP_DIR = BASE_DIR + '/../experiments/reach_img/'
+EXP_DIR = BASE_DIR + '/../experiments/reach_image/'
 
 #close to the blockstrike positions
 # all_offsets = [[np.array([-0.8, 0.0, 0.25])],

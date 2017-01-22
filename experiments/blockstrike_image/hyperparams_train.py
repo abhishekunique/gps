@@ -63,7 +63,7 @@ EXP_DIR = BASE_DIR + '/../experiments/blockstrike_image/'
 INIT_POLICY_DIR = '/home/abhigupta/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
-weights_file = "/home/coline/dynamics_subspace/gps/img_reach_blue_fp.pkl"
+weights_file = "/home/coline/dynamics_subspace/gps/img_weights.pkl"
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),

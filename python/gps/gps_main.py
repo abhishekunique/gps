@@ -222,7 +222,7 @@ class GPSMain(object):
         #     for cond in  self._train_idx[robot_number]:
         #         self.algorithm[robot_number].cur[cond].traj_distr = traj_distr[robot_number][cond]
 
-        traj_distr=self.data_logger.unpickle(self._data_files_dir+'traj_reach_image_update.pkl')
+        traj_distr=self.data_logger.unpickle(self._data_files_dir+'traj_reach_blue.pkl')
         for ag in range(self.num_robots):
             name = self.agent[ag]._hyperparams['filename'][0]
             if name in traj_distr:
@@ -300,7 +300,7 @@ class GPSMain(object):
             # self.data_logger.pickle(self._data_files_dir+'reach_data_color.pkl', data)
 
             # data = self.data_logger.unpickle(self._data_files_dir+'strike_data.pkl')
-            data = self.data_logger.unpickle(self._data_files_dir+'reach_data_color.pkl')
+            data = self.data_logger.unpickle(self._data_files_dir+'reach_data_blue.pkl')
             obs_full = data['obs_full']
             next_obs_full = data['next_obs_full']
             tgt_actions_full = data['tgt_actions_full']
