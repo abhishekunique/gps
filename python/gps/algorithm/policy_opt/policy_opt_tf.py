@@ -12,7 +12,7 @@ import numpy as np
 from gps.algorithm.policy_opt.config import POLICY_OPT_TF
 import tensorflow as tf
 
-from gps.algorithm.policy.tf_policy import TfPolicy
+from gps.algorithm.policy.tf_policy_hierarchical import TfPolicyHierarchical
 from gps.algorithm.policy_opt.policy_opt import PolicyOpt
 from gps.algorithm.policy_opt.tf_utils import TfSolver
 
@@ -22,7 +22,7 @@ LOGGER = logging.getLogger(__name__)
 
 class PolicyOptTf(PolicyOpt):
     """ Policy optimization using tensor flow for DAG computations/nonlinear function approximation. """
-    def __init__(self, hyperparams, dO, dU):
+    def __init__(self, hyperparams, dO, dU, highest_layer=False, hierarchy_layer=0):
         config = copy.deepcopy(POLICY_OPT_TF)
         config.update(hyperparams)
 
@@ -44,12 +44,19 @@ class PolicyOptTf(PolicyOpt):
         self.action_tensor = None  # mu true
         self.solver = None
         self.feat_vals = None
-        self.init_network()
+        self.context_tensor = None
+        if highest_layer is False:
+            dim_context=self._hyperparams['dim_context']
+        else:
+            dim_context = 0
+        self.hierarchy_layer = hierarchy_layer
+        self.init_network(highest_layer=highest_layer, dim_context=dim_context, hierarchy_layer=hierarchy_layer)
         self.init_solver()
         self.var = self._hyperparams['init_var'] * np.ones(dU)
         self.sess = tf.Session()
-        self.policy = TfPolicy(dU, self.obs_tensor, self.act_op, self.feat_op,
-                               np.zeros(dU), self.sess, self.device_string, copy_param_scope=self._hyperparams['copy_param_scope'])
+        self.policy = TfPolicyHierarchical(dU, self.obs_tensor, self.act_op, self.feat_op,
+                               np.zeros(dU), self.sess, self.device_string, self.context_tensor, hierarchy_layer=hierarchy_layer,
+                               highest_layer=highest_layer, copy_param_scope=self._hyperparams['copy_param_scope'])
         # List of indices for state (vector) data and image (tensor) data in observation.
         self.x_idx, self.img_idx, i = [], [], 0
         if 'obs_image_data' not in self._hyperparams['network_params']:
@@ -64,11 +71,12 @@ class PolicyOptTf(PolicyOpt):
         init_op = tf.initialize_all_variables()
         self.sess.run(init_op)
 
-    def init_network(self):
+    def init_network(self, highest_layer=False, dim_context=0, hierarchy_layer=0):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
         tf_map, fc_vars, last_conv_vars = tf_map_generator(dim_input=self._dO, dim_output=self._dU, batch_size=self.batch_size,
-                                  network_config=self._hyperparams['network_params'])
+                                  network_config=self._hyperparams['network_params'], hierarchy_layer=hierarchy_layer, 
+                                  highest_layer=highest_layer, dim_context=dim_context)
         self.obs_tensor = tf_map.get_input_tensor()
         self.precision_tensor = tf_map.get_precision_tensor()
         self.action_tensor = tf_map.get_target_output_tensor()
@@ -77,7 +85,7 @@ class PolicyOptTf(PolicyOpt):
         self.loss_scalar = tf_map.get_loss_op()
         self.fc_vars = fc_vars
         self.last_conv_vars = last_conv_vars
-
+        self.context_tensor = tf_map.get_context_tensor()
         # Setup the gradients
         self.grads = [tf.gradients(self.act_op[:,u], self.obs_tensor)[0]
                 for u in range(self._dU)]
@@ -94,7 +102,7 @@ class PolicyOptTf(PolicyOpt):
                                last_conv_vars=self.last_conv_vars)
         self.saver = tf.train.Saver()
 
-    def update(self, obs, tgt_mu, tgt_prc, tgt_wt):
+    def update(self, obs, tgt_mu, tgt_prc, tgt_wt, obs_context):
         """
         Update policy.
         Args:
@@ -107,7 +115,7 @@ class PolicyOptTf(PolicyOpt):
         """
         N, T = obs.shape[:2]
         dU, dO = self._dU, self._dO
-
+        dO_context = dU
         # TODO - Make sure all weights are nonzero?
 
         # Save original tgt_prc.
@@ -128,6 +136,8 @@ class PolicyOptTf(PolicyOpt):
         tgt_mu = np.reshape(tgt_mu, (N*T, dU))
         tgt_prc = np.reshape(tgt_prc, (N*T, dU, dU))
         tgt_wt = np.reshape(tgt_wt, (N*T, 1, 1))
+        if obs_context is not None:
+            obs_context = np.reshape(obs_context, (N*T, dO_context))
 
         # Fold weights into tgt_prc.
         tgt_prc = tgt_wt * tgt_prc
@@ -143,33 +153,21 @@ class PolicyOptTf(PolicyOpt):
                 1.0 / np.maximum(np.std(obs[:, self.x_idx], axis=0), 1e-3))
             self.policy.bias = - np.mean(
                 obs[:, self.x_idx].dot(self.policy.scale), axis=0)
-        obs[:, self.x_idx] = obs[:, self.x_idx].dot(self.policy.scale) + self.policy.bias
+            if obs_context is not None: 
+                self.policy.scale_context = np.diag(
+                    1.0 / np.maximum(np.std(obs_context, axis=0), 1e-3))
+                self.policy.bias_context = - np.mean(
+                    obs_context.dot(self.policy.scale_context), axis=0)
 
+
+        obs[:, self.x_idx] = obs[:, self.x_idx].dot(self.policy.scale) + self.policy.bias
+        if obs_context is not None: 
+            obs_context = obs_context.dot(self.policy.scale_context) + self.policy.bias_context
         # Assuming that N*T >= self.batch_size.
         batches_per_epoch = np.floor(N*T / self.batch_size)
         idx = range(N*T)
         average_loss = 0
         np.random.shuffle(idx)
-
-        if self._hyperparams['fc_only_iterations'] > 0:
-            feed_dict = {self.obs_tensor: obs}
-            num_values = obs.shape[0]
-            conv_values = self.solver.get_last_conv_values(self.sess, feed_dict, num_values, self.batch_size)
-            for i in range(self._hyperparams['fc_only_iterations'] ):
-                start_idx = int(i * self.batch_size %
-                                (batches_per_epoch * self.batch_size))
-                idx_i = idx[start_idx:start_idx+self.batch_size]
-                feed_dict = {self.last_conv_vars: conv_values[idx_i],
-                             self.action_tensor: tgt_mu[idx_i],
-                             self.precision_tensor: tgt_prc[idx_i]}
-                train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string, use_fc_solver=True)
-                average_loss += train_loss
-
-                if (i+1) % 500 == 0:
-                    LOGGER.info('tensorflow iteration %d, average loss %f',
-                                    i+1, average_loss / 500)
-                    average_loss = 0
-            average_loss = 0
 
         # actual training.
         for i in range(self._hyperparams['iterations']):
@@ -180,8 +178,9 @@ class PolicyOptTf(PolicyOpt):
             feed_dict = {self.obs_tensor: obs[idx_i],
                          self.action_tensor: tgt_mu[idx_i],
                          self.precision_tensor: tgt_prc[idx_i]}
+            if obs_context is not None:
+                feed_dict[self.context_tensor] = obs_context[idx_i]
             train_loss = self.solver(feed_dict, self.sess, device_string=self.device_string)
-
             average_loss += train_loss
             if (i+1) % 50 == 0:
                 LOGGER.info('tensorflow iteration %d, average loss %f',
@@ -189,6 +188,8 @@ class PolicyOptTf(PolicyOpt):
                 average_loss = 0
 
         feed_dict = {self.obs_tensor: obs}
+        if obs_context is not None:
+                feed_dict[self.context_tensor] = obs_context
         num_values = obs.shape[0]
         if self.feat_op is not None:
             self.feat_vals = self.solver.get_var_values(self.sess, self.feat_op, feed_dict, num_values, self.batch_size)
@@ -206,7 +207,7 @@ class PolicyOptTf(PolicyOpt):
 
         return self.policy
 
-    def prob(self, obs):
+    def prob(self, obs, obs_context):
         """
         Run policy forward.
         Args:
@@ -221,6 +222,10 @@ class PolicyOptTf(PolicyOpt):
             for n in range(N):
                 obs[n, :, self.x_idx] = (obs[n, :, self.x_idx].T.dot(self.policy.scale)
                                          + self.policy.bias).T
+        if self.policy.scale_context is not None:
+            # TODO: Should prob be called before update?
+            for n in range(N):
+                obs_context[n] = obs_context[n].dot(self.policy.scale_context) + self.policy.bias_context
 
         output = np.zeros((N, T, dU))
 
@@ -228,6 +233,9 @@ class PolicyOptTf(PolicyOpt):
             for t in range(T):
                 # Feed in data.
                 feed_dict = {self.obs_tensor: np.expand_dims(obs[i, t], axis=0)}
+                if not obs_context[i] is None:
+                    feed_dict[self.context_tensor] = np.expand_dims(obs_context[i, t], axis=0)
+
                 with tf.device(self.device_string):
                     output[i, t, :] = self.sess.run(self.act_op, feed_dict=feed_dict)
 

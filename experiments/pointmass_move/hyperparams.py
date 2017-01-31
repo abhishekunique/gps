@@ -1,43 +1,60 @@
-""" Hyperparameters for MJC peg insertion policy optimization. """
 from __future__ import division
 
 from datetime import datetime
 import os.path
-
 import numpy as np
 
 from gps import __file__ as gps_filepath
 from gps.agent.mjc.agent_mjc import AgentMuJoCo
-from gps.algorithm.algorithm_mdgps import AlgorithmMDGPS
+from gps.algorithm.algorithm_badmm import AlgorithmBADMM
+from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
-from gps.algorithm.cost.cost_utils import RAMP_FINAL_ONLY
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
 from gps.algorithm.dynamics.dynamics_prior_gmm import DynamicsPriorGMM
 from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
+from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
-from gps.algorithm.policy.lin_gauss_init import init_lqr
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
-from gps.algorithm.policy.policy_prior import PolicyPrior
-from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
-        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, ACTION
-from gps.gui.config import generate_experiment_info
-from gps.algorithm.policy_opt.tf_model_example import example_tf_network_hierarchical
+from gps.algorithm.policy_opt.tf_model_example import example_tf_network
 
+
+IMAGE_WIDTH = 80
+IMAGE_HEIGHT = 64
+IMAGE_CHANNELS = 3
+
+from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
+        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
+from gps.gui.config import generate_experiment_info
 
 SENSOR_DIMS = {
-    JOINT_ANGLES: 7,
-    JOINT_VELOCITIES: 7,
+    JOINT_ANGLES: 2,
+    JOINT_VELOCITIES: 2,
     END_EFFECTOR_POINTS: 6,
     END_EFFECTOR_POINT_VELOCITIES: 6,
-    ACTION: 7,
+    ACTION: 2,
 }
 
-PR2_GAINS = np.array([3.09, 1.08, 0.393, 0.674, 0.111, 0.152, 0.098])
-
+PR2_GAINS = [np.array([1.0, 1.0]), np.array([1.0, 1.0, 1.0, 1.0])]
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
-EXP_DIR = BASE_DIR + '/../experiments/mjc_mdgps_example/'
+EXP_DIR = BASE_DIR + '/../experiments/pointmass_move/'
+
+#close to the blockstrike positions
+# all_offsets = [[np.array([-0.8, 0.0, 0.25])],
+#                 [np.array([-0.8, 0.0, -1.3])],
+#                 [np.array([0.0, 0.0, 0.75])],
+#                 [np.array([0.1, 0.0, -0.75])]]
+
+
+all_offsets = [[np.asarray([-0.3, 0., -1.5])],
+               [np.asarray([0.3, 0., 0.3])],
+               [np.asarray([-0.4, 0.0, 0.6])],
+               [np.asarray([0.3, 0., -1.2])], 
+               [np.asarray([.5, 0.0, 0.3])],
+               [np.asarray([.7, 0.0, -0.3])],
+               [np.array([0., 0., -1.2])],
+               [np.array([0.4, 0., -0.9])]]
 
 common = {
     'experiment_name': 'my_experiment' + '_' + \
@@ -46,8 +63,9 @@ common = {
     'data_files_dir': EXP_DIR + 'data_files/',
     'target_filename': EXP_DIR + 'target.npz',
     'log_filename': EXP_DIR + 'log.txt',
-    'conditions': 4,
-    'num_hierarchies': 2
+    'conditions': 8,
+    'train_conditions': [0,1,2,3],
+    'test_conditions':[4,5,6,7],
 }
 
 if not os.path.exists(common['data_files_dir']):
@@ -55,77 +73,78 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = {
     'type': AgentMuJoCo,
-    'filename': './mjc_models/pr2_arm3d.xml',
-    'x0': np.concatenate([np.array([0.1, 0.1, -1.54, -1.7, 1.54, -0.2, 0]),
-                          np.zeros(7)]),
+    'filename': './mjc_models/pointmass_move.xml',
+    'x0': np.zeros(4),
     'dt': 0.05,
     'substeps': 5,
+    'pos_body_offset': all_offsets,
+    'pos_body_idx': np.array([2]),
     'conditions': common['conditions'],
-    'pos_body_idx': np.array([1]),
-    'pos_body_offset': [np.array([-0.08, -0.08, 0]), np.array([-0.08, 0.08, 0]),
-                        np.array([0.08, 0.08, 0]), np.array([0.08, -0.08, 0])],
+    'train_conditions': common['train_conditions'],
+    'test_conditions': common['test_conditions'],
     'T': 100,
     'sensor_dims': SENSOR_DIMS,
     'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
                       END_EFFECTOR_POINT_VELOCITIES],
+                      #include the camera images appropriately here
     'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
-                    END_EFFECTOR_POINT_VELOCITIES],
-    'camera_pos': np.array([0., 0., 2., 0., 0.2, 0.5]),
-}
+                      END_EFFECTOR_POINT_VELOCITIES],
+    'meta_include': [],
+    'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
+    }
 
 algorithm = {
-    'type': AlgorithmMDGPS,
+    'type': AlgorithmBADMM,
     'conditions': common['conditions'],
-    'iterations': 12,
-    'kl_step': 1.0,
-    'min_step_mult': 0.5,
-    'max_step_mult': 3.0,
-    'policy_sample_mode': 'replace',
+    'train_conditions': common['train_conditions'],
+    'test_conditions': common['test_conditions'],
+    'iterations': 25,
+    'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
+    'policy_dual_rate': 0.2,
+    'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
+    'fixed_lg_step': 3,
+    'kl_step': 5.0,
+    'min_step_mult': 0.01,
+    'max_step_mult': 1.0,
+    'sample_decrease_var': 0.05,
+    'sample_increase_var': 0.1,
 }
 
+
 algorithm['init_traj_distr'] = {
-    'type': init_lqr,
-    'init_gains':  1.0 / PR2_GAINS,
-    'init_acc': np.zeros(SENSOR_DIMS[ACTION]),
+    'type': init_pd,
     'init_var': 1.0,
-    'stiffness': 1.0,
-    'stiffness_vel': 0.5,
-    'final_weight': 50.0,
+    'pos_gains': 10.0,
+    'dQ': SENSOR_DIMS[ACTION],
     'dt': agent['dt'],
     'T': agent['T'],
 }
 
-torque_cost = {
-    'type': CostAction,
-    'wu': 1e-3 / PR2_GAINS,
-}
 
-fk_cost = {
+
+
+torque_cost_1 = [{
+    'type': CostAction,
+    'wu': 5e-1 / PR2_GAINS[0],
+} for i in common['train_conditions']]
+
+fk_cost_1 = [{
     'type': CostFK,
-    'target_end_effector': np.array([0.0, 0.3, -0.5, 0.0, 0.3, -0.2]),
-    'wp': np.array([2, 2, 1, 2, 2, 1]),
+    'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent['pos_body_offset'][i][0], np.array([0., 0., 0.])]),
+    'wp': np.array([1, 1, 1, 0, 0, 0]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
-}
+} for i in common['train_conditions']
+]
 
-# Create second cost function for last step only.
-final_cost = {
-    'type': CostFK,
-    'ramp_option': RAMP_FINAL_ONLY,
-    'target_end_effector': fk_cost['target_end_effector'],
-    'wp': fk_cost['wp'],
-    'l1': 1.0,
-    'l2': 0.0,
-    'alpha': 1e-5,
-    'wp_final_multiplier': 10.0,
-}
-
-algorithm['cost'] = {
+algorithm['cost'] = [{
     'type': CostSum,
-    'costs': [torque_cost, fk_cost, final_cost],
-    'weights': [1.0, 1.0, 1.0],
-}
+    'costs': [torque_cost_1[i], fk_cost_1[i]],
+    'weights': [1.0, 1.0],
+} for i in common['train_conditions']]
+
+
 
 algorithm['dynamics'] = {
     'type': DynamicsLRPrior,
@@ -138,22 +157,23 @@ algorithm['dynamics'] = {
     },
 }
 
+
 algorithm['traj_opt'] = {
     'type': TrajOptLQRPython,
 }
 
-# algorithm['policy_opt'] = {
-#     'type': PolicyOptCaffe,
-#     'iterations': 4000,
-#     'weights_file_prefix': EXP_DIR + 'policy',
-# }
+algorithm['policy_prior'] = {
+    'type': PolicyPriorGMM,
+    'max_clusters': 20,
+    'min_samples_per_cluster': 40,
+    'max_samples': 20,
+}
 
 algorithm['policy_opt'] = {
         'type': PolicyOptTf,
-        'network_model': example_tf_network_hierarchical,
+        'network_model': example_tf_network,
         'run_feats': False,
         'load_weights': False,
-        'dim_context': 7, #Need to make more general 
         'network_params': {
             'dim_hidden': [10],
             'num_filters': [10, 20],
@@ -168,23 +188,22 @@ algorithm['policy_opt'] = {
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
     }
 
-algorithm['policy_prior'] = {
-    'type': PolicyPriorGMM,
-    'max_clusters': 20,
-    'min_samples_per_cluster': 40,
-    'max_samples': 20,
-}
-
 config = {
-    'gui_on': False,
-    'iterations': algorithm['iterations'],
+    'iterations': 25,
     'num_samples': 5,
     'verbose_trials': 1,
     'verbose_policy_trials': 1,
     'common': common,
+    'save_wts': True,
     'agent': agent,
+    'gui_on': False,
+    'verbose_policy_trials': 5,
     'algorithm': algorithm,
-    'num_hierarchies': 2
+    'conditions': common['conditions'],
+    'train_conditions': common['train_conditions'],
+    'test_conditions': common['test_conditions'],
+    'inner_iterations': 4,
+    'to_log': [],
 }
 
 common['info'] = generate_experiment_info(config)

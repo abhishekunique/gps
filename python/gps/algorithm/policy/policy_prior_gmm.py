@@ -56,13 +56,15 @@ class PolicyPriorGMM(object):
             policy_opt: PolicyOpt containing current policy
         """
         X, obs = samples.get_X(), samples.get_obs()
-
+        obs_next = samples.get_obs_next()
         if self.X is None or mode == 'replace':
             self.X = X
             self.obs = obs
+            self.obs_next = obs_next
         elif mode == 'add' and X.size > 0:
             self.X = np.concatenate([self.X, X], axis=0)
             self.obs = np.concatenate([self.obs, obs], axis=0)
+            self.obs_next = np.concatenate([self.obs_next, obs_next], axis=0)
             # Trim extra samples
             # TODO: how should this interact with replace_samples?
             N = self.X.shape[0]
@@ -70,9 +72,10 @@ class PolicyPriorGMM(object):
                 start = N - self._max_samples
                 self.X = self.X[start:, :, :]
                 self.obs = self.obs[start:, :, :]
+                self.obs_next = self.obs_next[start:, :, :]
 
         # Evaluate policy at samples to get mean policy action.
-        U = policy_opt.prob(self.obs.copy())[0]
+        U = policy_opt.prob(self.obs.copy(), self.obs_next.copy())[0]
         # Create the dataset
         N, T = self.X.shape[:2]
         dO = self.X.shape[2] + U.shape[2]

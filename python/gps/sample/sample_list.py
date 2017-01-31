@@ -31,6 +31,12 @@ class SampleList(object):
             idx = range(len(self._samples))
         return np.asarray([self._samples[i].get_obs() for i in idx])
 
+    def get_obs_next(self, idx=None):
+        """ Returns N x T x dO numpy array of features. """
+        if idx is None:
+            idx = range(len(self._samples))
+        return np.asarray([self._samples[i].get_obs_next() for i in idx])
+
     def get_samples(self, idx=None):
         """ Returns N sample objects. """
         if idx is None:

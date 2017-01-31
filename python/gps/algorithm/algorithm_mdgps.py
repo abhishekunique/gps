@@ -30,7 +30,9 @@ class AlgorithmMDGPS(Algorithm):
                     policy_prior['type'](policy_prior)
 
         self.policy_opt = self._hyperparams['policy_opt']['type'](
-            self._hyperparams['policy_opt'], self.dO, self.dU
+            self._hyperparams['policy_opt'], self.dO, self.dU, 
+            highest_layer=hyperparams['highest_layer'], 
+            hierarchy_layer=hyperparams['hierarchy_layer']
         )
 
     def iteration(self, sample_lists):
@@ -70,14 +72,65 @@ class AlgorithmMDGPS(Algorithm):
         # Prepare for next iteration
         self._advance_iteration_variables()
 
-    def _update_policy(self):
+
+    def iteration_trajopt(self, sample_lists, sample_lists_next, num_h):
+        """
+        Run iteration of MDGPS-based guided policy search.
+
+        Args:
+            sample_lists: List of SampleList objects for each condition.
+        """
+        print("IN trajopts")
+        import IPython
+        IPython.embed()
+        # Store the samples and evaluate the costs.
+        for m in range(self.M):
+            self.cur[m].sample_list = sample_lists[m]
+            self._eval_cost(m)
+
+        # Update dynamics linearizations.
+        self._update_dynamics()
+
+        # On the first iteration, need to catch policy up to init_traj_distr.
+        if self.iteration_count == 0:
+            self.new_traj_distr = [
+                self.cur[cond].traj_distr for cond in range(self.M)
+            ]
+            self._update_policy(sample_lists, sample_lists_next)
+
+        # Update policy linearizations.
+        for m in range(self.M):
+            self._update_policy_fit(m)
+
+        # C-step
+        if self.iteration_count > 0:
+            self._stepadjust()
+        self._update_trajectories()
+
+
+    def iteration_poltrain(self, sample_lists, sample_lists_next, num_h):
+        # S-step
+        print("IN poltrain")
+        import IPython
+        IPython.embed()
+
+        self._update_policy(sample_lists, sample_lists_next)
+
+        # Prepare for next iteration
+        self._advance_iteration_variables()
+
+    def _update_policy(self, sample_lists, sample_lists_next):
         """ Compute the new policy. """
         dU, dO, T = self.dU, self.dO, self.T
+        obs_data_context = None
         # Compute target mean, cov, and weight for each sample.
         obs_data, tgt_mu = np.zeros((0, T, dO)), np.zeros((0, T, dU))
+        if sample_lists_next!= None:
+            dO_context = self.dU #NEED TO FIX
+            obs_data_context = np.zeros((0, T, dO_context))
         tgt_prc, tgt_wt = np.zeros((0, T, dU, dU)), np.zeros((0, T))
         for m in range(self.M):
-            samples = self.cur[m].sample_list
+            samples = sample_lists[m]
             X = samples.get_X()
             N = len(samples)
             traj, pol_info = self.new_traj_distr[m], self.cur[m].pol_info
@@ -96,7 +149,10 @@ class AlgorithmMDGPS(Algorithm):
             tgt_prc = np.concatenate((tgt_prc, prc))
             tgt_wt = np.concatenate((tgt_wt, wt))
             obs_data = np.concatenate((obs_data, samples.get_obs()))
-        self.policy_opt.update(obs_data, tgt_mu, tgt_prc, tgt_wt)
+            if sample_lists_next!= None:
+                obs_data_context = np.concatenate((obs_data_context, samples.get_obs_next()))
+
+        self.policy_opt.update(obs_data, tgt_mu, tgt_prc, tgt_wt, obs_data_context)
 
     def _update_policy_fit(self, m):
         """
@@ -113,7 +169,8 @@ class AlgorithmMDGPS(Algorithm):
         pol_info = self.cur[m].pol_info
         X = samples.get_X()
         obs = samples.get_obs().copy()
-        pol_mu, pol_sig = self.policy_opt.prob(obs)[:2]
+        obs_next = samples.get_obs_next().copy()
+        pol_mu, pol_sig = self.policy_opt.prob(obs, obs_next)[:2]
         pol_info.pol_mu, pol_info.pol_sig = pol_mu, pol_sig
 
         # Update policy prior.

@@ -29,7 +29,7 @@ class LinearGaussianPolicy(Policy):
         self.chol_pol_covar = chol_pol_covar
         self.inv_pol_covar = inv_pol_covar
 
-    def act(self, x, obs, t, noise=None):
+    def act(self, x, obs, t, noise=None, context=None):
         """
         Return an action for a state.
         Args:

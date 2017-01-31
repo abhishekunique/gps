@@ -80,6 +80,11 @@ class Sample(object):
                 self.agent.pack_data_obs(obs, data, data_types=[data_type])
         return obs
 
+    def get_obs_next(self, t=None):
+        """ Get the observation. Put it together if not precomputed. """
+        obs_next = self._obs_next if t is None else self._obs_next[t, :]
+        return obs_next
+
     def get_meta(self):
         """ Get the meta data. Put it together if not precomputed. """
         meta = self._meta

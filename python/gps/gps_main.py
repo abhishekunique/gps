@@ -46,9 +46,28 @@ class GPSMain(object):
         self.agent = config['agent']['type'](config['agent'])
         self.data_logger = DataLogger()
         self.gui = GPSTrainingGUI(config['common']) if config['gui_on'] else None
+        dUs = []
+        for num_h in range(self._hyperparams['num_hierarchies']):
+            dUs.append(self.agent.dU) #Need to fix, make more general
+        self.agent.dUs = dUs
+        #Need to introduce multiple levels of agents here. Or rather have the same agent give us several levels of samples. Maybe we can just take 
+        #the same samples, and pass it through the state abstractions. Add an additional class to generate state abstractions. 
+        full_alg = []
+        for num_h in range(self._hyperparams['num_hierarchies']):
+            #hack for the size of the dU
 
-        config['algorithm']['agent'] = self.agent
-        self.algorithm = config['algorithm']['type'](config['algorithm'])
+            curr_alg = copy.deepcopy(config['algorithm'])
+            curr_alg['agent'] = self.agent
+            if num_h == 0: 
+                curr_alg['highest_layer'] = True
+            else:
+                curr_alg['highest_layer'] = False
+            curr_alg['hierarchy_layer'] = num_h
+            full_alg.append(curr_alg)
+
+        #Have multiple levels of algorithms, each level doing the same thing with different levels, different states, and so on.
+        self.algorithm = [alg['type'](alg) for alg in full_alg]
+        #Have 2 different versions, one with the pushing through integrals, other one just fitting samples. 
 
     def run(self, itr_load=None):
         """
@@ -59,25 +78,41 @@ class GPSMain(object):
         Returns: None
         """
         itr_start = self._initialize(itr_load)
-
+        num_hierarchies = self._hyperparams['num_hierarchies']
         for itr in range(itr_start, self._hyperparams['iterations']):
             for cond in self._train_idx:
                 for i in range(self._hyperparams['num_samples']):
-                    self._take_sample(itr, cond, i)
-
-            traj_sample_lists = [
-                self.agent.get_samples(cond, -self._hyperparams['num_samples'])
-                for cond in self._train_idx
-            ]
-
+                    self._take_sample_hierarchical(itr, cond, i)
+            full_traj_lists = []
+            for h in range(num_hierarchies):
+                full_traj_lists.append([
+                    self.agent.get_samples(cond, -self._hyperparams['num_samples'], hierarchy_number=h)
+                    for cond in self._train_idx
+                ])
+            #Currently hacked so that things work with same sizes at all the layers. Need to fix
             # Clear agent samples.
             self.agent.clear_samples()
+            level_data = []
+            for num_h in range(num_hierarchies):
+                level_data.append(self.extract_layer(full_traj_lists, num_h))
+                print(num_h)
 
-            self._take_iteration(itr, traj_sample_lists)
-            pol_sample_lists = self._take_policy_samples()
-            self._log_data(itr, traj_sample_lists, pol_sample_lists)
-
+            for num_h in range(num_hierarchies):
+                if num_h == 0:
+                    self._take_iteration_trajopt(itr, level_data[num_h], None, num_h)
+                else:
+                    self._take_iteration_trajopt(itr, level_data[num_h], level_data[num_h-1], num_h)
+            for num_h in range(num_hierarchies):
+                if num_h == 0:
+                    self._take_iteration_poltrain(itr, level_data[num_h], None, num_h)
+                else:
+                    self._take_iteration_poltrain(itr, level_data[num_h], level_data[num_h-1], num_h)
+            # pol_sample_lists = self._take_policy_samples()
+            # self._log_data(itr, traj_sample_lists, pol_sample_lists)
         self._end()
+
+    def extract_layer(self, full_traj_lists, num_h):
+        return full_traj_lists[num_h]
 
     def test_policy(self, itr, N):
         """
@@ -143,6 +178,26 @@ class GPSMain(object):
                     'Press \'go\' to begin.') % itr_load)
             return itr_load + 1
 
+    def _take_sample_hierarchical(self, itr, cond, i):
+        """
+        Collect a sample from the agent.
+        Args:
+            itr: Iteration number.
+            cond: Condition number.
+            i: Sample number.
+        Returns: None
+        """
+        print("YO")
+        nn_flag = False
+        if self.algorithm[0]._hyperparams['sample_on_policy'] \
+                and self.algorithm[0].iteration_count > 0:
+            pols = [alg.policy_opt.policy for alg in self.algorithm]
+            nn_flag = True
+        else:
+            pols = [alg.cur[cond].traj_distr for alg in self.algorithm]
+
+        self.agent.sample_hierarchical(pols, cond, is_nn=nn_flag, verbose=(i < self._hyperparams['verbose_trials']))
+
     def _take_sample(self, itr, cond, i):
         """
         Collect a sample from the agent.
@@ -152,7 +207,7 @@ class GPSMain(object):
             i: Sample number.
         Returns: None
         """
-        if self.algorithm._hyperparams['sample_on_policy'] \
+        if self.algorithm[0]._hyperparams['sample_on_policy'] \
                 and self.algorithm.iteration_count > 0:
             pol = self.algorithm.policy_opt.policy
         else:
@@ -209,6 +264,26 @@ class GPSMain(object):
         self.algorithm.iteration(sample_lists)
         if self.gui:
             self.gui.stop_display_calculating()
+
+    def _take_iteration_trajopt(self, itr, sample_lists, sample_lists_next, num_h):
+        """
+        Take an iteration of the algorithm.
+        Args:
+            itr: Iteration number.
+        Returns: None
+        """
+        self.algorithm[num_h].iteration_trajopt(sample_lists,sample_lists_next, num_h)
+
+
+    def _take_iteration_poltrain(self, itr, sample_lists, sample_lists_next, num_h):
+        """
+        Take an iteration of the algorithm.
+        Args:
+            itr: Iteration number.
+        Returns: None
+        """
+        self.algorithm[num_h].iteration_poltrain(sample_lists, sample_lists_next, num_h)
+
 
     def _take_policy_samples(self, N=None):
         """

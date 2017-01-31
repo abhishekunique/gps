@@ -1,0 +1,29 @@
+<mujoco model="arm3d">
+    <compiler inertiafromgeom="true" angle="radian" coordinate="local" />
+    <option timestep="0.01" gravity="0 0 0" iterations="20" integrator="Euler" />
+    
+    <default>
+        <joint armature='0.04' damping="1" limited="true"/>
+        <geom friction=".8 .1 .1" density="300" margin="0.002" condim="1" contype="1" conaffinity="1"/>
+    </default>
+    
+    <worldbody>
+        <body name="palm" pos="0 0 0">
+            <geom rgba="1 1 1 1" type="box" pos="1.3 0 0" size="0.1 0.1 0.1" density='0.00001' contype="0" conaffinity="0"/>
+            <site name="object_pos" pos="1.3 0 0" size="0.01" />
+            <joint name="palm_slidex" type="slide" pos="1.3 0 0" axis="1 0 0" range="-20.5236 20.3963" damping="1.0" />
+            <joint name="palm_slidey" type="slide" pos="1.3 0 0" axis="0 0 1" range="-20.5236 20.3963" damping="1.0" />
+        </body>
+        
+        <body name="goal" pos="0.8 0.0 0.5">
+            <geom rgba="1 1 1 1" type="box" size="0.1 0.1 0.1" density='0.00001' contype="0" conaffinity="0"/>
+            <site name="goal_pos" pos="0 0 0" size="0.01" />
+        </body>
+    </worldbody>
+    
+    
+    <actuator>
+        <motor joint="palm_slidex" ctrlrange="-1 1" ctrllimited="true"/>
+        <motor joint="palm_slidey" ctrlrange="-1 1" ctrllimited="true"/>
+    </actuator>
+</mujoco>

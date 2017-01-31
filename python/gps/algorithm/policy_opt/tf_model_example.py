@@ -41,7 +41,7 @@ def get_input_layer(dim_input, dim_output):
     return net_input, action, precision
 
 
-def get_mlp_layers(mlp_input, number_layers, dimension_hidden):
+def get_mlp_layers(mlp_input, number_layers, dimension_hidden, hierarchy_layer):
     """compute MLP with specified number of layers.
         math: sigma(Wx + b)
         for each layer, where sigma is by default relu"""
@@ -50,8 +50,8 @@ def get_mlp_layers(mlp_input, number_layers, dimension_hidden):
     biases = []
     for layer_step in range(0, number_layers):
         in_shape = cur_top.get_shape().dims[1].value
-        cur_weight = init_weights([in_shape, dimension_hidden[layer_step]], name='w_' + str(layer_step))
-        cur_bias = init_bias([dimension_hidden[layer_step]], name='b_' + str(layer_step))
+        cur_weight = init_weights([in_shape, dimension_hidden[layer_step]], name='w_' + str(layer_step) + 'layer_' + str(hierarchy_layer))
+        cur_bias = init_bias([dimension_hidden[layer_step]], name='b_' + str(layer_step) + 'layer_' + str(hierarchy_layer))
         weights.append(cur_weight)
         biases.append(cur_bias)
         if layer_step != number_layers-1:  # final layer has no RELU
@@ -283,5 +283,48 @@ def get_xavier_weights(filter_shape, poolsize=(2, 2)):
     low = -4*np.sqrt(6.0/(fan_in + fan_out)) # use 4 for sigmoid, 1 for tanh activation
     high = 4*np.sqrt(6.0/(fan_in + fan_out))
     return tf.Variable(tf.random_uniform(filter_shape, minval=low, maxval=high, dtype=tf.float32))
+
+def get_input_layer_context(dim_input, dim_context, dim_output, hierarchy_layer=0):
+    """produce the placeholder inputs that are used to run ops forward and backwards.
+        net_input: usually an observation.
+        action: mu, the ground truth actions we're trying to learn.
+        precision: precision matrix used to commpute loss."""
+    net_input = tf.placeholder("float", [None, dim_input], name='nn_input_layer_' + str(hierarchy_layer))
+    if dim_context>0:
+        net_context = tf.placeholder("float", [None, dim_context], name='nn_context_layer_' + str(hierarchy_layer))
+    else:
+        net_context = None
+    action = tf.placeholder('float', [None, dim_output], name='action_layer_' + str(hierarchy_layer))
+    precision = tf.placeholder('float', [None, dim_output, dim_output], name='precision_layer_' + str(hierarchy_layer))
+    return net_input, net_context, action, precision
+
+def example_tf_network_hierarchical(dim_input=27, dim_context=27, dim_output=7, batch_size=25, network_config=None, hierarchy_layer=0, highest_layer=False):
+    """
+    An example of how one might want to specify a network in tensorflow.
+
+    Args:
+        dim_input: Dimensionality of input.
+        dim_output: Dimensionality of the output.
+        batch_size: Batch size.
+    Returns:
+        a TfMap object used to serialize, inputs, outputs, and loss.
+    """
+    n_layers = 2
+    dim_hidden = (n_layers - 1) * [40]
+    dim_hidden.append(dim_output)
+    if highest_layer: 
+        nn_input, _, action, precision = get_input_layer_context(dim_input, 0, dim_output, hierarchy_layer=0)
+        full_input = nn_input
+    else:
+        nn_input, nn_context, action, precision = get_input_layer_context(dim_input, dim_context, dim_output, hierarchy_layer=hierarchy_layer)
+        full_input = tf.concat(concat_dim=1, values=[nn_input, nn_context])
+    mlp_applied, weights_FC, biases_FC = get_mlp_layers(full_input, n_layers, dim_hidden, hierarchy_layer)
+    fc_vars = weights_FC + biases_FC
+    loss_out = get_loss_layer(mlp_out=mlp_applied, action=action, precision=precision, batch_size=batch_size)
+    if highest_layer: 
+        return TfMap.init_from_lists([nn_input, action, precision], [mlp_applied], [loss_out]), fc_vars, []
+    else:
+        return TfMap.init_from_lists([nn_input, action, precision], [mlp_applied], [loss_out], context_tensor=nn_context), fc_vars, []
+
 
 

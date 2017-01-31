@@ -15,6 +15,7 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS_NO_TARGET, END_EFFECTOR_POINT_VELOCITIES_NO_TARGET
 
 from gps.sample.sample import Sample
+from gps.sample.sample_list import SampleList
 
 
 class AgentMuJoCo(Agent):
@@ -65,7 +66,7 @@ class AgentMuJoCo(Agent):
                 idx = self._hyperparams['pos_body_idx'][i][j]
                 # TODO: this should actually add [i][j], but that would break things
                 self._model[i]['body_pos'][idx, :] += \
-                        self._hyperparams['pos_body_offset'][i]
+                        self._hyperparams['pos_body_offset'][i][j]
 
         self._joint_idx = list(range(self._model[0]['nq']))
         self._vel_idx = [i + self._model[0]['nq'] for i in self._joint_idx]
@@ -98,6 +99,91 @@ class AgentMuJoCo(Agent):
                                        AGENT_MUJOCO['image_height'],
                                        cam_pos[0], cam_pos[1], cam_pos[2],
                                        cam_pos[3], cam_pos[4], cam_pos[5])
+
+
+    def sample_hierarchical(self, policy_list, condition, is_nn=False, verbose=True, save=True, noisy=True):
+        """
+        Runs a trial and constructs a new sample containing information
+        about the trial.
+        Args:
+            policy: Policy to to used in the trial.
+            condition: Which condition setup to run.
+            verbose: Whether or not to plot the trial.
+            save: Whether or not to store the trial into the samples.
+            noisy: Whether or not to use noise during sampling.
+        """
+        # Create new sample, populate first time step.
+        num_h = len(policy_list)
+        feature_fn = None
+        new_samples = []
+        for h in range(num_h):
+            new_samples.append(self._init_sample(condition, feature_fn=feature_fn))
+        mj_X = self._hyperparams['x0'][condition]
+        if noisy:
+            noises = []
+            for h in range(num_h): 
+                noises.append(generate_noise(self.T, self.dUs[h], self._hyperparams))
+        else:
+            for h in range(num_h): 
+                noises.append(generate_noise(self.T, self.dUs[h], self._hyperparams))
+                noises.append(np.zeros((self.T, self.dUs[h])))
+        # if np.any(self._hyperparams['x0var'][condition] > 0):
+        #     x0n = self._hyperparams['x0var'] * \
+        #             np.random.randn(self._hyperparams['x0var'].shape)
+        #     mj_X += x0n
+        # noisy_body_idx = self._hyperparams['noisy_body_idx'][condition]
+        # if noisy_body_idx.size > 0:
+        #     for i in range(len(noisy_body_idx)):
+        #         idx = noisy_body_idx[i]
+        #         var = self._hyperparams['noisy_body_var'][condition][i]
+        #         self._model[condition]['body_pos'][idx, :] += \
+        #                 var * np.random.randn(1, 3)
+        # Take the sample.
+        Us = [np.zeros([self.T, self.dUs[h]]) for h in range(len(policy_list))]
+        for t in range(self.T):
+            X_t = new_samples[0].get_X(t=t)
+            obs_t = new_samples[0].get_obs(t=t)
+            mj_U = None
+            level_data = []
+            #Make sure the order is correct here
+            for h,pol in enumerate(policy_list):
+                mj_U = pol.act(X_t, obs_t, t, noises[h][t, :], context=mj_U)
+                level_data.append(mj_U)
+                Us[h][t, :] = copy.deepcopy(mj_U)
+            if verbose:
+                self._world[condition].plot(mj_X)
+            if (t + 1) < self.T:
+                for _ in range(self._hyperparams['substeps']):
+                    #mj_U has to be the last one
+                    mj_X, _ = self._world[condition].step(mj_X, mj_U)
+                #TODO: Some hidden state stuff will go here.
+                self._data = self._world[condition].get_data()
+                for h in range(num_h):
+                    self._set_sample(new_samples[h], copy.copy(mj_X), t, condition, feature_fn=feature_fn)
+        for h in range(num_h):           
+            new_samples[h].set(ACTION, Us[h])
+            new_samples[h].dU = self.dUs[h]
+        for h in range(num_h): 
+            if h == 0:
+                new_samples[h]._obs_next = None
+            else:
+                new_samples[h]._obs_next = Us[h-1]
+        if save:
+            self._samples[condition].append(new_samples)
+        return new_samples
+
+    def get_samples(self, condition, start=0, end=None, hierarchy_number=0):
+        """
+        Return the requested samples based on the start and end indices.
+        Args:
+            start: Starting index of samples to return.
+            end: End index of samples to return.
+        """
+        if end is None:
+            return SampleList([sl[hierarchy_number] for sl in self._samples[condition][start:]]) 
+        else:
+            return SampleList([sl[hierarchy_number] for sl in self._samples[condition][start:end]])
+
 
     def sample(self, policy, condition, verbose=True, save=True, noisy=True):
         """
