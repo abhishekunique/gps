@@ -80,9 +80,9 @@ class AlgorithmMDGPS(Algorithm):
         Args:
             sample_lists: List of SampleList objects for each condition.
         """
-        print("IN trajopts")
-        import IPython
-        IPython.embed()
+        # print("IN trajopts")
+        # import IPython
+        # IPython.embed()
         # Store the samples and evaluate the costs.
         for m in range(self.M):
             self.cur[m].sample_list = sample_lists[m]
@@ -110,9 +110,9 @@ class AlgorithmMDGPS(Algorithm):
 
     def iteration_poltrain(self, sample_lists, sample_lists_next, num_h):
         # S-step
-        print("IN poltrain")
-        import IPython
-        IPython.embed()
+        # print("IN poltrain")
+        # import IPython
+        # IPython.embed()
 
         self._update_policy(sample_lists, sample_lists_next)
 

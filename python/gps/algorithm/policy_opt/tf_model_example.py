@@ -317,6 +317,8 @@ def example_tf_network_hierarchical(dim_input=27, dim_context=27, dim_output=7, 
         full_input = nn_input
     else:
         nn_input, nn_context, action, precision = get_input_layer_context(dim_input, dim_context, dim_output, hierarchy_layer=hierarchy_layer)
+        #Just for prototyping
+        # full_input = nn_input
         full_input = tf.concat(concat_dim=1, values=[nn_input, nn_context])
     mlp_applied, weights_FC, biases_FC = get_mlp_layers(full_input, n_layers, dim_hidden, hierarchy_layer)
     fc_vars = weights_FC + biases_FC

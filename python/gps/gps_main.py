@@ -109,6 +109,9 @@ class GPSMain(object):
                     self._take_iteration_poltrain(itr, level_data[num_h], level_data[num_h-1], num_h)
             # pol_sample_lists = self._take_policy_samples()
             # self._log_data(itr, traj_sample_lists, pol_sample_lists)
+            if itr%10 == 0:
+                import IPython
+                IPython.embed()
         self._end()
 
     def extract_layer(self, full_traj_lists, num_h):
