@@ -184,7 +184,8 @@ config = {
     'common': common,
     'agent': agent,
     'algorithm': algorithm,
-    'num_hierarchies': 2
+    'num_hierarchies': 2,
+    'random_seed':1
 }
 
 common['info'] = generate_experiment_info(config)
