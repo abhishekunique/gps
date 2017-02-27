@@ -64,7 +64,7 @@ EXP_DIR = BASE_DIR + '/../experiments/blockstrike_image/'
 INIT_POLICY_DIR = '/home/abhigupta/gps/'
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
-weights_file = "/home/coline/dynamics_subspace/gps/img_weights.pkl"
+weights_file = "/home/coline/dynamics_subspace/gps/img_weights_2.pkl"
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),
@@ -333,7 +333,7 @@ test_cost = [{
 algorithm[1]['cost'] = [{
     'type': CostSum,
     'costs': [fk_cost_2[i], test_cost[i]],
-    'weights': [1,1],
+    'weights': [1.,2.],
 } for i in agent[0]['train_conditions']]
 
 

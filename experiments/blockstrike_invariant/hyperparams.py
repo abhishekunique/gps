@@ -291,21 +291,21 @@ fk_cost_blocktouch2 = [{
     'alpha': 1e-5,
 } for i in agent[1]['train_conditions']]
 
-load_trajs = np.load("3link_feats.npy")
-test_cost = [{
-    'type': CostDevRs,
-    'l1': 0.1,
-    'l2': 10.0,
-    'alpha': 1e-5,
-    'target_feats': np.mean(load_trajs[i], axis=0),
-    'load_file': 'best_multitask_subspace.pkl'
-} for i in agent[0]['train_conditions']]
+# load_trajs = np.load("3link_feats.npy")
+# test_cost = [{
+#     'type': CostDevRs,
+#     'l1': 0.1,
+#     'l2': 10.0,
+#     'alpha': 1e-5,
+#     'target_feats': np.mean(load_trajs[i], axis=0),
+#     'load_file': 'best_multitask_subspace.pkl'
+# } for i in agent[0]['train_conditions']]
 
 
 algorithm[1]['cost'] = [{
     'type': CostSum,
-    'costs': [fk_cost_2[i]],# fk_cost_blocktouch2[i]],# test_cost[i]],
-    'weights': [1.0],#1.0],
+    'costs': [fk_cost_2[i], fk_cost_blocktouch2[i]],# test_cost[i]],
+    'weights': [5.0,1.0],
 } for i in agent[0]['train_conditions']]
 
 

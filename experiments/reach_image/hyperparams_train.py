@@ -81,7 +81,7 @@ all_offsets = [[np.asarray([-0.3, 0., -1.5])],
                [np.array([0.4, 0., -0.9])]]
 
 OBS_INCLUDE =  [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES]
-weights_file = "/home/coline/dynamics_subspace/gps/img_contrastive1000.pkl"
+weights_file = "/home/coline/dynamics_subspace/gps/img_weights_2.pkl"
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),
@@ -128,7 +128,7 @@ common = {
             'batch_size': 25,
             # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
         }],
-        'iterations': 20000,
+        'iterations': 60000,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         'r0_index_list': range(15360),#np.concatenate([np.arange(0,3), np.arange(4,7), np.arange(8,11), np.arange(17,20)]),

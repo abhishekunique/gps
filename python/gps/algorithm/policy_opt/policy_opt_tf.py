@@ -238,7 +238,7 @@ class PolicyOptTf(PolicyOpt):
     def train_invariant_autoencoder(self, obs_full, next_obs_full, action_full, obs_extended_full, ee_full):
         import matplotlib.pyplot as plt
         print "in train"
-        num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
+
 
         
         # for cond in range(num_conds):
@@ -278,12 +278,12 @@ class PolicyOptTf(PolicyOpt):
             # next_obs = np.reshape(next_obs, (N*T, dO))
             
 
-            action = action_full[robot_number]
-            action = np.reshape(action, (N*T, dU))
+            # action = action_full[robot_number]
+            # action = np.reshape(action, (N*T, dU))
 
             obs_reshaped.append(obs)
             #next_obs_reshaped.append(next_obs)
-            action_reshaped.append(action)
+            # action_reshaped.append(action)
         mlplt = MLPlotter("Learning curves")
         idx = range(N*T)
         np.random.shuffle(idx)
@@ -300,6 +300,7 @@ class PolicyOptTf(PolicyOpt):
         # import IPython
         # IPython.embed()
         if self._hyperparams['strike']:
+            num_conds, num_samples, T_extended, _ = obs_extended_full[0].shape
             obs_full_reshaped = [np.reshape(obs_full[i], (num_conds, num_samples, T,-1)) for i in range(self.num_robots)]
             cond_feats = np.zeros((num_conds, num_samples, T, 32))
             cond_feats_other = np.zeros((num_conds, num_samples, T, 32))
@@ -318,6 +319,7 @@ class PolicyOptTf(PolicyOpt):
 
             #plt.imshow(img)
             cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T, 32))
+            print "SAVED FEATS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             np.save("3link_feats.npy", cond_feats)
             import IPython
             IPython.embed()
@@ -367,13 +369,13 @@ class PolicyOptTf(PolicyOpt):
                 all_losses = np.zeros((len(self.other['gen_loss']),))
                 mlplt.plot()
 
-        #import IPython
-        #IPython.embed()
+        import IPython
+        IPython.embed()
         mlplt.plot()
         var_dict = {}
         for k, v in self.other['all_variables'].items():
             var_dict[k] = self.sess.run(v)
-        pickle.dump(var_dict, open("img_weights.pkl", "wb"))
+        pickle.dump(var_dict, open("img_weights_2.pkl", "wb"))
 
 
 
@@ -432,15 +434,15 @@ class PolicyOptTf(PolicyOpt):
                     leng += np.linalg.norm([x-x_nbr, y-y_nbr])
         # plt.show()
         print "leng", leng   
-        #import IPython
-        #IPython.embed()
+        import IPython
+        IPython.embed()
         
 
         #plt.imshow(img)
         cond_feats = np.reshape(cond_feats, (num_conds, num_samples, T, 32))
-        np.save("3link_feats.npy", cond_feats)
-        import IPython
-        IPython.embed()
+        # np.save("3link_feats.npy", cond_feats)
+        # import IPython
+        # IPython.embed()
         r = 0
         t = 40
         s = 1
@@ -463,17 +465,17 @@ class PolicyOptTf(PolicyOpt):
         # image[:,:,0] += 104
         # image[:,:,1]+= 117
         # image[:,:,2]+= 123
-        #for i in range(16):
-        x = int(fp[i*2]+40)
-        y = int(fp[i*2+1]+32)
-        print x,y
-        image[x,y,:] = 255
-        image[max(0, x-1),y,:] = 100
-        image[min(79, x+1),y,:] = 100
-        image[x,max(y,0),:] = 100
-        image[x,min(y+1,63),:] = 100
-        out = plt.imshow(image)
-        plt.show(out)
+        # for i in range(16):
+        #     x = int(fp[t][i*2]*80+40)
+        #     y = int(fp[t][i*2+1]*64+32)
+        #     print x,y
+        #     image[x,y,:] = 255
+        #     image[max(0, x-1),y,:] = 200
+        #     image[min(79, x+1),y,:] = 200
+        #     image[x,max(y,0),:] =200
+        #     image[x,min(y+1,63),:] = 200
+        # out = plt.imshow(image)
+        # plt.show(out)
         def add_feat(images, fp, i):
             T,_,_,_ = images.shape
             for t in range(T):
@@ -506,7 +508,7 @@ class PolicyOptTf(PolicyOpt):
                     feed_dict[self.other['state_inputs'][r]] = obs_full[r][s]
                     fp = self.sess.run(self.other['state_features_list'][r], feed_dict)
                     images_fp = add_feat(images_fp, fp, feat)
-                ani_frame(images_fp, "strikeblue"+str(feat)+"_r"+str(r)+"_s"+str(s))
+                ani_frame(images_fp, "newstrikeblue"+str(feat)+"_r"+str(r)+"_s"+str(s))
             
         data = np.zeros((14,100, 32))
         for s in range(14):
@@ -518,7 +520,7 @@ class PolicyOptTf(PolicyOpt):
             for feat in range(16):
                 images_fp = add_feat(images_fp, fp, feat)
             ani_frame(images_fp, "allfeats_test"+str(feat)+"_r"+str(r)+"_s"+str(s))
-            
+
         for r in range(2):
             for s in [1,10]:
                 feed_dict[self.other['state_inputs'][r]] = obs_full[r][s]

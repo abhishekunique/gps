@@ -215,8 +215,8 @@ class CostImageFeatures(Cost):
             final_l[t] = np.sum(np.square(feat_forward[t] - tgt[t]))/2
 
         final_lx[:,feat_idx] = feat_forward- tgt
-        #if (self.count % 5) ==0:
-        #    self.make_clip(imgs, feat_forward, tgt)
+        if (self.count % 15) ==0:
+           self.make_clip(imgs, feat_forward, tgt)
         print "mean cost", np.mean(final_l)
         self.count+=1
         return final_l, final_lx, final_lu, final_lxx, final_luu, final_lux

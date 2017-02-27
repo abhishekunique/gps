@@ -97,7 +97,7 @@ class GPSMain(object):
         # traj_distr=self.data_logger.unpickle('traj_reach_image.pkl')
         # traj_distr.update(self.data_logger.unpickle('traj_reach_image_update.pkl'))
         # traj_distr=self.data_logger.unpickle('blockstrike_controllers.pkl')
-        # # traj_distr.update(self.data_logger.unpickle('traj_throw_2arm.pkl'))
+        # traj_distr = self.data_logger.unpickle(self._data_files_dir+'traj_distr.pkl')
         # for robot_number in range(self.num_robots):
         #     for cond in  self._train_idx[robot_number]:
         #         self.algorithm[robot_number].cur[cond].traj_distr = traj_distr[robot_number][cond]
@@ -111,6 +111,7 @@ class GPSMain(object):
         #         print name, "not in traj_distr"
 
         for itr in range(itr_start, self._hyperparams['iterations']):
+            print "starting main iter"
             traj_sample_lists = {}
             feature_lists = []
             for robot_number in range(self.num_robots):
@@ -123,16 +124,18 @@ class GPSMain(object):
                     for cond_1 in self._train_idx[robot_number]
                 ]
                 if rf:
-                    feature_lists.append(self.policy_opt.run_features_forward(self._extract_features(traj_sample_lists[robot_number], robot_number), robot_number))
-
+                    feature_lists.append(self.policy_opt.run_features_forward(self._extract_features(traj_sample_lists[r5Bobot_number], robot_number), robot_number))
+            print "got smaples"
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
             for robot_number in range(self.num_robots):
                 pol_sample_lists = None #self._take_policy_samples(robot_number=robot_number)
+                print "about to log"
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-                if rf:
-                    np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
+                print "logged"
+                # if rf:
+                #     np.save(self._data_files_dir + ('fps_%02d_rn_%02d.pkl' % (itr,robot_number)), copy.copy(np.asarray(feature_lists)))
 
             if itr % 19 == 0 and itr > 0:
                 import IPython
@@ -145,7 +148,8 @@ class GPSMain(object):
                 for cond in  self._train_idx[ag]:
                     print ag, cond
                     traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
-            #self.data_logger.pickle(self._data_files_dir+"traj_reach_image_update.pkl", traj_distr)
+            self.data_logger.pickle(self._data_files_dir+"traj_distr.pkl", traj_distr)
+            print "pickled"
             #self.data_logger.pickle("/home/coline/dynamics_subspace/gps/traj_lift_bracket_actuated.pkl", traj_distr)
             #self.data_logger.pickle("/home/coline/dynamics_subspace/gps/traj_hopper.pkl", traj_distr)
             #self.data_logger.pickle("/home/coline/dynamics_subspace/gps/traj_throw_2arm.pkl", traj_distr)
@@ -222,18 +226,21 @@ class GPSMain(object):
         #     for cond in  self._train_idx[robot_number]:
         #         self.algorithm[robot_number].cur[cond].traj_distr = traj_distr[robot_number][cond]
 
-        traj_distr=self.data_logger.unpickle(self._data_files_dir+'traj_reach_blue.pkl')
-        for ag in range(self.num_robots):
-            name = self.agent[ag]._hyperparams['filename'][0]
-            if name in traj_distr:
-                for cond in  self._train_idx[ag]:
-                    print ag, cond
-                    self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
-            else:
-                print name, "not in traj_distr"
+        #traj_distr=self.data_logger.unpickle(self._data_files_dir+'traj_reach_blue.pkl')
+        traj_distr=self.data_logger.unpickle(self._data_files_dir+'traj_distr_state.pkl')
+        # traj_distr2=self.data_logger.unpickle(self._data_files_dir+'traj_distr.pkl')
+        # traj_distr['./mjc_models/3link_button.xml'] = traj_distr2['./mjc_models/3link_button.xml']
+        # for ag in range(self.num_robots):
+        #     name = self.agent[ag]._hyperparams['filename'][0]
+        #     if name in traj_distr:
+        #         for cond in  self._train_idx[ag]:
+        #             print ag, cond
+        #             self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+        #     else:
+        #         print name, "not in traj_distr"
 
-        for robot_number in range(self.num_robots):
-            itr_start = self._initialize(itr_load, robot_number=robot_number)
+        # for robot_number in range(self.num_robots):
+        #     itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         for i in range(1):
             # traj_sample_lists = {}
@@ -297,15 +304,61 @@ class GPSMain(object):
             #        'obs_complete_time_full': obs_complete_time_full,
             #        'ee_full': ee_full,
             #    }
-            # self.data_logger.pickle(self._data_files_dir+'reach_data_color.pkl', data)
-
+            # self.data_logger.pickle(self._data_files_dir+'data_3link_inv.pkl', data)
+            data = self.data_logger.unpickle(self._data_files_dir+'data_3link_inv.pkl')
             # data = self.data_logger.unpickle(self._data_files_dir+'strike_data.pkl')
-            data = self.data_logger.unpickle(self._data_files_dir+'reach_data_blue.pkl')
+            # data = self.data_logger.unpickle(self._data_files_dir+'reach_data_blue.pkl')
             obs_full = data['obs_full']
             next_obs_full = data['next_obs_full']
             tgt_actions_full = data['tgt_actions_full']
             obs_complete_time_full = data['obs_complete_time_full']
             ee_full = data['ee_full']
+
+            #######################
+            # tasks = [ 'peginsert_invariant','reach_image', 'blockpush_invariant']
+            # obs_full = []
+            # next_obs_full = []
+            # ee_full = []
+            # tgt_actions_full = []
+            # full_dict = {}
+            # for task in tasks:
+            #     print task
+            #     print 'experiments/'+task+'/data_files/data_3link.pkl'
+            #     full_dict[task] = self.data_logger.unpickle('experiments/'+task+'/data_files/data_3link.pkl')
+            #     print full_dict[task]['obs_full'][0].shape
+            # for robot_number in range(self.num_robots):
+            #     obs = []
+            #     next_obs = []
+            #     ee = []
+            #     tgt_actions = []
+            #     for task in tasks:
+            #         print task
+            #         obs.append(full_dict[task]['obs_full'][robot_number])
+            #         ee.append(full_dict[task]['ee_full'][robot_number][:,:,:6])
+            #         # next_obs.append(full_dict[task]['next_obs_full'][robot_number])
+            #         # tgt_actions.append(full_dict[task]['action_full'][robot_number])
+            #     obs = np.concatenate(obs, axis=0)
+            #     ee = np.concatenate(ee, axis=0)
+            #     # next_obs = np.concatenate(next_obs, axis=0)
+            #     # tgt_actions = np.concatenate(tgt_actions, axis=0)
+            #     obs_full.append(obs)
+            #     ee_full.append(ee)
+            #     next_obs_full.append(next_obs)
+            #     tgt_actions_full.append(tgt_actions)
+            # data= {'obs_full': obs_full,
+            #        'next_obs_full': next_obs_full,
+            #        'tgt_actions_full': tgt_actions_full,
+            #        'ee_full': ee_full,
+            #    }
+            # obs_complete_time_full = obs_full
+            # self.data_logger.pickle('img_reachpushpeg.pkl', data)
+
+            # data = self.data_logger.unpickle('img_reachpushpeg.pkl')
+            # obs_full = data['obs_full']
+            # next_obs_full = data['next_obs_full']
+            # tgt_actions_full = data['tgt_actions_full']
+            # obs_complete_time_full = data['obs_full']
+            # ee_full = data['ee_full']
             print "start training"
             self.policy_opt.train_invariant_autoencoder(obs_full, next_obs_full, tgt_actions_full, obs_complete_time_full, ee_full)
             print "end training"
@@ -498,9 +551,10 @@ class GPSMain(object):
             self.gui[robot_number].set_status_text('Calculating.')
             self.gui[robot_number].start_display_calculating()
         self.algorithm[robot_number].iteration(sample_lists, itr)
+        print "done with alg iteration"
         if self.gui:
             self.gui[robot_number].stop_display_calculating()
-
+            print "stopped gui"
 
     def _take_policy_samples(self, N=None, robot_number=0):
         """
@@ -537,19 +591,20 @@ class GPSMain(object):
         #     copy.copy(self.algorithm)
         # )
     
-        self.data_logger.pickle(
-            self._data_files_dir + ('traj_sample_itr_%02d_rn_%02d.pkl' % (itr,robot_number)),
-            copy.copy(traj_sample_lists)
-        )
-
+        # self.data_logger.pickle(
+        #     self._data_files_dir + ('traj_sample_itr_%02d_rn_%02d.pkl' % (itr,robot_number)),
+        #     copy.copy(traj_sample_lists)
+        # )
+        print "keys"
         for key in self.traj_data_logs[robot_number].keys():
             self.traj_data_logs[robot_number][key].append([samplelist.get(key) for samplelist in traj_sample_lists])
 
-        self.data_logger.pickle(
-            self._data_files_dir + ('traj_samples_combined_rn_%02d.pkl'% (robot_number)),
-            copy.copy(self.traj_data_logs[robot_number]))
+        # self.data_logger.pickle(
+        #     self._data_files_dir + ('traj_samples_combined_rn_%02d.pkl'% (robot_number)),
+            # copy.copy(self.traj_data_logs[robot_number]))
+        print "about to np save"
         np.save(self._data_files_dir+"trial3_end_effectors_r"+str(robot_number)+"itr"+str(itr)+".npy", [traj_sample.get(END_EFFECTOR_POINTS) for traj_sample in traj_sample_lists])
-
+        print "if pol samples"
         if pol_sample_lists:
             self.data_logger.pickle(
                 self._data_files_dir + ('pol_sample_itr_%02d_rn_%02d.pkl' % (itr, robot_number)),
@@ -562,15 +617,16 @@ class GPSMain(object):
                 self._data_files_dir + ('pol_samples_combined_rn_%02d.pkl'% (robot_number)),
                 copy.copy(self.pol_data_logs[robot_number]))
 
-
+        print "if gui"
         if self.gui:
             self.gui[robot_number].set_status_text('Logging data and updating GUI.')
+            print "about to update"
             self.gui[robot_number].update(itr, self.algorithm[robot_number], self.agent[robot_number],
                 traj_sample_lists, pol_sample_lists)
-
-            self.gui[robot_number].save_figure(
-                self._data_files_dir + ('figure_itr_%02d.png' % itr)
-            )
+            print "save fig"
+            # self.gui[robot_number].save_figure(
+            #     self._data_files_dir + ('figure_itr_%02d.png' % itr)
+            # )
 
         if 'no_sample_logging' in self._hyperparams['common']:
             return
@@ -742,8 +798,8 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(127)
-        np.random.seed(113)
+        random.seed(124)
+        np.random.seed(12124)
 
         gps = GPSMain(hyperparams.config)
         if args.recordfeats:
