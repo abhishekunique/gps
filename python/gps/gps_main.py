@@ -183,27 +183,32 @@ class GPSMain(object):
         #         print(k)
         #         assign_op = v.assign(val_vars[k])
         #         self.policy_opt.sess.run(assign_op)
-        traj_distr = self.data_logger.unpickle('/home/coline/abhishek_gps/gps/traj_distr_color_reach.pkl')
-        for ag in range(self.num_robots):
-            name =self.agent[ag]._hyperparams['filename'][0]
-            print name
-            if name in traj_distr:
+        import os.path
+        TRAJ_DISTR_COLOR_REACH = "/home/kavi/traj_distr_color_reach.pkl"
+        HAVE_TRAJ_DISTR = os.path.isfile(TRAJ_DISTR_COLOR_REACH)
+        if HAVE_TRAJ_DISTR:
+            traj_distr = self.data_logger.unpickle(TRAJ_DISTR_COLOR_REACH)
+            for ag in range(self.num_robots):
+                name =self.agent[ag]._hyperparams['filename'][0]
+                print name
+                if name in traj_distr:
+                    for cond in  self._train_idx[ag]:
+                        print ag, cond
+                        self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+                else:
+                    print name, "not in traj_distr"
+        else:
+            newtraj_distr = {}
+            for ag in range(self.num_robots):
+                name = self.agent[ag]._hyperparams['filename'][0]
+                print name
+                newtraj_distr[name] = []
                 for cond in  self._train_idx[ag]:
                     print ag, cond
-                    self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
-            else:
-                print name, "not in traj_distr"
-        # newtraj_distr = {}
-        # for ag in range(self.num_robots):
-        #     name = self.agent[ag]._hyperparams['filename'][0]
-        #     print name
-        #     newtraj_distr[name] = []
-        #     for cond in  self._train_idx[ag]:
-        #         print ag, cond
-        #         newtraj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
-        # self.data_logger.pickle("/home/coline/abhishek_gps/gps/traj_distr_color_reach.pkl", newtraj_distr)
-        # import IPython
-        # IPython.embed()
+                    newtraj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
+            self.data_logger.pickle(TRAJ_DISTR_COLOR_REACH, newtraj_distr)
+            import IPython
+            #IPython.embed()
 
 
         # for cond in range(4):
