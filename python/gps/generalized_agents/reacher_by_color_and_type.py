@@ -109,7 +109,7 @@ END_EFFECTOR_INDEX_BY_COLOR = {
     "black" : 3,
     "green" : 1,
     "yellow" : 2,
-    "red": 0
+    "red": 0    
 }
 
 UNCHANGED_OBJECT_BY_COLOR = {
@@ -145,21 +145,30 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
         JOINT_VELOCITIES: number_links,
         END_EFFECTOR_POINTS: 15,
         END_EFFECTOR_POINT_VELOCITIES: 15,
-        ACTION: number_links,
-        RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
-        RGB_IMAGE_SIZE: 3,
+        ACTION: number_links
     }
+    if enable_images:
+        SENSOR_DIMS.update({
+            RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
+            RGB_IMAGE_SIZE: 3
+        })
+    image_data = [RGB_IMAGE] if enable_images else []
     agent_dict= {}
     start_of_end_eff_pts = SENSOR_DIMS[JOINT_ANGLES] + SENSOR_DIMS[JOINT_VELOCITIES]
     start_of_end_eff_vel = start_of_end_eff_pts + SENSOR_DIMS[END_EFFECTOR_POINTS]
+    if enable_images:
+        image_dims = {
+            'image_width': IMAGE_WIDTH,
+            'image_height': IMAGE_HEIGHT,
+            'image_channels': IMAGE_CHANNELS,
+        }
+    else:
+        image_dims = {}
     agent_dict['network_params']= {
         'dim_hidden': [10],
         'num_filters': [10, 20],
-        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE],
-        'obs_image_data':[RGB_IMAGE],
-        'image_width': IMAGE_WIDTH,
-        'image_height': IMAGE_HEIGHT,
-        'image_channels': IMAGE_CHANNELS,
+        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES] + image_data,
+        'obs_image_data':image_data,
         'sensor_dims': SENSOR_DIMS,
         'batch_size': 25,
         'robot_specific_idx': range(3 + start_of_end_eff_pts)+range(start_of_end_eff_vel,start_of_end_eff_vel + 3),
@@ -167,7 +176,8 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
         'dim_robot_specific':6 + start_of_end_eff_pts,
         'dim_output':number_links,
         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
-    }    
+    }
+    agent_dict['network_params'].update(image_dims)
     agent_dict['agent'] = {
         'type': AgentMuJoCo,
         'filename': XML_BY_ROBOT_TYPE[robot_type],
@@ -179,19 +189,17 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
         'conditions': 8,
         'train_conditions': range(4),
         'test_conditions': range(4,8),
-        'image_width': IMAGE_WIDTH,
-        'image_height': IMAGE_HEIGHT,
-        'image_channels': IMAGE_CHANNELS,
         'T': 100,
         'sensor_dims': SENSOR_DIMS,
         'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
                           END_EFFECTOR_POINT_VELOCITIES],
         #include the camera images appropriately here
-        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE],
+        'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES] + image_data,
         'meta_include': [],
         'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
         'unchanged_object': UNCHANGED_OBJECT_BY_COLOR[color] + number_links
     }
+    agent_dict['agent'].update(image_dims)
     agent_dict['algorithm'] = {
         'type': AlgorithmBADMM,
         'conditions': agent_dict['agent']['conditions'],
