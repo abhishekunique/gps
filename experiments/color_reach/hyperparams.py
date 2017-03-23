@@ -31,46 +31,21 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
 from gps.gui.config import generate_experiment_info
 
-from gps.example_agents.reach_3link_red import reach_3link_red
-from gps.example_agents.reach_3link_green import reach_3link_green
-from gps.example_agents.reach_3link_yellow import reach_3link_yellow
-from gps.example_agents.reach_3link_black import reach_3link_black
+from gps.generalized_agents.reacher_by_color_and_type import RobotType, reacher_by_color_and_type
 
-from gps.example_agents.reach_3link_red_shortjoint import reach_3link_red_shortjoint
-from gps.example_agents.reach_3link_green_shortjoint import reach_3link_green_shortjoint
-from gps.example_agents.reach_3link_yellow_shortjoint import reach_3link_yellow_shortjoint
-from gps.example_agents.reach_3link_black_shortjoint import reach_3link_black_shortjoint
+task_values, robot_values, arguments = [], [], []
+for robot_n, robot_type in enumerate(RobotType):
+    for task_n, color in enumerate(("red", "green", "yellow", "black")):
+        task_values.append(task_n)
+        robot_values.append(robot_n)
+        arguments.append((color, robot_type))
 
-from gps.example_agents.reach_4link_red import reach_4link_red
-from gps.example_agents.reach_4link_green import reach_4link_green
-from gps.example_agents.reach_4link_yellow import reach_4link_yellow
-from gps.example_agents.reach_4link_black import reach_4link_black
-
-agent_funs =[ reach_3link_red, reach_3link_green, 
-              reach_3link_yellow, reach_3link_black,
-              reach_3link_red_shortjoint, reach_3link_green_shortjoint,
-              reach_3link_yellow_shortjoint, reach_3link_black_shortjoint,
-              reach_4link_red, reach_4link_green,
-              reach_4link_yellow,reach_4link_black,
-          ]
 leave_one_out = 0
-task_values = [0,1,2,3,0,1,2,3,0,1,2,3]
-robot_values =[0,0,0,0,1,1,1,1,2,2,2,2]
 task_values = task_values[:leave_one_out]+task_values[leave_one_out+1:]
 robot_values = robot_values[:leave_one_out]+robot_values[leave_one_out+1:]
-agent_funs =agent_funs[:leave_one_out]+agent_funs[leave_one_out+1:]
+arguments =arguments[:leave_one_out]+arguments[leave_one_out+1:]
 
-# agent_funs = [reach_4link_red]
-# task_values = [0]
-# robot_values = [2]
-
-agents = []
-num_agents = len(agent_funs)
-for i in range(num_agents):
-    agents.append(agent_funs[i](i, num_agents))
-# val_agent =  {'agent': reach_4link(num_agents),
-#               'task': 0,
-#               'robot': 1,}
+agents = [reacher_by_color_and_type(i, len(arguments), color, robot_type, True) for i, (color, robot_type) in enumerate(arguments)]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/color_reach/'
