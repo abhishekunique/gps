@@ -239,7 +239,8 @@ class GPSMain(object):
             thread_samples_sampling = []
             print "itr", itr
             for robot_number in range(self.num_robots):
-                print "sampling robot", robot_number
+                import datetime
+                print "sampling robot", robot_number, datetime.datetime.time(datetime.datetime.now())
                 for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
                         self._take_sample(itr, cond, i, robot_number=robot_number)
