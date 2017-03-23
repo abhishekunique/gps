@@ -1353,7 +1353,7 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
 
 
 
-def multitask_multirobot_conv_supervised(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
+def multitask_multirobot_conv_supervised(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None, use_image=True):
     """
     Args:
         dim_input: Dimensionality of input.
@@ -1420,15 +1420,17 @@ def multitask_multirobot_conv_supervised(dim_input=[27, 27], dim_output=[7, 7], 
         #May not be reasonable to do 
         tm = 0
         num_filters = network_config['agent_params'][tm]['num_filters']
-        im_height = network_config['agent_params'][tm]['image_height']
-        im_width = network_config['agent_params'][tm]['image_width']
-        num_channels = network_config['agent_params'][tm]['image_channels']
+        if use_image:
+            im_height = network_config['agent_params'][tm]['image_height']
+            im_width = network_config['agent_params'][tm]['image_width']
+            num_channels = network_config['agent_params'][tm]['image_channels']
         dim_task_input = dim_task_specific_list[task_number]
-        task_weights['w1_tn_' + str(task_number)] = get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='w1_tn_' + str(task_number)) #init_weights((dim_task_input, dim_hidden[0]), name='w1_tn_' + str(task_number))
-        task_weights['b1_tn_' + str(task_number)] = init_bias([num_filters[0]], name='b1_tn_' + str(task_number)) #init_bias((dim_hidden[0],), name='b1_tn_' + str(task_number))
-        task_weights['w2_tn_' + str(task_number)] = get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='w2_tn_' + str(task_number)) #init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
-        task_weights['b2_tn_' + str(task_number)] = init_bias([num_filters[1]], name='b2_tn_' + str(task_number)) #init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
-        task_weights['w3_tn_' + str(task_number)] = init_weights((2*num_filters[1] + dim_task_input, dim_hidden[1]), name='w3_tn_' + str(task_number))
+        if use_image:
+            task_weights['w1_tn_' + str(task_number)] = get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='w1_tn_' + str(task_number)) #init_weights((dim_task_input, dim_hidden[0]), name='w1_tn_' + str(task_number))
+            task_weights['b1_tn_' + str(task_number)] = init_bias([num_filters[0]], name='b1_tn_' + str(task_number)) #init_bias((dim_hidden[0],), name='b1_tn_' + str(task_number))
+            task_weights['w2_tn_' + str(task_number)] = get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='w2_tn_' + str(task_number)) #init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
+            task_weights['b2_tn_' + str(task_number)] = init_bias([num_filters[1]], name='b2_tn_' + str(task_number)) #init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
+        task_weights['w3_tn_' + str(task_number)] = init_weights(((2*num_filters[1] if use_image else 0) + dim_task_input, dim_hidden[1]), name='w3_tn_' + str(task_number))
         task_weights['b3_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b3_tn_' + str(task_number))
         task_weights['taskout_tn_' + str(task_number)] = init_weights((dim_hidden[2], task_out_size), name='taskout_tn_' + str(task_number))
         task_weights['taskout_b_tn_' + str(task_number)] = init_bias((task_out_size,), name='task_out_tn_' + str(task_number))
@@ -1452,43 +1454,46 @@ def multitask_multirobot_conv_supervised(dim_input=[27, 27], dim_output=[7, 7], 
         ee_input = tf.placeholder("float", [None, 6], name='ee_input' + str(agent_number))
         nn_input, action, precision = get_input_layer(dim_input[agent_number], dim_output[agent_number], agent_number)
         state_input = nn_input[:, 0:x_idx[-1]+1]
-        image_input = nn_input[:, x_idx[-1]+1:img_idx[-1]+1]
+        if use_image:
+            image_input = nn_input[:, x_idx[-1]+1:img_idx[-1]+1]
         robot_idx = tf.constant(agent_params['robot_specific_idx'])
         task_idx = tf.constant(agent_params['task_specific_idx'])
         state_input_t = tf.transpose(state_input, perm=[1,0])
         robot_input = tf.transpose(tf.gather(state_input_t, robot_idx), perm=[1,0])
         task_input = tf.transpose(tf.gather(state_input_t, task_idx), perm=[1,0])
-        image_input = tf.reshape(image_input, [-1, num_channels, im_width, im_height])
-        image_input = tf.transpose(image_input, perm=[0,3,2,1])
+        if use_image:
+            image_input = tf.reshape(image_input, [-1, num_channels, im_width, im_height])
+            image_input = tf.transpose(image_input, perm=[0,3,2,1])
         robot_index = robot_list[agent_number]
         task_index = task_list[agent_number]
         print "task", task_index, "robot", robot_index
 
-        conv_layer_1 = conv2d(img=image_input, w=task_weights['w1_tn_' + str(task_index)], b=task_weights['b1_tn_' + str(task_index)])
-        conv_layer_2 = conv2d(img=conv_layer_1, w=task_weights['w2_tn_' + str(task_index)], b=task_weights['b2_tn_' + str(task_index)])
+        if use_image:
+            conv_layer_1 = conv2d(img=image_input, w=task_weights['w1_tn_' + str(task_index)], b=task_weights['b1_tn_' + str(task_index)])
+            conv_layer_2 = conv2d(img=conv_layer_1, w=task_weights['w2_tn_' + str(task_index)], b=task_weights['b2_tn_' + str(task_index)])
       
-        #==================
-        #spatial softmax
-        _, num_rows, num_cols, num_fp = conv_layer_2.get_shape()
-        num_rows, num_cols, num_fp = [int(x) for x in [num_rows, num_cols, num_fp]]
-        x_map = np.empty([num_rows, num_cols], np.float32)
-        y_map = np.empty([num_rows, num_cols], np.float32)
-        for i in range(num_rows):
-            for j in range(num_cols):
-                x_map[i, j] = (i - num_rows / 2.0) / num_rows
-                y_map[i, j] = (j - num_cols / 2.0) / num_cols
-        x_map = tf.convert_to_tensor(x_map)
-        y_map = tf.convert_to_tensor(y_map)
-        x_map = tf.reshape(x_map, [num_rows * num_cols])
-        y_map = tf.reshape(y_map, [num_rows * num_cols])
-        # rearrange features to be [batch_size, num_fp, num_rows, num_cols]
-        features = tf.reshape(tf.transpose(conv_layer_2, [0,3,1,2]),
-                              [-1, num_rows*num_cols])
-        softmax = tf.nn.softmax(features)
-        fp_x = tf.reduce_sum(tf.mul(x_map, softmax), [1], keep_dims=True)
-        fp_y = tf.reduce_sum(tf.mul(y_map, softmax), [1], keep_dims=True)
-        fp = tf.reshape(tf.concat(1, [fp_x, fp_y]), [-1, num_fp*2])
-        layer3_input = tf.concat(concat_dim=1, values=[fp, task_input])
+            #==================
+            #spatial softmax
+            _, num_rows, num_cols, num_fp = conv_layer_2.get_shape()
+            num_rows, num_cols, num_fp = [int(x) for x in [num_rows, num_cols, num_fp]]
+            x_map = np.empty([num_rows, num_cols], np.float32)
+            y_map = np.empty([num_rows, num_cols], np.float32)
+            for i in range(num_rows):
+                for j in range(num_cols):
+                    x_map[i, j] = (i - num_rows / 2.0) / num_rows
+                    y_map[i, j] = (j - num_cols / 2.0) / num_cols
+            x_map = tf.convert_to_tensor(x_map)
+            y_map = tf.convert_to_tensor(y_map)
+            x_map = tf.reshape(x_map, [num_rows * num_cols])
+            y_map = tf.reshape(y_map, [num_rows * num_cols])
+            # rearrange features to be [batch_size, num_fp, num_rows, num_cols]
+            features = tf.reshape(tf.transpose(conv_layer_2, [0,3,1,2]),
+                                  [-1, num_rows*num_cols])
+            softmax = tf.nn.softmax(features)
+            fp_x = tf.reduce_sum(tf.mul(x_map, softmax), [1], keep_dims=True)
+            fp_y = tf.reduce_sum(tf.mul(y_map, softmax), [1], keep_dims=True)
+            fp = tf.reshape(tf.concat(1, [fp_x, fp_y]), [-1, num_fp*2])
+        layer3_input = tf.concat(concat_dim=1, values=([fp] if use_image else []) + [task_input])
         fc_layer3 = tf.nn.relu(tf.nn.dropout(tf.matmul(layer3_input, task_weights['w3_tn_'+str(task_index)]) + task_weights['b3_tn_'+str(task_index)], keep_prob))
 
         taskout = tf.nn.relu(tf.nn.dropout(tf.matmul(fc_layer3, task_weights['taskout_tn_'+str(task_index)]) + task_weights['taskout_b_tn_'+str(task_index)], keep_prob))
