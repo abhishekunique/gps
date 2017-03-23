@@ -113,7 +113,7 @@ class AgentMuJoCo(Agent):
             save: Whether or not to store the trial into the samples.
         """
         # Create new sample, populate first time step.
-        act = np.load('/home/coline/abhishek_gps/gps/actions.npy')
+        act = np.load('/home/kavi/gps/actions.npy')
         unchanged_object = copy.deepcopy(self._hyperparams['unchanged_object'])
         objs = copy.deepcopy(self._hyperparams['pos_body_idx'][condition]) #[6,7,8,9]
         all_offsets = copy.deepcopy(self._hyperparams['offsets'])
