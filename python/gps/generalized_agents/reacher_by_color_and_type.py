@@ -156,14 +156,19 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
     agent_dict= {}
     start_of_end_eff_pts = SENSOR_DIMS[JOINT_ANGLES] + SENSOR_DIMS[JOINT_VELOCITIES]
     start_of_end_eff_vel = start_of_end_eff_pts + SENSOR_DIMS[END_EFFECTOR_POINTS]
+    end_of_end_eff_vel = start_of_end_eff_vel + SENSOR_DIMS[END_EFFECTOR_POINT_VELOCITIES]
     if enable_images:
         image_dims = {
             'image_width': IMAGE_WIDTH,
             'image_height': IMAGE_HEIGHT,
             'image_channels': IMAGE_CHANNELS,
         }
+        robot_specific_indices = range(3 + start_of_end_eff_pts)+range(start_of_end_eff_vel,start_of_end_eff_vel + 3)
+        task_specific_indices = range(start_of_end_eff_pts,3 + start_of_end_eff_pts) + range(start_of_end_eff_vel,start_of_end_eff_vel + 3)
     else:
         image_dims = {}
+        robot_specific_indices = range(end_of_end_eff_vel)
+        task_specific_indices = range(start_of_end_eff_pts, end_of_end_eff_vel)
     agent_dict['network_params']= {
         'dim_hidden': [10],
         'num_filters': [10, 20],
@@ -171,9 +176,9 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
         'obs_image_data':image_data,
         'sensor_dims': SENSOR_DIMS,
         'batch_size': 25,
-        'robot_specific_idx': range(3 + start_of_end_eff_pts)+range(start_of_end_eff_vel,start_of_end_eff_vel + 3),
-        'task_specific_idx': range(start_of_end_eff_pts,3 + start_of_end_eff_pts) + range(start_of_end_eff_vel,start_of_end_eff_vel + 3),
-        'dim_robot_specific':6 + start_of_end_eff_pts,
+        'robot_specific_idx': robot_specific_indices,
+        'task_specific_idx': task_specific_indices,
+        'dim_robot_specific':len(robot_specific_indices),
         'dim_output':number_links,
         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
     }
