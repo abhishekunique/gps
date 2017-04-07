@@ -209,24 +209,6 @@ class GPSMain(object):
                     newtraj_distr[name] = []
                     for cond in  self._train_idx[ag]:
                         print ag, cond
-        # for cond in range(4):
-        #     samples = [self.agent[0].sample(self.algorithm[0].policy_opt.policy[0], cond,
-        #                                     verbose=True, save=False) for j in range(5)]
-        #     self.data_logger.pickle(self._data_files_dir+'nn_list_'+str(cond)+'.pkl', samples)
-
-        # sl0 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_0.pkl')) 
-        # sl1 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_1.pkl'))
-        # sl2 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_2.pkl'))
-        # sl3 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_3.pkl'))
-        # for j in range(5):
-        #     sl0[j].agent = self.agent[0]
-        #     sl1[j].agent = self.agent[0]
-        #     sl2[j].agent = self.agent[0]
-        #     sl3[j].agent = self.agent[0]
-        # self.algorithm[0].reinitialize_net(0, sl0)
-        # self.algorithm[0].reinitialize_net(1, sl1)
-        # self.algorithm[0].reinitialize_net(2, sl2)
-        # self.algorithm[0].reinitialize_net(3, sl3)
         self.check_itr = 8
         import IPython
         #IPython.embed()
@@ -248,6 +230,24 @@ class GPSMain(object):
                     for cond_1 in self._train_idx[robot_number]
                 ]
             time3 = time.clock()
+        if False: # TODO use for blockpush, etc.
+            for cond in range(4):
+                samples = [self.agent[0].sample(self.algorithm[0].policy_opt.policy[0], cond,
+                                                verbose=True, save=False) for j in range(5)]
+                self.data_logger.pickle(self._data_files_dir+'nn_list_'+str(cond)+'.pkl', samples)
+            sl0 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_0.pkl')) 
+            sl1 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_1.pkl'))
+            sl2 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_2.pkl'))
+            sl3 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_3.pkl'))
+            for j in range(5):
+                sl0[j].agent = self.agent[0]
+                sl1[j].agent = self.agent[0]
+                sl2[j].agent = self.agent[0]
+                sl3[j].agent = self.agent[0]
+            self.algorithm[0].reinitialize_net(0, sl0)
+            self.algorithm[0].reinitialize_net(1, sl1)
+            self.algorithm[0].reinitialize_net(2, sl2)
+            self.algorithm[0].reinitialize_net(3, sl3)
 
             if self.agent[robot_number].nan_flag:
                 IPython.embed()
