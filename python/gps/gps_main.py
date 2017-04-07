@@ -232,6 +232,10 @@ class GPSMain(object):
             self.algorithm[0].reinitialize_net(2, sl2)
             self.algorithm[0].reinitialize_net(3, sl3)
 
+        if testing:
+            self._take_policy_samples(robot_number=robot_number)
+            self._end()
+            return
         self.check_itr = 8
         import IPython
         #IPython.embed()
