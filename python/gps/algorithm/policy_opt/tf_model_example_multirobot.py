@@ -1353,7 +1353,7 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
 
 
 
-def multitask_multirobot_conv_supervised(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None, use_image=True):
+def multitask_multirobot_conv_supervised(is_testing, dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None, use_image=True):
     """
     Args:
         dim_input: Dimensionality of input.

@@ -27,6 +27,7 @@ IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
 USE_IMAGES = False
+IS_TESTING = True
 
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
@@ -42,9 +43,14 @@ for robot_n, robot_type in enumerate(RobotType):
         arguments.append((color, robot_type))
 
 leave_one_out = 0
-task_values = task_values[:leave_one_out]+task_values[leave_one_out+1:]
-robot_values = robot_values[:leave_one_out]+robot_values[leave_one_out+1:]
-arguments =arguments[:leave_one_out]+arguments[leave_one_out+1:]
+if IS_TESTING:
+    task_values     = [task_values[leave_one_out]]
+    robot_values    = [robot_values[leave_one_out]]
+    arguments       = [arguments[leave_one_out]]
+else:
+    task_values     = task_values[:leave_one_out]+task_values[leave_one_out+1:]
+    robot_values    = robot_values[:leave_one_out]+robot_values[leave_one_out+1:]
+    arguments       = arguments[:leave_one_out]+arguments[leave_one_out+1:]
 
 agents = [reacher_by_color_and_type(i, len(arguments), color, robot_type, USE_IMAGES) for i, (color, robot_type) in enumerate(arguments)]
 
@@ -64,7 +70,7 @@ common = {
     'num_robots':len(agents),
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': lambda *args, **kwargs: multitask_multirobot_conv_supervised(*args, use_image=False, **kwargs),
+        'network_model': lambda *args, **kwargs: multitask_multirobot_conv_supervised(*args, use_image=False, is_testing=IS_TESTING, **kwargs),
         'network_params': {
             'task_list': task_values,
             'robot_list': robot_values,
@@ -94,6 +100,7 @@ algorithm = [a['algorithm'] for a in agents]
 
 config = {
     'iterations': 25,
+    'is_testing' : IS_TESTING,
     'num_samples': 10,
     'verbose_trials': 10,
     'verbose_policy_trials': 0,

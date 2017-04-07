@@ -143,7 +143,7 @@ class GPSMain(object):
 
         self._end()
 
-    def run_badmm(self, itr_load=None):
+    def run_badmm(self, testing, itr_load=None):
         """
         Run training by iteratively sampling and taking an iteration.
         Args:
@@ -695,11 +695,11 @@ def main():
             else:
                 if args.multithread:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_badmm_parallel(itr_load=resume_training_itr)
+                        target=lambda: gps.run_badmm_parallel(testing=hyperparams.config['is_testing'], itr_load=resume_training_itr)
                     )
                 else:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_badmm(itr_load=resume_training_itr)
+                        target=lambda: gps.run_badmm(testing=hyperparams.config['is_testing'], itr_load=resume_training_itr)
                     )
             run_gps.daemon = True
             run_gps.start()
@@ -710,7 +710,7 @@ def main():
             if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
                 gps.run(itr_load=resume_training_itr)
             else:
-                gps.run_badmm(itr_load=resume_training_itr)
+                gps.run_badmm(testing=hyperparams.config['is_testing'], itr_load=resume_training_itr)
 
 if __name__ == "__main__":
     main()
