@@ -158,22 +158,21 @@ class GPSMain(object):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         self.policy_opt.validation_samples = self.data_logger.unpickle('4peg_val.pkl')
-
-        # size = 38
-        # self.policy_opt.policy[0].scale = np.eye(size)
-        # self.policy_opt.policy[0].bias = np.zeros((size,))
-        # # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
-        # self.policy_opt.policy[0].x_idx = range(size)
-        # for r in range(11):
-        #     size = [36, 36, 36, 36, 36, 36, 36, 36, 38, 38, 38][r]
-        #     self.policy_opt.policy[r].scale = np.eye(size)
-        #     self.policy_opt.policy[r].bias = np.zeros((size,))
-        #     # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
-        #     self.policy_opt.policy[r].x_idx = range(size)
-
         
+        if testing:
+            size = 36 # FIXME MAGIC NUMBER
+            self.policy_opt.policy[0].scale = np.eye(size)
+            self.policy_opt.policy[0].bias = np.zeros((size,))
+            # FIXME READ IN THE VARIANCE FOR BLOCKPUSH, etc.
+            # # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
+            self.policy_opt.policy[0].x_idx = range(size)
+            # for r in range(11):
+            #     size = [36, 36, 36, 36, 36, 36, 36, 36, 38, 38, 38][r]
+            #     self.policy_opt.policy[r].scale = np.eye(size)
+            #     self.policy_opt.policy[r].bias = np.zeros((size,))
+            #     # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
+            #     self.policy_opt.policy[r].x_idx = range(size)
         # pool = Pool()
-
 
         if testing:
 
