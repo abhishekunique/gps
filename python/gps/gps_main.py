@@ -175,42 +175,41 @@ class GPSMain(object):
         # pool = Pool()
 
 
-        # import pickle
-        # val_vars, pol_var = pickle.load(open('/home/abhigupta/gps/color_reach_weights/weights_reachtest_itr0.pkl', 'rb'))
-        # self.policy_opt.var = pol_var#[pol_var[-2]]
-        # for k,v in self.policy_opt.av.items():
-        #     if k in val_vars:
-        #         print(k)
-        #         assign_op = v.assign(val_vars[k])
-        #         self.policy_opt.sess.run(assign_op)
-        import os.path
-        TRAJ_DISTR_COLOR_REACH = "/home/kavi/traj_distr_color_reach.pkl"
-        HAVE_TRAJ_DISTR = os.path.isfile(TRAJ_DISTR_COLOR_REACH)
-        if HAVE_TRAJ_DISTR:
-            traj_distr = self.data_logger.unpickle(TRAJ_DISTR_COLOR_REACH)
-            for ag in range(self.num_robots):
-                name =self.agent[ag]._hyperparams['filename'][0]
-                print name
-                if name in traj_distr:
+        if testing:
+
+            from os import listdir
+            from re import sub
+            highest_nn_dump_iteration = max([int(sub("\D", "", x)) for x in listdir("color_reach_dropout_weights")])
+            val_vars, pol_var = pickle.load(open('color_reach_dropout_weights/weights_itr%s.pkl' % highest_nn_dump_iteration, 'rb'))
+            self.policy_opt.var = pol_var#[pol_var[-2]]
+            for k,v in self.policy_opt.av.items():
+                if k in val_vars:
+                    print(k)
+                    assign_op = v.assign(val_vars[k])
+                    self.policy_opt.sess.run(assign_op)
+        else:
+            import os.path
+            TRAJ_DISTR_COLOR_REACH = "traj_distr_color_reach.pkl"
+            HAVE_TRAJ_DISTR = os.path.isfile(TRAJ_DISTR_COLOR_REACH)
+            if HAVE_TRAJ_DISTR:
+                traj_distr = self.data_logger.unpickle(TRAJ_DISTR_COLOR_REACH)
+                for ag in range(self.num_robots):
+                    name =self.agent[ag]._hyperparams['filename'][0]
+                    print name
+                    if name in traj_distr:
+                        for cond in  self._train_idx[ag]:
+                            print ag, cond
+                            self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+                    else:
+                        print name, "not in traj_distr"
+            else:
+                newtraj_distr = {}
+                for ag in range(self.num_robots):
+                    name = self.agent[ag]._hyperparams['filename'][0]
+                    print name
+                    newtraj_distr[name] = []
                     for cond in  self._train_idx[ag]:
                         print ag, cond
-                        self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
-                else:
-                    print name, "not in traj_distr"
-        else:
-            newtraj_distr = {}
-            for ag in range(self.num_robots):
-                name = self.agent[ag]._hyperparams['filename'][0]
-                print name
-                newtraj_distr[name] = []
-                for cond in  self._train_idx[ag]:
-                    print ag, cond
-                    newtraj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
-            self.data_logger.pickle(TRAJ_DISTR_COLOR_REACH, newtraj_distr)
-            import IPython
-            #IPython.embed()
-
-
         # for cond in range(4):
         #     samples = [self.agent[0].sample(self.algorithm[0].policy_opt.policy[0], cond,
         #                                     verbose=True, save=False) for j in range(5)]
