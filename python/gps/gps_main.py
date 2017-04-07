@@ -224,6 +224,8 @@ class GPSMain(object):
                 for cond in self._train_idx[robot_number]:
                     for i in range(self._hyperparams['num_samples']):
                         self._take_sample(itr, cond, i, robot_number=robot_number)
+                        newtraj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
+                self.data_logger.pickle(TRAJ_DISTR_COLOR_REACH, newtraj_distr)
 
                 traj_sample_lists[robot_number] = [
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
