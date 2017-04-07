@@ -209,29 +209,10 @@ class GPSMain(object):
                     newtraj_distr[name] = []
                     for cond in  self._train_idx[ag]:
                         print ag, cond
-        self.check_itr = 8
-        import IPython
-        #IPython.embed()
-        for itr in range(itr_start, self._hyperparams['iterations']):
-
-            time2 = time.clock()
-            traj_sample_lists = {}
-            thread_samples_sampling = []
-            print "itr", itr
-            for robot_number in range(self.num_robots):
-                import datetime
-                print "sampling robot", robot_number, datetime.datetime.time(datetime.datetime.now())
-                for cond in self._train_idx[robot_number]:
-                    for i in range(self._hyperparams['num_samples']):
-                        self._take_sample(itr, cond, i, robot_number=robot_number)
                         newtraj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
                 self.data_logger.pickle(TRAJ_DISTR_COLOR_REACH, newtraj_distr)
+        
 
-                traj_sample_lists[robot_number] = [
-                    self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
-                    for cond_1 in self._train_idx[robot_number]
-                ]
-            time3 = time.clock()
         if False: # TODO use for blockpush, etc.
             for cond in range(4):
                 samples = [self.agent[0].sample(self.algorithm[0].policy_opt.policy[0], cond,
@@ -251,6 +232,26 @@ class GPSMain(object):
             self.algorithm[0].reinitialize_net(2, sl2)
             self.algorithm[0].reinitialize_net(3, sl3)
 
+        self.check_itr = 8
+        import IPython
+        #IPython.embed()
+        for itr in range(itr_start, self._hyperparams['iterations']):
+
+            time2 = time.clock()
+            traj_sample_lists = {}
+            thread_samples_sampling = []
+            print "itr", itr
+            for robot_number in range(self.num_robots):
+                print "sampling robot", robot_number, datetime.time(datetime.now())
+                for cond in self._train_idx[robot_number]:
+                    for i in range(self._hyperparams['num_samples']):
+                        self._take_sample(itr, cond, i, robot_number=robot_number)
+
+                traj_sample_lists[robot_number] = [
+                    self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
+                    for cond_1 in self._train_idx[robot_number]
+                ]
+            time3 = time.clock()
             if self.agent[robot_number].nan_flag:
                 IPython.embed()
 
