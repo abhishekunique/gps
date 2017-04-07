@@ -282,16 +282,15 @@ class GPSMain(object):
             if itr % self.check_itr == 0 and itr >0:
                 import IPython
                 IPython.embed()
-
-            # traj_distr = {}
-            # for ag in range(self.num_robots):
-            #     name = self.agent[ag]._hyperparams['filename'][0]
-            #     print name
-            #     traj_distr[name] = []
-            #     for cond in  self._train_idx[ag]:
-            #         print ag, cond
-            #         traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
-            # self.data_logger.pickle("/home/abhigupta/gps/2step_blockpush_5link.pkl", traj_distr)
+            traj_distr = {}
+            for ag in range(self.num_robots):
+                name = self.agent[ag]._hyperparams['filename'][0]
+                print name
+                traj_distr[name] = []
+                for cond in  self._train_idx[ag]:
+                    print ag, cond
+                    traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
+            self.data_logger.pickle(TRAJ_DISTR_COLOR_REACH, traj_distr)
 
         self._end()
 
