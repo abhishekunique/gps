@@ -15,6 +15,7 @@ import time
 import pickle
 import tensorflow as tf
 import IPython
+from datetime import datetime
 # Add gps/python to path so that imports work.
 sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
 from gps.gui.gps_training_gui import GPSTrainingGUI
@@ -261,13 +262,13 @@ class GPSMain(object):
 
             for robot_number in range(self.num_robots):
                 # self.policy_opt.prepare_solver(itr_robot_status, self.)
-                print "iter", itr,"start for rn", robot_number
+                print "iter", itr,"start for rn", robot_number, datetime.time(datetime.now())
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
             time4 = time.clock()
             self._take_iteration_shared()
             time5 = time.clock()
             for robot_number in range(self.num_robots):
-                print "pol samples", robot_number
+                prxnt "pol samples", robot_number, datetime.time(datetime.now())
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 if self.agent[robot_number].nan_flag:
                     IPython.embed()
@@ -371,7 +372,7 @@ class GPSMain(object):
                 for m in self._train_idx[robot_number]:
                     self.algorithm[robot_number]._update_policy_fit(m)  # Update policy priors.
             for robot_number in range(self.num_robots):
-                print "dual", robot_number
+                print "dual", robot_number, datetime.time(datetime.now())
                 if self.algorithm[robot_number].iteration_count > 0 or inner_itr > 0:
                     step = (inner_itr == self._hyperparams['inner_iterations'] - 1)
                     # Update dual variables.
