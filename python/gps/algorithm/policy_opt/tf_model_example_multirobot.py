@@ -1370,10 +1370,12 @@ def multitask_multirobot_conv_supervised(is_testing, dim_input=[27, 27], dim_out
     robot_list = network_config['robot_list']
     num_robots = 3#max(robot_list)+1
     num_tasks = 4#max(task_list)+1
-    tasks= range(num_tasks)
-    robots=range(num_robots)
-    # tasks = [0]
-    # robots = [2]
+    if is_testing:
+        tasks = [0]
+        robots = [0]
+    else:
+       tasks= range(num_tasks)
+       robots=range(num_robots)
     nnets = []
     n_layers = 6
     layer_size = 80
