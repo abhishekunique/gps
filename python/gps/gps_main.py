@@ -268,7 +268,7 @@ class GPSMain(object):
             self._take_iteration_shared()
             time5 = time.clock()
             for robot_number in range(self.num_robots):
-                prxnt "pol samples", robot_number, datetime.time(datetime.now())
+                print "pol samples", robot_number, datetime.time(datetime.now())
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
                 if self.agent[robot_number].nan_flag:
                     IPython.embed()
