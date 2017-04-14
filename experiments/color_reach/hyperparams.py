@@ -26,8 +26,8 @@ from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUA
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
-USE_IMAGES = False
-IS_TESTING = True
+USE_IMAGES = True
+IS_TESTING = False
 
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
@@ -42,7 +42,7 @@ for robot_n, robot_type in enumerate(RobotType):
         robot_values.append(robot_n)
         arguments.append((color, robot_type))
 
-leave_one_out = 0
+leave_one_out = 11
 if IS_TESTING:
     task_values     = [task_values[leave_one_out]]
     robot_values    = [robot_values[leave_one_out]]
@@ -78,7 +78,6 @@ common = {
         },
         #'val_agents': [1],
         'iterations': 20000,
-        'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
     }
@@ -98,12 +97,14 @@ for a in agent:
         ]})
 algorithm = [a['algorithm'] for a in agents]
 
+NUM_SAMPLES = 10
+
 config = {
-    'iterations': 25,
     'is_testing' : IS_TESTING,
-    'num_samples': 10,
-    'verbose_trials': 10,
-    'verbose_policy_trials': 0,
+    'iterations': 5,
+    'num_samples': NUM_SAMPLES,
+    'verbose_trials': NUM_SAMPLES if USE_IMAGES else 0,
+    'verbose_policy_trials': 1,
     'save_wts': True,
     'common': common,
     'agent': agent,
