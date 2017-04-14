@@ -225,7 +225,7 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
     }
     agent_dict['algorithm']['init_traj_distr'] = {
         'type': init_pd,
-        'init_var': 10.0,
+        'init_var': 10.0, # TODO can be useful to use
         'pos_gains': 10.0,
         'dQ': SENSOR_DIMS[ACTION],
         'dt':  agent_dict['agent']['dt'],
