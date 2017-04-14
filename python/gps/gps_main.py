@@ -159,9 +159,9 @@ class GPSMain(object):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         self.policy_opt.validation_samples = self.data_logger.unpickle('4peg_val.pkl')
-        
+
         if testing:
-            size = 36 # FIXME MAGIC NUMBER
+            size = 36 # FIXME MAGIC NUMBER; sample.getObs
             self.policy_opt.policy[0].scale = np.eye(size)
             self.policy_opt.policy[0].bias = np.zeros((size,))
             # FIXME READ IN THE VARIANCE FOR BLOCKPUSH, etc.
