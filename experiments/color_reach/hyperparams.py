@@ -70,7 +70,7 @@ common = {
     'num_robots':len(agents),
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': lambda *args, **kwargs: multitask_multirobot_conv_supervised(*args, use_image=False, is_testing=IS_TESTING, **kwargs),
+        'network_model': lambda *args, **kwargs: multitask_multirobot_conv_supervised(*args, use_image=USE_IMAGES, is_testing=IS_TESTING, **kwargs),
         'network_params': {
             'task_list': task_values,
             'robot_list': robot_values,
