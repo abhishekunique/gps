@@ -34,82 +34,37 @@ class RobotType(Enum):
     THREE_LINK_SHORT_JOINT = 2
     FOUR_LINK = 3
 
+BLOCK_LOCATIONS = [np.asarray(location) for location in ([0.4, 0., -1.3], [-0.4, 0.0, 0.7], [0.45, 0., 0.45], [-0.3, 0., -1.65])]
+
+OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR = {
+    3: {
+        'black': [(0, 1, 2, 3), (3, 2, 1, 0), (3, 0, 1, 2), (0, 2, 3, 1)],
+        'green': [(2, 3, 0, 1), (3, 0, 1, 2), (0, 2, 3, 1), (0, 1, 2, 3)],
+        'yellow': [(2, 0, 3, 1), (3, 1, 0, 2), (3, 0, 2, 1), (2, 0, 1, 3)],
+        'red': [(3, 2, 0, 1), (0, 1, 3, 2), (2, 1, 3, 0), (1, 0, 2, 3)]
+        },
+    4: {
+        'black': [(3, 2, 0, 1), (0, 1, 3, 2), (2, 1, 3, 0), (1, 0, 2, 3)],
+        'green': [(2, 3, 0, 1), (3, 0, 1, 2), (0, 2, 3, 1), (0, 1, 2, 3)],
+        'yellow': [(2, 0, 3, 1), (3, 1, 0, 2), (3, 0, 2, 1), (2, 0, 1, 3)],
+        'red': [(3, 2, 0, 1), (0, 1, 3, 2), (2, 1, 3, 0), (1, 0, 2, 3)]
+        }
+}
+
+
 OFFSETS_BY_LINK_NUMBER_AND_COLOR = {
-    3 : {
-        "black": [[np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.3, 0., -1.65])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.45, 0., 0.45])],
-                        [np.asarray([0.4, 0., -1.3]), np.asarray([0.45, 0., 0.45]),  np.asarray([-0.3, 0., -1.65]), np.asarray([-0.4, 0.0, 0.7])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])]],
-        "green": [[np.asarray([0.45, 0., 0.45]), np.asarray([-0.3, 0., -1.65]), np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.45, 0., 0.45])],
-                        [np.asarray([0.4, 0., -1.3]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.3, 0., -1.65]), np.asarray([-0.4, 0.0, 0.7])],
-                        [np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.3, 0., -1.65])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])]],
-        "yellow": [ [np.asarray([0.45, 0., 0.45]), np.asarray([0.4, 0., -1.3]), np.asarray([-0.3, 0., -1.65]), np.asarray([-0.4, 0.0, 0.7])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3]), np.asarray([0.45, 0., 0.45])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.4, 0., -1.3]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7])],
-                        [np.asarray([0.45, 0., 0.45]), np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([-0.3, 0., -1.65])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])]],
-        "red": [[np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7])],
-                        [np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([-0.3, 0., -1.65]),  np.asarray([0.45, 0., 0.45])],
-                        [np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([-0.3, 0., -1.65]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.3, 0., -1.65])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                        [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])]]
-    },
-    4 : {
-        "black": [ [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7])],
-                    [np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45])],
-                    [np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([-0.3, 0., -1.65]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.4, 0.0, 0.7]),np.asarray([0.4, 0., -1.3]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.3, 0., -1.65])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])]],
-        "green": [ [ np.asarray([0.45, 0., 0.45]), np.asarray([-0.3, 0., -1.65]), np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7])],
-                    [ np.asarray([-0.3, 0., -1.65]), np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.45, 0., 0.45])],
-                    [ np.asarray([0.4, 0., -1.3]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.3, 0., -1.65]), np.asarray([-0.4, 0.0, 0.7])],
-                    [ np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.3, 0., -1.65])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])]],
-        "yellow": [ [np.asarray([0.45, 0., 0.45]), np.asarray([0.4, 0., -1.3]), np.asarray([-0.3, 0., -1.65]), np.asarray([-0.4, 0.0, 0.7])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3]), np.asarray([0.45, 0., 0.45])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.4, 0., -1.3]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7])],
-                    [np.asarray([0.45, 0., 0.45]), np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([-0.3, 0., -1.65])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])]],
-        "red": [ [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7])],
-                    [np.asarray([0.4, 0., -1.3]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45])],
-                    [np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([-0.3, 0., -1.65]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.4, 0.0, 0.7]),np.asarray([0.4, 0., -1.3]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.3, 0., -1.65])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])],
-                    [np.asarray([-0.3, 0., -1.65]), np.asarray([0.45, 0., 0.45]), np.asarray([-0.4, 0.0, 0.7]), np.asarray([0.4, 0., -1.3])]]
+    number : {
+        color : [[BLOCK_LOCATIONS[i] for i in idx] for idx in OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR[number][color] + [(3, 2, 1, 0)] * 4]
+        for color in OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR[number]
     }
+    for number in OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR
 }
 
 END_EFFECTOR_INDEX_BY_COLOR = {
     "black" : 3,
     "green" : 1,
     "yellow" : 2,
-    "red": 0    
+    "red": 0
 }
 
 UNCHANGED_OBJECT_BY_COLOR = {
@@ -236,7 +191,7 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
         'type': CostAction,
         'wu': 1e-1 / PR2_GAINS[PR2_GAIN_INDEX_BY_ROBOT_TYPE[robot_type]],
     } for i in agent_dict['agent']['train_conditions']]
-    
+
     fk_cost_0 = [{
         'type': CostFK,
         'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent_dict['agent']['pos_body_offset'][i][END_EFFECTOR_INDEX_BY_COLOR[color]], np.zeros(12)]),
