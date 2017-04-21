@@ -33,8 +33,39 @@ class RobotType(Enum):
     THREE_LINK = 1
     THREE_LINK_SHORT_JOINT = 2
     FOUR_LINK = 3
+    PEGGY = 4
+    def is_arm(self):
+        if self == RobotType.THREE_LINK or self == RobotType.THREE_LINK_SHORT_JOINT or self == RobotType.FOUR_LINK:
+            return True
+        elif self == RobotType.PEGGY:
+            return False
+        else:
+            raise RuntimeError
+    def number_links(self):
+        if self == RobotType.THREE_LINK or self == RobotType.THREE_LINK_SHORT_JOINT:
+            return 3
+        elif self == RobotType.FOUR_LINK:
+            return 4
+        elif self == RobotType.PEGGY:
+            return 7
+        else:
+            raise RuntimeError
+    def bodies_before_color_blocks(self):
+        if self.is_arm():
+            return self.number_links() + 2
+        elif self == RobotType.PEGGY:
+            return 25
+        else:
+            raise RuntimeError
+    def gains(self):
+        if self.is_arm():
+            return np.ones(self.number_links())
+        elif self == RobotType.PEGGY:
+            return np.array([3.09, 1.08, 0.393, 0.674, 0.111, 0.152, 0.098])
+        else:
+            raise RuntimeError
 
-BLOCK_LOCATIONS = [np.asarray(location) for location in ([0.4, 0., -1.3], [-0.4, 0.0, 0.7], [0.45, 0., 0.45], [-0.3, 0., -1.65])]
+BLOCK_LOCATIONS = [np.asarray(location) * 0 for location in ([0.4, 0, -1.3], [-0.4, 0.0, 0.7], [0.45, 0, 0.45], [-0.3, 0., -1.65])]
 
 OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR = {
     3: {
@@ -50,6 +81,8 @@ OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR = {
         'red': [(3, 2, 0, 1), (0, 1, 3, 2), (2, 1, 3, 0), (1, 0, 2, 3)]
         }
 }
+
+OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR[7] = OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR[3]
 
 
 OFFSETS_BY_LINK_NUMBER_AND_COLOR = {
@@ -68,32 +101,22 @@ END_EFFECTOR_INDEX_BY_COLOR = {
 }
 
 UNCHANGED_OBJECT_BY_COLOR = {
-    "black": 6,
-    "green": 4,
-    "yellow": 5,
-    "red": 3
-}
-
-NUMBER_LINKS_BY_ROBOT_TYPE = {
-    RobotType.THREE_LINK : 3,
-    RobotType.THREE_LINK_SHORT_JOINT : 3,
-    RobotType.FOUR_LINK : 4
+    "black": 4,
+    "green": 2,
+    "yellow": 3,
+    "red": 1
 }
 
 XML_BY_ROBOT_TYPE = {
     RobotType.THREE_LINK_SHORT_JOINT : './mjc_models/arm_3link_reach_colors_shortjoint.xml',
     RobotType.THREE_LINK : './mjc_models/arm_3link_reach_colors.xml',
-    RobotType.FOUR_LINK : './mjc_models/arm_4link_reach_colors.xml'
-}
-
-PR2_GAIN_INDEX_BY_ROBOT_TYPE = {
-    RobotType.THREE_LINK_SHORT_JOINT : 0,
-    RobotType.THREE_LINK : 0,
-    RobotType.FOUR_LINK : 1
+    RobotType.FOUR_LINK : './mjc_models/arm_4link_reach_colors.xml',
+    RobotType.PEGGY : './mjc_models/pr2_arm3d_reach_colors.xml'
 }
 
 def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enable_images):
-    number_links = NUMBER_LINKS_BY_ROBOT_TYPE[robot_type]
+    number_links = robot_type.number_links()
+    bodies_before_color_blocks = robot_type.bodies_before_color_blocks()
     all_offsets = OFFSETS_BY_LINK_NUMBER_AND_COLOR[number_links][color]
     SENSOR_DIMS = {
         JOINT_ANGLES: number_links,
@@ -145,7 +168,7 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
         'dt': 0.05,
         'substeps': 5,
         'pos_body_offset': all_offsets,
-        'pos_body_idx': np.array(range(3 + number_links, 7 + number_links)),
+        'pos_body_idx': np.array(range(bodies_before_color_blocks + 1, bodies_before_color_blocks + 5)),
         'conditions': 8,
         'train_conditions': range(4),
         'test_conditions': range(4,8),
@@ -157,7 +180,7 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES] + image_data,
         'meta_include': [],
         'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
-        'unchanged_object': UNCHANGED_OBJECT_BY_COLOR[color] + number_links
+        'unchanged_object': UNCHANGED_OBJECT_BY_COLOR[color] + bodies_before_color_blocks
     }
     agent_dict['agent'].update(image_dims)
     agent_dict['algorithm'] = {
@@ -189,7 +212,7 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
 
     torque_cost_0 = [{
         'type': CostAction,
-        'wu': 1e-1 / PR2_GAINS[PR2_GAIN_INDEX_BY_ROBOT_TYPE[robot_type]],
+        'wu': 1e-1 / robot_type.gains(),
     } for i in agent_dict['agent']['train_conditions']]
 
     fk_cost_0 = [{
