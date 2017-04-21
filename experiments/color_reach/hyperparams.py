@@ -27,7 +27,10 @@ IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
 USE_IMAGES = False
-IS_TESTING = True
+IS_TESTING = False
+NEURAL_NET_ITERATIONS = 20000
+ITERATIONS = 10
+SAMPLES = 10
 
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
@@ -77,7 +80,7 @@ common = {
             'agent_params':[a['network_params'] for a in agents],
         },
         #'val_agents': [1],
-        'iterations': 20000,
+        'iterations': NEURAL_NET_ITERATIONS,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
@@ -99,11 +102,11 @@ for a in agent:
 algorithm = [a['algorithm'] for a in agents]
 
 config = {
-    'iterations': 25,
+    'iterations': ITERATIONS,
     'is_testing' : IS_TESTING,
-    'num_samples': 10,
-    'verbose_trials': 10,
-    'verbose_policy_trials': 0,
+    'num_samples': SAMPLES * (1 - IS_TESTING),
+    'verbose_trials': 0,
+    'verbose_policy_trials': int(IS_TESTING),
     'save_wts': True,
     'common': common,
     'agent': agent,
