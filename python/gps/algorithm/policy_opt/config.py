@@ -24,6 +24,7 @@ GENERIC_CONFIG = {
     # set gpu usage.
     'use_gpu': 1,  # Whether or not to use the GPU for caffe training.
     'gpu_id': 0,
+    'random_seed': 1,
 }
 
 
@@ -34,7 +35,6 @@ POLICY_OPT_CAFFE = {
                                             # create NetParameter.
     'network_arch_params': {},  # Arguments to pass to method above.
     'weights_file_prefix': '',
-    'random_seed': 1,
 }
 
 POLICY_OPT_CAFFE.update(GENERIC_CONFIG)
@@ -50,6 +50,9 @@ POLICY_OPT_TF = {
     'checkpoint_prefix': checkpoint_path,
     'restore_shared_wts': False,
     'val_agents': [],
+    'copy_param_scope': 'conv_params',
+    'checkpoint_prefix': checkpoint_path,
+    'fc_only_iterations': 0,
 }
 
 POLICY_OPT_TF.update(GENERIC_CONFIG)

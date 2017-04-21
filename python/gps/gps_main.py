@@ -16,15 +16,16 @@ import pickle
 import tensorflow as tf
 import IPython
 from datetime import datetime
+import numpy as np
 # Add gps/python to path so that imports work.
 sys.path.append('/'.join(str.split(__file__, '/')[:-2]))
 from gps.gui.gps_training_gui import GPSTrainingGUI
 from gps.utility.data_logger import DataLogger
 from gps.sample.sample_list import SampleList
+
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.proto.gps_pb2 import ACTION, RGB_IMAGE, END_EFFECTOR_POINTS,END_EFFECTOR_POINT_VELOCITIES
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 import IPython
 ###from queue import Queue
 from threading import Thread
@@ -35,10 +36,22 @@ def parallel_traj_samples(info):
     for i in range(info[1]):
        info[4].append(info[2].sample(info[3], cond, verbose=True))
 
+os.environ['GLOG_minloglevel'] = '2'
+
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+
+
 
 class GPSMain(object):
     """ Main class to run algorithms and experiments. """
-    def __init__(self, config):
+    def __init__(self, config, quit_on_end=False):
+        """
+        Initialize GPSMain
+        Args:
+            config: Hyperparameters for experiment
+            quit_on_end: When true, quit automatically on completion
+        """
+        self._quit_on_end = quit_on_end
         self._hyperparams = config
         self._conditions = [] #config['common']['conditions']
 
@@ -130,7 +143,7 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
-            
+
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
 
@@ -212,14 +225,14 @@ class GPSMain(object):
                         print ag, cond
                         newtraj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
                 self.data_logger.pickle(TRAJ_DISTR_COLOR_REACH, newtraj_distr)
-        
+
 
         if False: # TODO use for blockpush, etc.
             for cond in range(4):
                 samples = [self.agent[0].sample(self.algorithm[0].policy_opt.policy[0], cond,
                                                 verbose=True, save=False) for j in range(5)]
                 self.data_logger.pickle(self._data_files_dir+'nn_list_'+str(cond)+'.pkl', samples)
-            sl0 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_0.pkl')) 
+            sl0 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_0.pkl'))
             sl1 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_1.pkl'))
             sl2 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_2.pkl'))
             sl3 = SampleList(self.data_logger.unpickle(self._data_files_dir + 'nn_list_3.pkl'))
@@ -241,7 +254,6 @@ class GPSMain(object):
         import IPython
         #IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
-
             time2 = time.clock()
             traj_sample_lists = {}
             thread_samples_sampling = []
@@ -365,7 +377,7 @@ class GPSMain(object):
             #May want to make this shared across robots
             if self.algorithm[0].iteration_count > 0 or inner_itr > 0:
                 print "policy opt update"
-                self.policy_opt.update_ee(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, 
+                self.policy_opt.update_ee(obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full,
                                           next_ee_full, itr_full, inner_itr)
             for robot_number in range(self.num_robots):
                 print "update pol fit", robot_number
@@ -432,25 +444,26 @@ class GPSMain(object):
                 self.gui[robot_number].set_status_text('Press \'go\' to begin.')
             return 0
         else:
-            algorithm_file = self._data_files_dir + 'algorithm_i_%02d.pkl' % itr_load
+            algorithm_file = self._data_files_dir + 'algorithm_itr_%02d.pkl' % itr_load
             self.algorithm = self.data_logger.unpickle(algorithm_file)
             if self.algorithm is None:
                 print("Error: cannot find '%s.'" % algorithm_file)
                 os._exit(1) # called instead of sys.exit(), since this is in a thread
-                
+
             if self.gui:
                 traj_sample_lists = self.data_logger.unpickle(self._data_files_dir +
                     ('traj_sample_itr_%02d.pkl' % itr_load))
-                pol_sample_lists = self.data_logger.unpickle(self._data_files_dir +
-                    ('pol_sample_itr_%02d.pkl' % itr_load))
-                self.gui.update(itr_load, self.algorithm, self.agent,
-                    traj_sample_lists, pol_sample_lists)
+                if self.algorithm.cur[0].pol_info:
+                    pol_sample_lists = self.data_logger.unpickle(self._data_files_dir +
+                        ('pol_sample_itr_%02d.pkl' % itr_load))
+                else:
+                    pol_sample_lists = None
                 self.gui.set_status_text(
                     ('Resuming training from algorithm state at iteration %d.\n' +
                     'Press \'go\' to begin.') % itr_load)
             return itr_load + 1
 
- 
+
     def _take_sample(self, itr, cond, i, robot_number=0):
         """
         Collect a sample from the agent.
@@ -460,7 +473,10 @@ class GPSMain(object):
             i: Sample number.
         Returns: None
         """
-        pol = self.algorithm[robot_number].cur[cond].traj_distr
+        if self.algorithm[robot_number]._hyperparams['sample_on_policy'] and self.algorithm[robot_number].iteration_count > 0:
+            pol = self.algorithm[robot_number].policy_opt.policy[robot_number]
+        else:
+            pol = self.algorithm[robot_number].cur[cond].traj_distr
         if self.gui:
             self.gui[robot_number].set_image_overlays(cond)   # Must call for each new cond.
             redo = True
@@ -515,20 +531,24 @@ class GPSMain(object):
             self.gui[robot_number].stop_display_calculating()
 
 
-    def _take_policy_samples(self, N=None, robot_number=0):
+    def _take_policy_samples(self, robot_number=0):
         """
         Take samples from the policy to see how it's doing.
         Args:
             N  : number of policy samples to take per condition
         Returns: None
         """
-        # if 'verbose_policy_trials' not in self._hyperparams:
-        #     return None
-        if not N:
-            N = self._hyperparams['verbose_policy_trials']
+        if 'verbose_policy_trials' not in self._hyperparams:
+            # AlgorithmTrajOpt
+            return None
+        verbose = self._hyperparams['verbose_policy_trials']
+        N = verbose
         if self.gui:
             self.gui[robot_number].set_status_text('Taking policy samples.')
         pol_samples = [[None for _ in range(N)] for _ in range(self._conditions[robot_number])]
+        # Since this isn't noisy, just take one sample.
+        # TODO: Make this noisy? Add hyperparam?
+        # TODO: Take at all conditions for GUI?
         for cond in range(self._conditions[robot_number]):
             for i in range(N):
                 pol_samples[cond][i] = self.agent[robot_number].sample(
@@ -584,7 +604,11 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 self.gui[robot_number].set_status_text('Training complete.')
                 self.gui[robot_number].end_mode()
-
+            self.gui.set_status_text('Training complete.')
+            self.gui.end_mode()
+            if self._quit_on_end:
+                # Quit automatically (for running sequential expts)
+                os._exit(1)
 
 def main():
     """ Main function to be run. """
@@ -598,17 +622,29 @@ def main():
     parser.add_argument('-r', '--resume', metavar='N', type=int,
                         help='resume training from iter N')
     parser.add_argument('-p', '--policy', metavar='N', type=int,
-                        help='take N policy samples (for BADMM only)')
+                        help='take N policy samples (for BADMM/MDGPS only)')
     parser.add_argument('-m', '--multithread', action='store_true',
                         help='Perform the badmm algorithm in parallel')
+    parser.add_argument('-s', '--silent', action='store_true',
+                        help='silent debug print outs')
+    parser.add_argument('-q', '--quit', action='store_true',
+                        help='quit GUI automatically when finished')
     args = parser.parse_args()
 
     exp_name = args.experiment
     resume_training_itr = args.resume
     test_policy_N = args.policy
 
-    exp_dir = 'experiments/' + exp_name + '/'
+    from gps import __file__ as gps_filepath
+    gps_filepath = os.path.abspath(gps_filepath)
+    gps_dir = '/'.join(str.split(gps_filepath, '/')[:-3]) + '/'
+    exp_dir = gps_dir + 'experiments/' + exp_name + '/'
     hyperparams_file = exp_dir + 'hyperparams.py'
+
+    if args.silent:
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+    else:
+        logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
     if args.new:
         from shutil import copy
@@ -662,8 +698,10 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(40)
-        np.random.seed(40)
+        seed = hyperparams.config.get('random_seed', 0)
+        random.seed(seed)
+        np.random.seed(seed)
+
         data_files_dir = exp_dir + 'data_files/'
         data_filenames = os.listdir(data_files_dir)
         algorithm_prefix = 'algorithm_itr_'
@@ -688,10 +726,11 @@ def main():
         import numpy as np
         import matplotlib.pyplot as plt
 
-        random.seed(3)
-        np.random.seed(3)
+        seed = hyperparams.config.get('random_seed', 0)
+        random.seed(seed)
+        np.random.seed(seed)
 
-        gps = GPSMain(hyperparams.config)
+        gps = GPSMain(hyperparams.config, args.quit)
         if hyperparams.config['gui_on']:
             if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
                 run_gps = threading.Thread(

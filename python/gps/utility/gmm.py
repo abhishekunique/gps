@@ -54,36 +54,20 @@ class GMM(object):
                 on each cluster).
         """
         # Constants.
+        N, D = data.shape
         K = self.sigma.shape[0]
-        Di = data.shape[1]
-        N = data.shape[0]
 
-        # Compute probabilities.
-        data = data.T
-        mu = self.mu[:, 0:Di].T
-        mu_expand = np.expand_dims(np.expand_dims(mu, axis=1), axis=1)
-        assert mu_expand.shape == (Di, 1, 1, K)
-        # Calculate for each point distance to each cluster.
-        data_expand = np.tile(data, [K, 1, 1, 1]).transpose([2, 3, 1, 0])
-        diff = data_expand - np.tile(mu_expand, [1, N, 1, 1])
-        assert diff.shape == (Di, N, 1, K)
-        Pdiff = np.zeros_like(diff)
-        cconst = np.zeros((1, 1, 1, K))
-
+        logobs = -0.5*np.ones((N, K))*D*np.log(2*np.pi)
         for i in range(K):
-            U = scipy.linalg.cholesky(self.sigma[i, :Di, :Di],
-                                      check_finite=False)
-            Pdiff[:, :, 0, i] = scipy.linalg.solve_triangular(
-                U, scipy.linalg.solve_triangular(
-                    U.T, diff[:, :, 0, i], lower=True, check_finite=False
-                ), check_finite=False
-            )
-            cconst[0, 0, 0, i] = -np.sum(np.log(np.diag(U))) - 0.5 * Di * \
-                    np.log(2 * np.pi)
+            mu, sigma = self.mu[i], self.sigma[i]
+            L = scipy.linalg.cholesky(sigma, lower=True)
+            logobs[:, i] -= np.sum(np.log(np.diag(L)))
 
-        logobs = -0.5 * np.sum(diff * Pdiff, axis=0, keepdims=True) + cconst
-        assert logobs.shape == (1, N, 1, K)
-        logobs = logobs[0, :, 0, :] + self.logmass.T
+            diff = (data - mu).T
+            soln = scipy.linalg.solve_triangular(L, diff, lower=True)
+            logobs[:, i] -= 0.5*np.sum(soln**2, axis=0)
+
+        logobs += self.logmass.T
         return logobs
 
     def moments(self, logwts):
@@ -102,10 +86,8 @@ class GMM(object):
         mu = np.sum(self.mu * wts, axis=0)
 
         # Compute overall covariance.
-        # For some reason this version works way better than the "right"
-        # one... could we be computing xxt wrong?
         diff = self.mu - np.expand_dims(mu, axis=0)
-        diff_expand = np.expand_dims(diff, axis=1) * \
+        diff_expand = np.expand_dims(self.mu, axis=1) * \
                 np.expand_dims(diff, axis=2)
         wts_expand = np.expand_dims(wts, axis=2)
         sigma = np.sum((self.sigma + diff_expand) * wts_expand, axis=0)
@@ -177,8 +159,13 @@ class GMM(object):
             ll = np.sum(logsum(logobs, axis=1))
             LOGGER.debug('GMM itr %d/%d. Log likelihood: %f',
                          itr, max_iterations, ll)
-            if np.abs(ll-prevll) < 1e-2:
-                LOGGER.debug('GMM convergenced on itr=%d/%d',
+            if ll < prevll:
+                # TODO: Why does log-likelihood decrease sometimes?
+                LOGGER.debug('Log-likelihood decreased! Ending on itr=%d/%d',
+                             itr, max_iterations)
+                break
+            if np.abs(ll-prevll) < 1e-5*prevll:
+                LOGGER.debug('GMM converged on itr=%d/%d',
                              itr, max_iterations)
                 break
             prevll = ll

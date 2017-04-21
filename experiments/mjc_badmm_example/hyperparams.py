@@ -20,10 +20,13 @@ from gps.algorithm.policy_opt.policy_opt_caffe import PolicyOptCaffe
 from gps.algorithm.policy.lin_gauss_init import init_lqr
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy.policy_prior import PolicyPrior
+from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
+from gps.algorithm.policy_opt.tf_model_example import example_tf_network
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, ACTION
 from gps.gui.config import generate_experiment_info
 
+ALGORITHM_NN_LIBRARY = "caffe"
 
 SENSOR_DIMS = {
     JOINT_ANGLES: 7,
@@ -61,8 +64,8 @@ agent = {
     'substeps': 5,
     'conditions': common['conditions'],
     'pos_body_idx': np.array([1]),
-    'pos_body_offset': [np.array([0.0, 0.12, 0]), np.array([0.0, -0.08, 0]),
-                        np.array([-0.2, -0.08, 0]), np.array([-0.2, 0.12, 0])],
+    'pos_body_offset': [[np.array([0.1, 0.1, 0])], [np.array([0.1, -0.1, 0])],
+                        [np.array([-0.1, -0.1, 0])], [np.array([-0.1, 0.1, 0])]],
     'T': 100,
     'sensor_dims': SENSOR_DIMS,
     'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
@@ -77,12 +80,13 @@ algorithm = {
     'conditions': common['conditions'],
     'iterations': 12,
     'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
-    'policy_dual_rate': 0.2,
+    'policy_dual_rate': 0.1,
+    'init_pol_wt': 0.002,
     'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
     'fixed_lg_step': 3,
-    'kl_step': 2.0,
+    'kl_step': 1.0,
     'min_step_mult': 0.01,
-    'max_step_mult': 1.0,
+    'max_step_mult': 3.0,
     'sample_decrease_var': 0.05,
     'sample_increase_var': 0.1,
     'policy_sample_mode': 'replace'
@@ -102,13 +106,13 @@ algorithm['init_traj_distr'] = {
 
 torque_cost = {
     'type': CostAction,
-    'wu': 5e-5 / PR2_GAINS,
+    'wu': 1e-3 / PR2_GAINS,
 }
 
 fk_cost = {
     'type': CostFK,
     'target_end_effector': np.array([0.0, 0.3, -0.5, 0.0, 0.3, -0.2]),
-    'wp': np.array([1, 1, 1, 1, 1, 1]),
+    'wp': np.array([2, 2, 1, 2, 2, 1]),
     'l1': 0.1,
     'l2': 10.0,
     'alpha': 1e-5,
@@ -147,11 +151,23 @@ algorithm['traj_opt'] = {
     'type': TrajOptLQRPython,
 }
 
-algorithm['policy_opt'] = {
-    'type': PolicyOptCaffe,
-    'weights_file_prefix': EXP_DIR + 'policy',
-    'iterations': 2000,
-}
+if ALGORITHM_NN_LIBRARY == "tf":
+    algorithm['policy_opt'] = {
+        'type': PolicyOptTf,
+        'network_params': {
+            'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES],
+            'sensor_dims': SENSOR_DIMS,
+        },
+        'weights_file_prefix': EXP_DIR + 'policy',
+        'iterations': 3000,
+        'network_model': example_tf_network
+    }
+elif ALGORITHM_NN_LIBRARY == "caffe":
+    algorithm['policy_opt'] = {
+        'type': PolicyOptCaffe,
+        'weights_file_prefix': EXP_DIR + 'policy',
+        'iterations': 5000,
+    }
 
 algorithm['policy_prior'] = {
     'type': PolicyPriorGMM,

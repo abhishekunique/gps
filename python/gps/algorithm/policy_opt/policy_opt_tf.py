@@ -1,15 +1,21 @@
 """ This file defines policy optimization for a tensorflow policy. """
 import copy
 import logging
+import os
+import tempfile
 
 import numpy as np
 
+# NOTE: Order of these imports matters for some reason.
+# Changing it can lead to segmentation faults on some machines.
+
+from gps.algorithm.policy_opt.config import POLICY_OPT_TF
 import tensorflow as tf
 
 from gps.algorithm.policy.tf_policy import TfPolicy
 from gps.algorithm.policy_opt.policy_opt import PolicyOpt
-from gps.algorithm.policy_opt.config import POLICY_OPT_TF
 from gps.algorithm.policy_opt.tf_utils import TfSolver
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -23,6 +29,8 @@ class PolicyOptTf(PolicyOpt):
         self.num_robots = len(dU)
         self.tf_iter = [0 for r_no in range(len(dU))]
         self.checkpoint_prefix = self._hyperparams['checkpoint_prefix']
+        tf.set_random_seed(self._hyperparams['random_seed'])
+
         self.batch_size = self._hyperparams['batch_size']
         self.device_string = "/cpu:0"
         if self._hyperparams['use_gpu'] == 1:
@@ -83,7 +91,7 @@ class PolicyOptTf(PolicyOpt):
         #         assign_op = v.assign(val_vars[k])
         #         self.sess.run(assign_op)
 
- 
+
     def init_network(self):
         """ Helper method to initialize the tf networks used """
         tf_map_generator = self._hyperparams['network_model']
@@ -132,17 +140,8 @@ class PolicyOptTf(PolicyOpt):
                                     weight_decay=self._hyperparams['weight_decay'],
                                     # vars_to_opt = self.robot_vars)
                                     vars_to_opt= self.av.values())
-        # task_loss = tf.add_n(self.ls['task_loss'])
-        # self.task_solver =TfSolver(loss_scalar=task_loss,
-        #                            solver_name=self._hyperparams['solver_type'],
-        #                            base_lr=self._hyperparams['lr'],
-        #                            lr_policy=self._hyperparams['lr_policy'],
-        #                            momentum=self._hyperparams['momentum'],
-        #                            weight_decay=self._hyperparams['weight_decay'],
-        #                            vars_to_opt = self.task_vars)
 
-
-    def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr):
+    def update(self, obs_full, tgt_mu_full, tgt_prc_full, tgt_wt_full, itr_full, inner_itr, fc_only=False):
         """
         Update policy.
         Args:
@@ -199,7 +198,7 @@ class PolicyOptTf(PolicyOpt):
             # TODO: Find entries with very low weights?
 
             # Normalize obs, but only compute normalzation at the beginning.
-            if itr == 0 and inner_itr == 1:
+            if self.policy.scale is None or self.policy.bias is None:
                 #TODO: may need to change this
                 self.policy[robot_number].x_idx = self.x_idx[robot_number]
                 self.policy[robot_number].scale = np.eye(np.diag(1.0 / (np.std(obs[:, self.x_idx[robot_number]], axis=0) + 1e-8)).shape[0])
@@ -211,7 +210,7 @@ class PolicyOptTf(PolicyOpt):
             # Assuming that N*T >= self.batch_size.
             batches_per_epoch = np.floor(N*T / self.batch_size)
             idx = range(N*T)
-            
+
             np.random.shuffle(idx)
             obs_reshaped.append(obs)
             tgt_mu_reshaped.append(tgt_mu)
@@ -234,7 +233,7 @@ class PolicyOptTf(PolicyOpt):
                 start_idx = int(i * self.batch_size %
                                 (batches_per_epoch_reshaped[robot_number] * self.batch_size))
                 idx_i = idx_reshaped[robot_number][start_idx:start_idx+self.batch_size]
-                
+
                 feed_dict[self.obs_tensors[robot_number]] = obs_reshaped[robot_number][idx_i]
                 feed_dict[self.action_tensors[robot_number]] = tgt_mu_reshaped[robot_number][idx_i]
                 feed_dict[self.precision_tensors[robot_number]] = tgt_prc_reshaped[robot_number][idx_i]
@@ -243,10 +242,9 @@ class PolicyOptTf(PolicyOpt):
             val_loss = self.sess.run(self.val_loss, val_dict)
             avg_val_loss += val_loss
             average_loss += train_loss
-            if i % 500 == 0:
-                LOGGER.debug('tensorflow iteration %d, average loss %f',
-                             i, average_loss / 500)
-                print 'supervised tf loss is ' (average_loss/800)
+            if (i+1) % 50 == 0:
+                LOGGER.info('tensorflow iteration %d, average loss %f',
+                             i+1, average_loss / 50)
                 average_loss = 0
 
         for robot_number in range(self.num_robots):
@@ -272,15 +270,11 @@ class PolicyOptTf(PolicyOpt):
         N, T = obs.shape[:2]
 
         # Normalize obs.
-        try:
+        if self.policy[robot_number].scale != None:
             for n in range(N):
-                if self.policy[robot_number].scale is not None and self.policy[robot_number].bias is not None:
-                    obs[n, :, self.x_idx[robot_number]] = (obs[n, :, self.x_idx[robot_number]].T.dot(self.policy[robot_number].scale)
-                                             + self.policy[robot_number].bias).T
-        except AttributeError:
-            pass  # TODO: Should prob be called before update?
-
-        output = np.zeros((N, T, dU)) 
+                obs[n, :, self.x_idx[robot_number]] = (obs[n, :, self.x_idx[robot_number]].T.dot(self.policy[robot_number].scale)
+                                         + self.policy[robot_number].bias).T
+        output = np.zeros((N, T, dU))
         for i in range(N):
             feed_dict = {self.obs_tensors[robot_number]: obs[i, :]}
             feed_dict[self.ls['keep_prob']] = 1.0
@@ -320,13 +314,60 @@ class PolicyOptTf(PolicyOpt):
         saver = tf.train.Saver()
         saver.restore(sess, self.checkpoint_prefix + "_itr"+str(itr)+'.ckpt')
 
+    def linearize(self, obs):
+        """
+        Linearize policy about observations
+        Args:
+            obs: Numpy array of observations that is T x dO
+        """
+        # TODO - modify this in case of image features being in the state.
+        T = obs.shape[0]
+
+        # Initialize
+        pol_K = np.empty((T, self._dU, self._dO))
+        pol_k = np.empty((T, self._dU))
+
+        # Perform scaling
+        x = obs.copy() # Store pre-scaled
+        if self.policy.scale is not None:
+            obs[:, self.x_idx] = \
+                    obs[:, self.x_idx].dot(self.policy.scale) + \
+                    self.policy.bias
+
+        # Constant bias/gain matrices
+        feed_dict = {self.obs_tensor: obs}
+        pol_k = self.sess.run(self.act_op, feed_dict=feed_dict)
+        for u in range(self._dU):
+            pol_K[:, u, :] = self.sess.run(self.grads[u], feed_dict=feed_dict)
+
+        # Correct bias
+        for t in range(T):
+            if self.policy.scale is not None:
+                pol_K[t, :, :] = pol_K[t, :, :].dot(self.policy.scale)
+            pol_k[t, :] -= pol_K[t, :, :].dot(x[t])
+
+        return pol_K, pol_k
 
     def set_ent_reg(self, ent_reg, robot_number=0):
         """ Set the entropy regularization. """
         self.ent_reg[robot_number] = ent_reg
 
+    def save_model(self, fname):
+        LOGGER.debug('Saving model to: %s', fname)
+        self.saver.save(self.sess, fname)
+
+    def restore_model(self, fname):
+        self.saver.restore(self.sess, fname)
+        LOGGER.debug('Restoring model from: %s', fname)
+
     # For pickling.
     def __getstate__(self):
+        with tempfile.NamedTemporaryFile('w+b', delete=True) as f:
+            self.save_model(f.name) # TODO - is this implemented.
+            f.seek(0)
+            with open(f.name, 'r') as f2:
+                wts = f2.read()
+            os.remove(f.name+'.meta')
         return {
             'hyperparams': self._hyperparams,
             'dO': self._dO,
@@ -334,6 +375,9 @@ class PolicyOptTf(PolicyOpt):
             'scale': [pol.scale for pol in self.policy],
             'bias': [pol.bias for pol in self.policy],
             'tf_iter': self.tf_iter,
+            'x_idx': self.policy.x_idx,
+            'chol_pol_covar': self.policy.chol_pol_covar,
+            'wts': wts,
         }
 
     # For unpickling.
@@ -343,7 +387,14 @@ class PolicyOptTf(PolicyOpt):
         self.__init__(state['hyperparams'], state['dO'], state['dU'])
         self.policy.scale = state['scale']
         self.policy.bias = state['bias']
+        self.policy.x_idx = state['x_idx']
+        self.policy.chol_pol_covar = state['chol_pol_covar']
         self.tf_iter = state['tf_iter']
+
+        with tempfile.NamedTemporaryFile('w+b', delete=True) as f:
+            f.write(state['wts'])
+            f.seek(0)
+            self.restore_model(f.name)
 
         # saver = tf.train.Saver()
         # check_file = self.checkpoint_file
@@ -419,7 +470,7 @@ class PolicyOptTf(PolicyOpt):
             # Assuming that N*T >= self.batch_size.
             batches_per_epoch = np.floor(N*T / self.batch_size)
             idx = range(N*T)
-            
+
             np.random.shuffle(idx)
             obs_reshaped.append(obs)
             tgt_mu_reshaped.append(tgt_mu)
@@ -459,7 +510,7 @@ class PolicyOptTf(PolicyOpt):
 
                         #feed_dict[self.ls['ee_input'][robot_number]] = ee_reshaped[robot_number][idx_i]
                     robot_dict.update(feed_dict)
-                    #robot_dict[self.ls['task_output'][robot_number]] = ee_reshaped[robot_number][idx_i]               
+                    #robot_dict[self.ls['task_output'][robot_number]] = ee_reshaped[robot_number][idx_i]
 
                 #task_loss = self.task_solver(feed_dict, self.sess, device_string=self.device_string)
                 train_loss = self.robot_solver(robot_dict, self.sess, device_string=self.device_string)

@@ -31,6 +31,10 @@ from gps.gui.util import buffered_axis_limits, load_data_from_npz
 
 from gps.proto.gps_pb2 import END_EFFECTOR_POINTS
 
+# Needed for typechecks
+from gps.algorithm.algorithm_badmm import AlgorithmBADMM
+from gps.algorithm.algorithm_mdgps import AlgorithmMDGPS
+
 class GPSTrainingGUI(object):
 
     def __init__(self, hyperparams):
@@ -269,7 +273,7 @@ class GPSTrainingGUI(object):
             self._first_update = False
 
         costs = [np.mean(np.sum(algorithm.prev[m].cs, axis=1)) for m in range(algorithm.M)]
-        self._update_iteration_data(itr, algorithm, costs)
+        self._update_iteration_data(itr, algorithm, costs, pol_sample_lists)
         self._cost_plotter.update(costs, t=itr)
         if END_EFFECTOR_POINTS in agent.x_data_types:
             self._update_trajectory_visualizations(algorithm, agent,
@@ -278,42 +282,63 @@ class GPSTrainingGUI(object):
         self._fig.canvas.draw()
         self._fig.canvas.flush_events() # Fixes bug in Qt4Agg backend
 
-    def _output_column_titles(self, algorithm):
+    def _output_column_titles(self, algorithm, policy_titles=False):
         """
         Setup iteration data column titles: iteration, average cost, and for
         each condition the mean cost over samples, step size, linear Guassian
         controller entropies, and initial/final KL divergences for BADMM.
         """
         self.set_output_text(self._hyperparams['experiment_name'])
-        condition_titles = '%3s | %8s' % ('', '')
-        itr_data_fields  = '%3s | %8s' % ('itr', 'avg_cost')
+        if isinstance(algorithm, AlgorithmMDGPS) or isinstance(algorithm, AlgorithmBADMM):
+            condition_titles = '%3s | %8s %12s' % ('', '', '')
+            itr_data_fields  = '%3s | %8s %12s' % ('itr', 'avg_cost', 'avg_pol_cost')
+        else:
+            condition_titles = '%3s | %8s' % ('', '')
+            itr_data_fields  = '%3s | %8s' % ('itr', 'avg_cost')
         for m in range(algorithm.M):
             condition_titles += ' | %8s %9s %-7d' % ('', 'condition', m)
             itr_data_fields  += ' | %8s %8s %8s' % ('  cost  ', '  step  ', 'entropy ')
-            if algorithm.prev[0].pol_info is not None:
-                condition_titles += ' %8s %8s' % ('', '')
-                itr_data_fields  += ' %8s %8s' % ('kl_div_i', 'kl_div_f')
+            if isinstance(algorithm, AlgorithmBADMM):
+                condition_titles += ' %8s %8s %8s' % ('', '', '')
+                itr_data_fields  += ' %8s %8s %8s' % ('pol_cost', 'kl_div_i', 'kl_div_f')
+            elif isinstance(algorithm, AlgorithmMDGPS):
+                condition_titles += ' %8s' % ('')
+                itr_data_fields  += ' %8s' % ('pol_cost')
         self.append_output_text(condition_titles)
         self.append_output_text(itr_data_fields)
 
-    def _update_iteration_data(self, itr, algorithm, costs):
+    def _update_iteration_data(self, itr, algorithm, costs, pol_sample_lists):
         """
         Update iteration data information: iteration, average cost, and for
         each condition the mean cost over samples, step size, linear Guassian
         controller entropies, and initial/final KL divergences for BADMM.
         """
         avg_cost = np.mean(costs)
-        itr_data = '%3d | %8.2f' % (itr, avg_cost)
+        if pol_sample_lists is not None:
+            test_idx = algorithm._hyperparams['test_conditions']
+            # pol_sample_lists is a list of singletons
+            samples = [sl[0] for sl in pol_sample_lists]
+            pol_costs = [np.sum(algorithm.cost[idx].eval(s)[0])
+                    for s, idx in zip(samples, test_idx)]
+            itr_data = '%3d | %8.2f %12.2f' % (itr, avg_cost, np.mean(pol_costs))
+        else:
+            itr_data = '%3d | %8.2f' % (itr, avg_cost)
         for m in range(algorithm.M):
             cost = costs[m]
             step = algorithm.prev[m].step_mult * algorithm.base_kl_step
             entropy = 2*np.sum(np.log(np.diagonal(algorithm.prev[m].traj_distr.chol_pol_covar,
                     axis1=1, axis2=2)))
             itr_data += ' | %8.2f %8.2f %8.2f' % (cost, step, entropy)
-            if algorithm.prev[0].pol_info is not None:
-                kl_div_i = algorithm.prev[m].pol_info.prev_kl[0]
-                kl_div_f = algorithm.prev[m].pol_info.prev_kl[-1]
-                itr_data += ' %8.2f %8.2f' % (kl_div_i, kl_div_f)
+            if isinstance(algorithm, AlgorithmBADMM):
+                kl_div_i = algorithm.cur[m].pol_info.init_kl.mean()
+                kl_div_f = algorithm.cur[m].pol_info.prev_kl.mean()
+                itr_data += ' %8.2f %8.2f %8.2f' % (pol_costs[m], kl_div_i, kl_div_f)
+            elif isinstance(algorithm, AlgorithmMDGPS):
+                # TODO: Change for test/train better.
+                if test_idx == algorithm._hyperparams['train_conditions']:
+                    itr_data += ' %8.2f' % (pol_costs[m])
+                else:
+                    itr_data += ' %8s' % ("N/A")
         self.append_output_text(itr_data)
 
     def _update_trajectory_visualizations(self, algorithm, agent,
@@ -326,7 +351,8 @@ class GPSTrainingGUI(object):
         for m in range(algorithm.M):
             self._traj_visualizer.clear(m)
             self._traj_visualizer.set_lim(i=m, xlim=xlim, ylim=ylim, zlim=zlim)
-            self._update_linear_gaussian_controller_plots(algorithm, agent, m)
+            if algorithm._hyperparams['fit_dynamics']:
+                self._update_linear_gaussian_controller_plots(algorithm, agent, m)                                
             self._update_samples_plots(traj_sample_lists, m, 'green', 'Trajectory Samples')
             if pol_sample_lists:
                 self._update_samples_plots(pol_sample_lists,  m, 'blue',  'Policy Samples')

@@ -49,6 +49,9 @@ class TfMap:
     def get_output_op(self):
         return self.output_op
 
+    def get_feature_op(self):
+        return self.img_feat_op
+
     def set_output_op(self, output_op):
         self.output_op = output_op
 
@@ -62,7 +65,7 @@ class TfMap:
 class TfSolver:
     """ A container for holding solver hyperparams in tensorflow. Used to execute backwards pass. """
     def __init__(self, loss_scalar, solver_name='adam', base_lr=None, lr_policy=None,
-                 momentum=None, weight_decay=None, robot_number=0, fc_vars=None, 
+                 momentum=None, weight_decay=None, robot_number=0, fc_vars=None,
                  last_conv_vars=None, vars_to_opt=None):
         self.base_lr = base_lr
         self.lr_policy = lr_policy
@@ -88,7 +91,6 @@ class TfSolver:
         #     self.fc_vars = fc_vars
         #     self.last_conv_vars = last_conv_vars
         #     self.fc_solver_op = self.get_solver_op(var_list=fc_vars)
-        #self.trainable_variables = tf.trainable_variables()
 
     def get_solver_op(self, var_list=None, loss=None):
         solver_string = self.solver_name.lower()
@@ -130,6 +132,22 @@ class TfSolver:
 
         for v in range(len(self.last_conv_vars)):
             final_values[v] = np.concatenate([values[i][v] for i in range(len(values))])
+        return final_value
+
+    def get_var_values(self, sess, var, feed_dict, num_values, batch_size):
+        i = 0
+        values = []
+        while i < num_values:
+            batch_dict = {}
+            start = i
+            end = min(i+batch_size, num_values)
+            for k,v in feed_dict.iteritems():
+                batch_dict[k] = v[start:end]
+            batch_vals = sess.run(var, batch_dict)
+            values.append(batch_vals)
+            i = end
+        i = 0
+        final_values = np.concatenate([values[i] for i in range(len(values))])
         return final_values
 
     def __call__(self, feed_dict, sess, device_string="/cpu:0", use_fc_solver=False):

@@ -135,8 +135,9 @@ class AgentROS(Agent):
                        condition_data[TRIAL_ARM]['data'])
         self.reset_arm(AUXILIARY_ARM, condition_data[AUXILIARY_ARM]['mode'],
                        condition_data[AUXILIARY_ARM]['data'])
+        time.sleep(2.0)  # useful for the real robot, so it stops completely
 
-    def sample(self, policy, condition, verbose=True, save=True):
+    def sample(self, policy, condition, verbose=True, save=True, noisy=True):
         """
         Reset and execute a policy and collect a sample.
         Args:
@@ -144,6 +145,7 @@ class AgentROS(Agent):
             condition: Which condition setup to run.
             verbose: Unused for this agent.
             save: Whether or not to store the trial into the samples.
+            noisy: Whether or not to use noise during sampling.
         Returns:
             sample: A Sample object.
         """
@@ -153,7 +155,10 @@ class AgentROS(Agent):
 
         self.reset(condition)
         # Generate noise.
-        noise = generate_noise(self.T, self.dU, self._hyperparams)
+        if noisy:
+            noise = generate_noise(self.T, self.dU, self._hyperparams)
+        else:
+            noise = np.zeros((self.T, self.dU))
 
         # Execute trial.
         trial_command = TrialCommand()

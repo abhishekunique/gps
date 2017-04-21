@@ -63,10 +63,10 @@ class Agent(object):
                                                    self._meta_idx)}
 
     @abc.abstractmethod
-    def sample(self, policy, condition, verbose=True, save=True):
+    def sample(self, policy, condition, verbose=True, save=True, noisy=True):
         """
         Draw a sample from the environment, using the specified policy
-        and under the specified condition.
+        and under the specified condition, with or without noise.
         """
         raise NotImplementedError("Must be implemented in subclass.")
 
@@ -83,6 +83,17 @@ class Agent(object):
         """
         return (SampleList(self._samples[condition][start:]) if end is None
                 else SampleList(self._samples[condition][start:end]))
+
+    def clear_samples(self, condition=None):
+        """
+        Reset the samples for a given condition, defaulting to all conditions.
+        Args:
+            condition: Condition for which to reset samples.
+        """
+        if condition is None:
+            self._samples = [[] for _ in range(self._hyperparams['conditions'])]
+        else:
+            self._samples[condition] = []
 
     def delete_last_sample(self, condition):
         """ Delete the last sample from the specified condition. """
