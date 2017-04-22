@@ -25,8 +25,13 @@ for num_robots in (10, 20, 30):
     for robot_num in np.random.choice(num_robots, size=10):
         for typ in old:
             for color in old[typ]:
-                generic = reacher_by_color_and_type(num_robots, robot_num, color, typ, enable_images=True)
+                if typ == RobotType.FOUR_LINK and color == "black":
+                    offsets = [[-0.4, 0.0, 0.7], [0.45, 0.0, 0.45], [0.4, 0.0, -1.3], [-0.3, 0.0, -1.65]]
+                else:
+                    offsets = [[-0.3, 0., -1.65], [0.4, 0., -1.3],  [0.45, 0., 0.45], [-0.4, 0.0, 0.7]]
+                generic = reacher_by_color_and_type(num_robots, robot_num, offsets, color, typ, enable_images=True)
                 specialized = old[typ][color](num_robots, robot_num)
+                specialized['agent']['pos_body_offset'] = None # Works!
                 np.testing.assert_equal(generic, specialized, "num_robots=%s, robot_num=%s, color=%s, typ=%s" % (num_robots, robot_num, color, typ))
 
 

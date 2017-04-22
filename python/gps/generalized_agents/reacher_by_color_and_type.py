@@ -65,41 +65,6 @@ class RobotType(Enum):
         else:
             raise RuntimeError
 
-BLOCK_LOCATIONS = [np.asarray(location) * 0 for location in ([0.4, 0, -1.3], [-0.4, 0.0, 0.7], [0.45, 0, 0.45], [-0.3, 0., -1.65])]
-
-OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR = {
-    3: {
-        'black': [(0, 1, 2, 3), (3, 2, 1, 0), (3, 0, 1, 2), (0, 2, 3, 1)],
-        'green': [(2, 3, 0, 1), (3, 0, 1, 2), (0, 2, 3, 1), (0, 1, 2, 3)],
-        'yellow': [(2, 0, 3, 1), (3, 1, 0, 2), (3, 0, 2, 1), (2, 0, 1, 3)],
-        'red': [(3, 2, 0, 1), (0, 1, 3, 2), (2, 1, 3, 0), (1, 0, 2, 3)]
-        },
-    4: {
-        'black': [(3, 2, 0, 1), (0, 1, 3, 2), (2, 1, 3, 0), (1, 0, 2, 3)],
-        'green': [(2, 3, 0, 1), (3, 0, 1, 2), (0, 2, 3, 1), (0, 1, 2, 3)],
-        'yellow': [(2, 0, 3, 1), (3, 1, 0, 2), (3, 0, 2, 1), (2, 0, 1, 3)],
-        'red': [(3, 2, 0, 1), (0, 1, 3, 2), (2, 1, 3, 0), (1, 0, 2, 3)]
-        }
-}
-
-OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR[7] = OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR[3]
-
-
-OFFSETS_BY_LINK_NUMBER_AND_COLOR = {
-    number : {
-        color : [[BLOCK_LOCATIONS[i] for i in idx] for idx in OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR[number][color] + [(3, 2, 1, 0)] * 4]
-        for color in OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR[number]
-    }
-    for number in OFFSET_IDX_BY_LINK_NUMBER_AND_COLOR
-}
-
-END_EFFECTOR_INDEX_BY_COLOR = {
-    "black" : 3,
-    "green" : 1,
-    "yellow" : 2,
-    "red": 0
-}
-
 UNCHANGED_OBJECT_BY_COLOR = {
     "black": 4,
     "green": 2,
@@ -114,10 +79,9 @@ XML_BY_ROBOT_TYPE = {
     RobotType.PEGGY : './mjc_models/pr2_arm3d_reach_colors.xml'
 }
 
-def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enable_images):
+def reacher_by_color_and_type(robot_number, num_robots, offsets, color, robot_type, enable_images):
     number_links = robot_type.number_links()
     bodies_before_color_blocks = robot_type.bodies_before_color_blocks()
-    all_offsets = OFFSETS_BY_LINK_NUMBER_AND_COLOR[number_links][color]
     SENSOR_DIMS = {
         JOINT_ANGLES: number_links,
         JOINT_VELOCITIES: number_links,
@@ -167,7 +131,7 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
         'x0': np.zeros(2 * number_links),
         'dt': 0.05,
         'substeps': 5,
-        'pos_body_offset': all_offsets,
+        'pos_body_offset': None,
         'pos_body_idx': np.array(range(bodies_before_color_blocks + 1, bodies_before_color_blocks + 5)),
         'conditions': 8,
         'train_conditions': range(4),
@@ -217,7 +181,7 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
 
     fk_cost_0 = [{
         'type': CostFK,
-        'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ agent_dict['agent']['pos_body_offset'][i][END_EFFECTOR_INDEX_BY_COLOR[color]], np.zeros(12)]),
+        'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ offsets[i], np.zeros(12)]),
         'wp': np.array([1, 1, 1, 0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0]),
         'l1': 0.1,
         'l2': 10.0,
@@ -240,7 +204,7 @@ def reacher_by_color_and_type(robot_number, num_robots, color, robot_type, enabl
             'min_samples_per_cluster': 40,
             'max_samples': 20,
         },
-}
+    }
 
     agent_dict['algorithm']['traj_opt'] = {
         'type': TrajOptLQRPython,

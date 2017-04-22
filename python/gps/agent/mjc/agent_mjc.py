@@ -63,14 +63,15 @@ class AgentMuJoCo(Agent):
                 self._model.append(self._world[i].get_model())
 
         for i in range(self._hyperparams['conditions']):
-            for j in range(len(self._hyperparams['pos_body_idx'][i])):
-                idx = self._hyperparams['pos_body_idx'][i][j]
-                self._model[i]['body_pos'][idx, :] += \
-                        self._hyperparams['pos_body_offset'][i][j]
+            if self._hyperparams['pos_body_offset'][i] != None:
+                for j in range(len(self._hyperparams['pos_body_idx'][i])):
+                    idx = self._hyperparams['pos_body_idx'][i][j]
+                    self._model[i]['body_pos'][idx, :] += \
+                            self._hyperparams['pos_body_offset'][i][j]
 
-                if 'quat_body_offset' in self._hyperparams:
-                    self._model[i]['body_quat'][idx, :] += \
-                            self._hyperparams['quat_body_offset'][i][j]
+                    if 'quat_body_offset' in self._hyperparams:
+                        self._model[i]['body_quat'][idx, :] += \
+                                self._hyperparams['quat_body_offset'][i][j]
             self._world[i].set_model(self._model[i])
             x0 = self._hyperparams['x0'][i]
             idx = len(x0) // 2

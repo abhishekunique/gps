@@ -58,7 +58,7 @@ else:
     robot_values    = robot_values[:leave_one_out]+robot_values[leave_one_out+1:]
     arguments       = arguments[:leave_one_out]+arguments[leave_one_out+1:]
 
-agents = [reacher_by_color_and_type(i, len(arguments), color, robot_type, USE_IMAGES) for i, (color, robot_type) in enumerate(arguments)]
+agents = [reacher_by_color_and_type(i, len(arguments), BLOCK_LOCATIONS, color, robot_type, USE_IMAGES) for i, (color, robot_type) in enumerate(arguments)]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/color_reach/'
