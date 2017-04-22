@@ -38,6 +38,9 @@ from gps.gui.config import generate_experiment_info
 
 from gps.generalized_agents.reacher_by_color_and_type import RobotType, reacher_by_color_and_type
 
+BLOCK_LOCATIONS = [np.asarray(loc) for loc in ([-0.3, 0., -1.65], [0.4, 0., -1.3],  [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
+INIT_OFFSET = np.array([0.8, 0.0, 0.5])
+
 task_values, robot_values, arguments = [], [], []
 for robot_n, robot_type in enumerate(RobotType):
     for task_n, color in enumerate(("red", "green", "yellow", "black")):
@@ -91,14 +94,9 @@ common = {
 if not os.path.exists(common['data_files_dir']):
     os.makedirs(common['data_files_dir'])
 
-init_offset = np.array([0.8, 0.0, 0.5])
 agent = [a['agent'] for a in agents]
 for a in agent:
-    a.update({'offsets': [np.asarray([-0.3, 0., -1.65]) + init_offset, np.asarray([0.4, 0., -1.3]) + init_offset,  np.asarray([0.45, 0., 0.45]) + init_offset, np.asarray([-0.4, 0.0, 0.7]) + init_offset, \
-                np.asarray([-0.3, 0., -1.65]) + init_offset, np.asarray([0.4, 0., -1.3]) + init_offset,  np.asarray([0.45, 0., 0.45]) + init_offset, np.asarray([-0.4, 0.0, 0.7]) + init_offset
-
-
-        ]})
+    a.update({'offsets': [x + INIT_OFFSET for x in BLOCK_LOCATIONS * 2]})
 algorithm = [a['algorithm'] for a in agents]
 
 config = {
