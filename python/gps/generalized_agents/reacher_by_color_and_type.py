@@ -54,7 +54,7 @@ class RobotType(Enum):
         if self.is_arm():
             return self.number_links() + 2
         elif self == RobotType.PEGGY:
-            return 25
+            return 16
         else:
             raise RuntimeError
     def gains(self):
