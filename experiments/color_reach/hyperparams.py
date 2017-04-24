@@ -31,6 +31,7 @@ IS_TESTING = False
 NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 10
 SAMPLES = 10
+VERBOSE_TRIALS = False
 
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
@@ -38,11 +39,11 @@ from gps.gui.config import generate_experiment_info
 
 from gps.generalized_agents.reacher_by_color_and_type import RobotType, reacher_by_color_and_type
 
-BLOCK_LOCATIONS = [np.asarray(loc) for loc in ([-0.3, 0., -1.65], [0.4, 0., -1.3],  [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
-INIT_OFFSET = np.array([0.8, 0.0, 0.5])
+BLOCK_LOCATIONS = [np.asarray(loc) / 2 for loc in ([0.4, 0., -1.3], [-0.3, 0., -1.65], [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
+INIT_OFFSET = np.array([0.8, 0.0, 0.5]) / 2
 
 task_values, robot_values, arguments = [], [], []
-for robot_n, robot_type in enumerate(RobotType):
+for robot_n, robot_type in enumerate((RobotType.FOUR_LINK, RobotType.PEGGY, RobotType.THREE_LINK_SHORT_JOINT)):
     for task_n, color in enumerate(("red", "green", "yellow", "black")):
         task_values.append(task_n)
         robot_values.append(robot_n)
@@ -102,8 +103,8 @@ algorithm = [a['algorithm'] for a in agents]
 config = {
     'iterations': ITERATIONS,
     'is_testing' : IS_TESTING,
-    'num_samples': SAMPLES * (1 - IS_TESTING),
-    'verbose_trials': 0,
+    'num_samples': SAMPLES,
+    'verbose_trials': SAMPLES * VERBOSE_TRIALS,
     'verbose_policy_trials': int(IS_TESTING),
     'save_wts': True,
     'common': common,
