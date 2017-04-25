@@ -103,6 +103,7 @@ algorithm = [a['algorithm'] for a in agents]
 config = {
     'iterations': ITERATIONS,
     'is_testing' : IS_TESTING,
+    'load_old_weights' : True,
     'num_samples': SAMPLES,
     'verbose_trials': SAMPLES * VERBOSE_TRIALS,
     'verbose_policy_trials': int(IS_TESTING),

@@ -157,7 +157,7 @@ class GPSMain(object):
 
         self._end()
 
-    def run_badmm(self, testing, itr_load=None):
+    def run_badmm(self, testing, load_old_weights, itr_load=None):
         """
         Run training by iteratively sampling and taking an iteration.
         Args:
@@ -188,11 +188,13 @@ class GPSMain(object):
             #     self.policy_opt.policy[r].x_idx = range(size)
         # pool = Pool()
 
-        if testing:
+        weights_pkl_offset = 0
+        if testing or load_old_weights:
 
             from os import listdir
             from re import sub
             highest_nn_dump_iteration = max([int(sub("\D", "", x)) for x in listdir("color_reach_dropout_weights")])
+            weights_pkl_offset = highest_nn_dump_iteration + 1
             val_vars, pol_var = pickle.load(open('color_reach_dropout_weights/weights_itr%s.pkl' % highest_nn_dump_iteration, 'rb'))
             self.policy_opt.var = pol_var#[pol_var[-2]]
             for k,v in self.policy_opt.av.items():
@@ -200,7 +202,7 @@ class GPSMain(object):
                     print(k)
                     assign_op = v.assign(val_vars[k])
                     self.policy_opt.sess.run(assign_op)
-        else:
+        if not testing:
             import os.path
             TRAJ_DISTR_COLOR_REACH = "traj_distr_color_reach.pkl"
             HAVE_TRAJ_DISTR = os.path.isfile(TRAJ_DISTR_COLOR_REACH)
@@ -294,7 +296,7 @@ class GPSMain(object):
             for k,v in self.policy_opt.av.iteritems():
                 vars[k] = self.policy_opt.sess.run(v)
             data_dump =[vars, self.policy_opt.var]
-            with open('color_reach_dropout_weights/weights_itr'+str(itr)+'.pkl','wb') as f:
+            with open('color_reach_dropout_weights/weights_itr'+str(itr + weights_pkl_offset)+'.pkl','wb') as f:
                 pickle.dump(data_dump, f)
             if itr % self.check_itr == 0 and itr >0:
                 import IPython
@@ -739,11 +741,11 @@ def main():
             else:
                 if args.multithread:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_badmm_parallel(testing=hyperparams.config['is_testing'], itr_load=resume_training_itr)
+                        target=lambda: gps.run_badmm_parallel(testing=hyperparams.config['is_testing'], load_old_weights=hyperparams.config['load_old_weights'], itr_load=resume_training_itr)
                     )
                 else:
                     run_gps = threading.Thread(
-                        target=lambda: gps.run_badmm(testing=hyperparams.config['is_testing'], itr_load=resume_training_itr)
+                        target=lambda: gps.run_badmm(testing=hyperparams.config['is_testing'], load_old_weights=hyperparams.config['load_old_weights'], itr_load=resume_training_itr)
                     )
             run_gps.daemon = True
             run_gps.start()
@@ -754,7 +756,7 @@ def main():
             if hyperparams.config['algorithm'][0]['type'] == AlgorithmTrajOpt:
                 gps.run(itr_load=resume_training_itr)
             else:
-                gps.run_badmm(testing=hyperparams.config['is_testing'], itr_load=resume_training_itr)
+                gps.run_badmm(testing=hyperparams.config['is_testing'], load_old_weights=hyperparams.config['load_old_weights'], itr_load=resume_training_itr)
 
 if __name__ == "__main__":
     main()
