@@ -7,6 +7,7 @@ import logging
 import imp
 import os
 import os.path
+import re
 import sys
 import copy
 import argparse
@@ -188,12 +189,14 @@ class GPSMain(object):
             #     self.policy_opt.policy[r].x_idx = range(size)
         # pool = Pool()
 
-        weights_pkl_offset = 0
-        if testing or load_old_weights:
+        if not os.path.exists("color_reach_dropout_weights"):
+            os.makedirs("color_reach_dropout_weights")
 
-            from os import listdir
-            from re import sub
-            highest_nn_dump_iteration = max([int(sub("\D", "", x)) for x in listdir("color_reach_dropout_weights")])
+        weights_pkl_offset = 0
+
+        nn_dumps = [int(re.sub("\D", "", x)) for x in os.listdir("color_reach_dropout_weights")]
+        if testing or load_old_weights and nn_dumps:
+            highest_nn_dump_iteration = max(nn_dumps)
             weights_pkl_offset = highest_nn_dump_iteration + 1
             val_vars, pol_var = pickle.load(open('color_reach_dropout_weights/weights_itr%s.pkl' % highest_nn_dump_iteration, 'rb'))
             self.policy_opt.var = pol_var#[pol_var[-2]]
@@ -203,7 +206,6 @@ class GPSMain(object):
                     assign_op = v.assign(val_vars[k])
                     self.policy_opt.sess.run(assign_op)
         if not testing:
-            import os.path
             TRAJ_DISTR_COLOR_REACH = "traj_distr_color_reach.pkl"
             HAVE_TRAJ_DISTR = os.path.isfile(TRAJ_DISTR_COLOR_REACH)
             if HAVE_TRAJ_DISTR:
