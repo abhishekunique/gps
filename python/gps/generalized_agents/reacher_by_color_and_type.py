@@ -30,13 +30,13 @@ class RobotType(Enum):
     THREE_LINK = 1
     THREE_LINK_SHORT_JOINT = 2
     FOUR_LINK = 3
-    PEGGY = 4
+    PR2 = 4
     KINOVA = 5
     BAXTER = 6
     def is_arm(self):
         if self == RobotType.THREE_LINK or self == RobotType.THREE_LINK_SHORT_JOINT or self == RobotType.FOUR_LINK:
             return True
-        elif self == RobotType.PEGGY or self == RobotType.KINOVA or self == RobotType.BAXTER:
+        elif self == RobotType.PR2 or self == RobotType.KINOVA or self == RobotType.BAXTER:
             return False
         else:
             raise RuntimeError
@@ -45,7 +45,7 @@ class RobotType(Enum):
             return 3
         elif self == RobotType.FOUR_LINK:
             return 4
-        elif self == RobotType.PEGGY:
+        elif self == RobotType.PR2:
             return 7
         elif self == RobotType.KINOVA:
             return 9
@@ -56,7 +56,7 @@ class RobotType(Enum):
     def bodies_before_color_blocks(self):
         if self.is_arm():
             return self.number_links() + 2
-        elif self == RobotType.PEGGY:
+        elif self == RobotType.PR2:
             return 16
         elif self == RobotType.KINOVA:
             return 10
@@ -67,7 +67,7 @@ class RobotType(Enum):
     def gains(self):
         if self.is_arm() or self == RobotType.KINOVA or self == RobotType.BAXTER:
             return np.ones(self.number_links())
-        elif self == RobotType.PEGGY:
+        elif self == RobotType.PR2:
             return np.array([3.09, 1.08, 0.393, 0.674, 0.111, 0.152, 0.098])
         else:
             raise RuntimeError
@@ -83,7 +83,7 @@ XML_BY_ROBOT_TYPE = {
     RobotType.THREE_LINK_SHORT_JOINT : './mjc_models/arm_3link_reach_colors_shortjoint.xml',
     RobotType.THREE_LINK : './mjc_models/arm_3link_reach_colors.xml',
     RobotType.FOUR_LINK : './mjc_models/arm_4link_reach_colors.xml',
-    RobotType.PEGGY : './mjc_models/pr2_arm3d_reach_colors.xml',
+    RobotType.PR2 : './mjc_models/pr2_arm3d_reach_colors.xml',
     RobotType.KINOVA : './mjc_models/kinova/jaco.xml',
     RobotType.BAXTER : './mjc_models/baxter/baxter.xml'
 }
