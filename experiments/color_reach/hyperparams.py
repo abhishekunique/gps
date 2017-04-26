@@ -28,6 +28,7 @@ IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
 USE_IMAGES = False
 IS_TESTING = False
+LOAD_OLD_WEIGHTS = False
 NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 10
 SAMPLES = 10
@@ -103,7 +104,7 @@ algorithm = [a['algorithm'] for a in agents]
 config = {
     'iterations': ITERATIONS,
     'is_testing' : IS_TESTING,
-    'load_old_weights' : True,
+    'load_old_weights' : LOAD_OLD_WEIGHTS,
     'num_samples': SAMPLES,
     'verbose_trials': SAMPLES * VERBOSE_TRIALS,
     'verbose_policy_trials': int(IS_TESTING),
