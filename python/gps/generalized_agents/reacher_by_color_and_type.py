@@ -79,7 +79,7 @@ XML_BY_ROBOT_TYPE = {
     RobotType.PEGGY : './mjc_models/pr2_arm3d_reach_colors.xml'
 }
 
-def reacher_by_color_and_type(robot_number, num_robots, offsets, color, robot_type, enable_images):
+def reacher_by_color_and_type(robot_number, num_robots, init_offset, offsets, color, robot_type, enable_images):
     number_links = robot_type.number_links()
     bodies_before_color_blocks = robot_type.bodies_before_color_blocks()
     SENSOR_DIMS = {
@@ -181,7 +181,7 @@ def reacher_by_color_and_type(robot_number, num_robots, offsets, color, robot_ty
 
     fk_cost_0 = [{
         'type': CostFK,
-        'target_end_effector': np.concatenate([np.array([0.8, 0.0, 0.5])+ offsets[i], np.zeros(12)]),
+        'target_end_effector': np.concatenate([np.array(init_offset) + offsets[i], np.zeros(12)]),
         'wp': np.array([1, 1, 1, 0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0]),
         'l1': 0.1,
         'l2': 10.0,
