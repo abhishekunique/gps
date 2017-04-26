@@ -79,7 +79,7 @@ XML_BY_ROBOT_TYPE = {
     RobotType.THREE_LINK : './mjc_models/arm_3link_reach_colors.xml',
     RobotType.FOUR_LINK : './mjc_models/arm_4link_reach_colors.xml',
     RobotType.PEGGY : './mjc_models/pr2_arm3d_reach_colors.xml',
-    RobotType.KINOVA : './mjc_models/jaco.xml'
+    RobotType.KINOVA : './mjc_models/kinova/jaco.xml'
 }
 
 def reacher_by_color_and_type(robot_number, num_robots, init_offset, offsets, color, robot_type, enable_images):
