@@ -188,17 +188,18 @@ class GPSMain(object):
             #     # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
             #     self.policy_opt.policy[r].x_idx = range(size)
         # pool = Pool()
-
-        if not os.path.exists("color_reach_dropout_weights"):
-            os.makedirs("color_reach_dropout_weights")
+        nn_dump_path = self._hyperparams["nn_dump_path"]
+        TRAJ_DISTR_COLOR_REACH = self._hyperparams["traj_distr_dump"]
+        if not os.path.exists(nn_dump_path):
+            os.makedirs(nn_dump_path)
 
         weights_pkl_offset = 0
 
-        nn_dumps = [int(re.sub("\D", "", x)) for x in os.listdir("color_reach_dropout_weights")]
+        nn_dumps = [int(re.sub("\D", "", x)) for x in os.listdir(nn_dump_path)]
         if testing or load_old_weights and nn_dumps:
             highest_nn_dump_iteration = max(nn_dumps)
             weights_pkl_offset = highest_nn_dump_iteration + 1
-            val_vars, pol_var = pickle.load(open('color_reach_dropout_weights/weights_itr%s.pkl' % highest_nn_dump_iteration, 'rb'))
+            val_vars, pol_var = pickle.load(open('{0}/weights_itr{1}.pkl'.format(nn_dump_path, highest_nn_dump_iteration), 'rb'))
             self.policy_opt.var = pol_var#[pol_var[-2]]
             for k,v in self.policy_opt.av.items():
                 if k in val_vars:
@@ -206,7 +207,6 @@ class GPSMain(object):
                     assign_op = v.assign(val_vars[k])
                     self.policy_opt.sess.run(assign_op)
         if not testing:
-            TRAJ_DISTR_COLOR_REACH = "traj_distr_color_reach.pkl"
             HAVE_TRAJ_DISTR = os.path.isfile(TRAJ_DISTR_COLOR_REACH)
             if HAVE_TRAJ_DISTR:
                 traj_distr = self.data_logger.unpickle(TRAJ_DISTR_COLOR_REACH)
@@ -298,7 +298,7 @@ class GPSMain(object):
             for k,v in self.policy_opt.av.iteritems():
                 vars[k] = self.policy_opt.sess.run(v)
             data_dump =[vars, self.policy_opt.var]
-            with open('color_reach_dropout_weights/weights_itr'+str(itr + weights_pkl_offset)+'.pkl','wb') as f:
+            with open('{0}/weights_itr{1}.pkl'.format(nn_dump_path, itr + weights_pkl_offset),'wb') as f:
                 pickle.dump(data_dump, f)
             if itr % self.check_itr == 0 and itr >0:
                 import IPython
