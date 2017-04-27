@@ -3,25 +3,10 @@ from __future__ import division
 from datetime import datetime
 import os.path
 import numpy as np
-import operator
 
 from gps import __file__ as gps_filepath
-from gps.agent.mjc.agent_mjc import AgentMuJoCo
-from gps.algorithm.algorithm_badmm import AlgorithmBADMM
-from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
-from gps.algorithm.cost.cost_fk import CostFK
-from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
-from gps.algorithm.cost.cost_action import CostAction
-from gps.algorithm.cost.cost_sum import CostSum
-from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
-from gps.algorithm.dynamics.dynamics_prior_gmm import DynamicsPriorGMM
-from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
-from gps.algorithm.policy.lin_gauss_init import init_lqr, init_pd, init_from_file
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
-from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
-from gps.algorithm.policy_opt.tf_model_imbalanced import model_fc_shared
-from gps.algorithm.policy_opt.tf_model_example_multirobot import example_tf_network_multi, multitask_multirobot_conv_supervised
-from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUADRATIC
+from gps.algorithm.policy_opt.tf_model_example_multirobot import multitask_multirobot_conv_supervised
 
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
