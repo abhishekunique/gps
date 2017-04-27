@@ -26,14 +26,28 @@ from gps.algorithm.cost.cost_utils import RAMP_LINEAR, RAMP_FINAL_ONLY, RAMP_QUA
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
+
+MODE = "training"
 USE_IMAGES = False
-IS_TESTING = False
 LOAD_OLD_WEIGHTS = False
 NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 10
-SAMPLES = 10
-VERBOSE_TRIALS = False
 ARMS_3D = True
+
+if MODE == "testing":
+    IS_TESTING = True
+    SAMPLES = 10
+    VERBOSE_TRIALS = False
+elif MODE == "check-traj":
+    IS_TESTING = False
+    SAMPLES = 1
+    VERBOSE_TRIALS = True
+elif MODE == "training":
+    IS_TESTING = False
+    SAMPLES = 10
+    VERBOSE_TRIALS = False
+else:
+    raise RuntimeError
 
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
