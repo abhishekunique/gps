@@ -33,6 +33,7 @@ NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 10
 SAMPLES = 10
 VERBOSE_TRIALS = False
+ARMS_3D = True
 
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
@@ -60,7 +61,7 @@ else:
     robot_values    = robot_values[:leave_one_out]+robot_values[leave_one_out+1:]
     arguments       = arguments[:leave_one_out]+arguments[leave_one_out+1:]
 
-agents = [reacher_by_color_and_type(i, len(arguments), INIT_OFFSET, BLOCK_LOCATIONS, color, robot_type, USE_IMAGES) for i, (color, robot_type) in enumerate(arguments)]
+agents = [reacher_by_color_and_type(i, len(arguments), ARMS_3D, INIT_OFFSET, BLOCK_LOCATIONS, color, robot_type, USE_IMAGES) for i, (color, robot_type) in enumerate(arguments)]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/color_reach/'

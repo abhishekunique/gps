@@ -71,7 +71,7 @@ class RobotType(Enum):
             return np.array([3.09, 1.08, 0.393, 0.674, 0.111, 0.152, 0.098])
         else:
             raise RuntimeError
-    def xml(self):
+    def xml(self, is_3d):
         filename = {
             RobotType.THREE_LINK_SHORT_JOINT : './mjc_models/arm_3link_reach_colors_shortjoint',
             RobotType.THREE_LINK : './mjc_models/arm_3link_reach_colors',
@@ -80,6 +80,8 @@ class RobotType(Enum):
             RobotType.KINOVA : './mjc_models/kinova/jaco',
             RobotType.BAXTER : './mjc_models/baxter/baxter'
         }[self]
+        if self.is_arm() and is_3d:
+            filename += "_3d"
         return filename + ".xml"
 
 UNCHANGED_OBJECT_BY_COLOR = {
@@ -89,7 +91,7 @@ UNCHANGED_OBJECT_BY_COLOR = {
     "red": 1
 }
 
-def reacher_by_color_and_type(robot_number, num_robots, init_offset, offsets, color, robot_type, enable_images):
+def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offsets, color, robot_type, enable_images):
     number_links = robot_type.number_links()
     bodies_before_color_blocks = robot_type.bodies_before_color_blocks()
     SENSOR_DIMS = {
@@ -137,7 +139,7 @@ def reacher_by_color_and_type(robot_number, num_robots, init_offset, offsets, co
     agent_dict['network_params'].update(image_dims)
     agent_dict['agent'] = {
         'type': AgentMuJoCo,
-        'filename': robot_type.xml(),
+        'filename': robot_type.xml(is_3d),
         'x0': np.zeros(2 * number_links),
         'dt': 0.05,
         'substeps': 5,
