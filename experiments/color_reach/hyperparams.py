@@ -44,7 +44,7 @@ BLOCK_LOCATIONS = [np.asarray(loc) / 2 for loc in ([-0.3, 0., -1.65], [0.4, 0., 
 INIT_OFFSET = np.array([0.8, 0.0, 0.5]) / 2
 
 task_values, robot_values, arguments = [], [], []
-for robot_n, robot_type in enumerate((RobotType.FOUR_LINK, RobotType.PR2, RobotType.THREE_LINK_SHORT_JOINT)):
+for robot_n, robot_type in enumerate((RobotType.FOUR_LINK, RobotType.PEGGY, RobotType.THREE_LINK_SHORT_JOINT)):
     for task_n, color in enumerate(("red", "green", "yellow", "black")):
         task_values.append(task_n)
         robot_values.append(robot_n)
