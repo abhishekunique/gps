@@ -33,10 +33,11 @@ class RobotType(Enum):
     PEGGY = 4
     KINOVA = 5
     BAXTER = 6
+    PR2 = 7
     def is_arm(self):
-        if self == RobotType.THREE_LINK or self == RobotType.THREE_LINK_SHORT_JOINT or self == RobotType.FOUR_LINK:
+        if self in {RobotType.THREE_LINK, RobotType.THREE_LINK_SHORT_JOINT, RobotType.FOUR_LINK}:
             return True
-        elif self == RobotType.PEGGY or self == RobotType.KINOVA or self == RobotType.BAXTER:
+        elif self in {RobotType.PEGGY, RobotType.KINOVA, RobotType.BAXTER, RobotType.PR2}:
             return False
         else:
             raise RuntimeError
@@ -51,6 +52,8 @@ class RobotType(Enum):
             return 9
         elif self == RobotType.BAXTER:
             return 19
+        elif self == RobotType.PR2:
+            return 11
         else:
             raise RuntimeError
     def bodies_before_color_blocks(self):
@@ -62,10 +65,12 @@ class RobotType(Enum):
             return 10
         elif self == RobotType.BAXTER:
             return 35
+        elif self == RobotType.PR2:
+            return 15
         else:
             raise RuntimeError
     def gains(self):
-        if self.is_arm() or self == RobotType.KINOVA or self == RobotType.BAXTER:
+        if self.is_arm() or self in {RobotType.KINOVA, RobotType.BAXTER, RobotType.PR2}:
             return np.ones(self.number_links())
         elif self == RobotType.PEGGY:
             return np.array([3.09, 1.08, 0.393, 0.674, 0.111, 0.152, 0.098])
@@ -78,7 +83,8 @@ class RobotType(Enum):
             RobotType.FOUR_LINK : './mjc_models/arm_4link_reach_colors',
             RobotType.PEGGY : './mjc_models/peggy_arm3d_reach_colors',
             RobotType.KINOVA : './mjc_models/kinova/jaco',
-            RobotType.BAXTER : './mjc_models/baxter/baxter'
+            RobotType.BAXTER : './mjc_models/baxter/baxter',
+            RobotType.PR2 : './mjc_models/pr2/pr2_arm'
         }[self]
         if self.is_arm() and is_3d:
             filename += "_3d"
