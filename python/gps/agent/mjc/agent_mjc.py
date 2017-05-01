@@ -129,8 +129,8 @@ class AgentMuJoCo(Agent):
         all_offsets = copy.deepcopy(self._hyperparams['offsets'])
         # print(len(all_offsets))
         # print(condition%4)
-        curr_offset = all_offsets[condition] #which of them to choose now
-        del all_offsets[condition]
+        curr_offset = all_offsets[condition % len(all_offsets)] #which of them to choose now
+        del all_offsets[condition % len(all_offsets)]
         orders = [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]]
         curr_order = random.choice(orders)
         order_idx = 0
@@ -141,7 +141,7 @@ class AgentMuJoCo(Agent):
                 if condition<=3:
                     self._model[condition]['body_pos'][j, :] = all_offsets[curr_order[order_idx]]
                 else:
-                    self._model[condition]['body_pos'][j, :] = all_offsets[4+curr_order[order_idx]]
+                    self._model[condition]['body_pos'][j, :] = all_offsets[curr_order[order_idx]]
                 order_idx += 1
         self._world[condition].set_model(self._model[condition])
         self._world[condition].kinematics()

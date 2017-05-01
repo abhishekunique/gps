@@ -98,7 +98,7 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = [a['agent'] for a in agents]
 for a in agent:
-    a.update({'offsets': [x + INIT_OFFSET for x in BLOCK_LOCATIONS * 2]})
+    a.update({'offsets': [x + INIT_OFFSET for x in BLOCK_LOCATIONS]})
 algorithm = [a['algorithm'] for a in agents]
 
 config = {
