@@ -18,6 +18,7 @@ LOAD_OLD_WEIGHTS = False
 NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 10
 ARMS_3D = True
+NAME = "PR2_vs_reachers"
 
 if MODE == "testing":
     IS_TESTING = True
@@ -105,8 +106,8 @@ config = {
     'iterations': ITERATIONS,
     'is_testing' : IS_TESTING,
     'load_old_weights' : LOAD_OLD_WEIGHTS,
-    'nn_dump_path' : "color_reach_dropout_weights",
-    'traj_distr_dump' : "traj_distr_color_reach.pkl",
+    'nn_dump_path' : "nn_weights_%s" % NAME,
+    'traj_distr_dump' : "traj_distr_%s.pkl" % NAME,
     'num_samples': SAMPLES,
     'verbose_trials': SAMPLES * VERBOSE_TRIALS,
     'verbose_policy_trials': int(IS_TESTING),
