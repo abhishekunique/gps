@@ -124,25 +124,9 @@ class AgentMuJoCo(Agent):
         """
         # Create new sample, populate first time step.
         act = np.load('/home/kavi/gps/actions.npy')
-        unchanged_object = copy.deepcopy(self._hyperparams['unchanged_object'])
-        objs = copy.deepcopy(self._hyperparams['pos_body_idx'][condition]) #[6,7,8,9]
-        all_offsets = copy.deepcopy(self._hyperparams['offsets'])
-        # print(len(all_offsets))
-        # print(condition%4)
-        curr_offset = all_offsets[condition % len(all_offsets)] #which of them to choose now
-        del all_offsets[condition % len(all_offsets)]
-        orders = [[0,1,2],[0,2,1],[1,0,2],[1,2,0],[2,0,1],[2,1,0]]
-        curr_order = random.choice(orders)
-        order_idx = 0
-        for j in objs:
-            if j == unchanged_object:
-                self._model[condition]['body_pos'][unchanged_object, :] = curr_offset
-            else:
-                if condition<=3:
-                    self._model[condition]['body_pos'][j, :] = all_offsets[curr_order[order_idx]]
-                else:
-                    self._model[condition]['body_pos'][j, :] = all_offsets[curr_order[order_idx]]
-                order_idx += 1
+        offs_to_use = self._hyperparams['offs_to_use'](self, condition)
+        for idx, j in enumerate(self._hyperparams['pos_body_idx'][condition]):
+            self._model[condition]['body_pos'][j, :] = offs_to_use[idx]
         self._world[condition].set_model(self._model[condition])
         self._world[condition].kinematics()
         feature_fn = None

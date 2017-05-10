@@ -90,12 +90,7 @@ class RobotType(Enum):
             filename += "_3d"
         return filename + ".xml"
 
-UNCHANGED_OBJECT_BY_COLOR = {
-    "black": 4,
-    "green": 2,
-    "yellow": 3,
-    "red": 1
-}
+COLOR_ORDER = ("red", "green", "yellow", "black")
 
 def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offsets, color, robot_type, enable_images):
     number_links = robot_type.number_links()
@@ -143,6 +138,17 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
     }
     agent_dict['network_params'].update(image_dims)
+    def offset_generator(self, condition):
+        all_offsets = list(self._hyperparams['offsets'])
+        cond_idx = condition % len(all_offsets)
+        to_shuffle = sorted(set(range(len(all_offsets))) - {cond_idx})
+        unchanged = COLOR_ORDER.index(color)
+        shuffled = list(to_shuffle)
+        np.random.shuffle(shuffled)
+        indices = np.array(range(len(all_offsets)))
+        indices[to_shuffle] = shuffled
+        indices[[unchanged, cond_idx]] = indices[[cond_idx, unchanged]]
+        return [all_offsets[i] for i in indices]
     agent_dict['agent'] = {
         'type': AgentMuJoCo,
         'filename': robot_type.xml(is_3d),
@@ -162,7 +168,7 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES] + image_data,
         'meta_include': [],
         'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
-        'unchanged_object': UNCHANGED_OBJECT_BY_COLOR[color] + bodies_before_color_blocks
+        'offs_to_use': offset_generator
     }
     agent_dict['agent'].update(image_dims)
     agent_dict['algorithm'] = {
