@@ -53,7 +53,7 @@ class RobotType(Enum):
         elif self == RobotType.BAXTER:
             return 19
         elif self == RobotType.PR2:
-            return 11
+            return 7
         else:
             raise RuntimeError
     def bodies_before_color_blocks(self):
@@ -66,13 +66,13 @@ class RobotType(Enum):
         elif self == RobotType.BAXTER:
             return 35
         elif self == RobotType.PR2:
-            return 15
+            return 11
         else:
             raise RuntimeError
     def gains(self):
-        if self.is_arm() or self in {RobotType.KINOVA, RobotType.BAXTER, RobotType.PR2}:
+        if self.is_arm() or self in {RobotType.KINOVA, RobotType.BAXTER}:
             return np.ones(self.number_links())
-        elif self == RobotType.PEGGY:
+        elif self in {RobotType.PEGGY, RobotType.PR2}:
             return np.array([3.09, 1.08, 0.393, 0.674, 0.111, 0.152, 0.098])
         else:
             raise RuntimeError

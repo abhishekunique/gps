@@ -95,31 +95,6 @@
                           <inertial pos="0 0 0" mass="0.001" diaginertia="0.001 0.001 0.001" />
                           <geom type="box" size="0.0005 0.0005 0.0005" pos="0 0 0" />
                         </body>
-
-
-                       <body name="r_gripper_l_finger_link" pos="0.07691 0.01 0">
-                          <inertial pos="0.03598 0.0173 -0.00164" quat="0.57444 0.429111 0.518782 0.465562" mass="0.17126" diaginertia="0.00019774 0.000181336 7.66239e-005" />
-                          <joint name="r_gripper_l_finger_joint" type="hinge" pos="0 0 0" axis="0 0 1" />
-                          <geom rgba="0.7 0.7 0.7 1" mesh="l_finger"/>
-
-                          <body name="r_gripper_l_finger_tip_link" pos="0.09137 0.00495 0">
-                            <inertial pos="0.00423 0.00284 0" quat="0.249588 0.661594 -0.249588 0.661594" mass="0.04419" diaginertia="1.54177e-005 1.50049e-005 3.23624e-006" />
-                            <joint name="r_gripper_l_finger_tip_joint" type="hinge" pos="0 0 0" axis="0 0 1" />
-                            <geom rgba="0 0.8 0 1" mesh="l_finger_tip"/>
-                          </body>
-                        </body>
-
-                        <body name="r_gripper_r_finger_link" pos="0.07691 -0.01 0" euler="3.14 0 0">
-                          <inertial pos="0.03576 -0.01736 -0.00095" quat="0.474684 0.510909 0.446353 0.560727" mass="0.17389" diaginertia="0.000198903 0.00018134 7.66847e-005" />
-                          <joint name="r_gripper_r_finger_joint" type="hinge" pos="0 0 0" axis="0 0 1" />
-                          <geom rgba="0.7 0.7 0.7 1" mesh="l_finger"/>
-
-                          <body name="r_gripper_r_finger_tip_link" pos="0.09137 0.00495 0">
-                            <inertial pos="0.00423 -0.00284 0" quat="-0.249588 0.661594 0.249588 0.661594" mass="0.04419" diaginertia="1.54177e-005 1.50049e-005 3.23624e-006" />
-                            <joint name="r_gripper_r_finger_tip_joint" type="hinge" pos="0 0 0" axis="0 0 1" />
-                            <geom rgba="0 0.8 0 1" mesh="l_finger_tip"/>
-                          </body>
-                        </body>
                         <site name="End of arm" pos="0 0 0" size="0.01" />
                       </body>
                     </body>
@@ -160,9 +135,5 @@
     <motor joint="r_forearm_roll_joint" name="Ar_forearm_roll_joint"/>
     <motor joint="r_wrist_flex_joint" name="Ar_wrist_flex_joint"/>
     <motor joint="r_wrist_roll_joint" name="Ar_wrist_roll_joint"/>
-    <motor joint="r_gripper_l_finger_joint" name="Ar_gripper_l_finger_joint"/>
-    <motor joint="r_gripper_l_finger_tip_joint" name="Ar_gripper_l_finger_tip_joint"/>
-    <motor joint="r_gripper_r_finger_joint" name="Ar_gripper_r_finger_joint"/>
-    <motor joint="r_gripper_r_finger_tip_joint" name="Ar_gripper_r_finger_tip_joint"/>
     </actuator>
 </mujoco>
