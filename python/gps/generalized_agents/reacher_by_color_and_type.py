@@ -139,16 +139,17 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
     }
     agent_dict['network_params'].update(image_dims)
     def offset_generator(self, condition):
-        all_offsets = list(self._hyperparams['offsets'])
-        cond_idx = condition % len(all_offsets)
-        to_shuffle = sorted(set(range(len(all_offsets))) - {cond_idx})
+        num_offsets = len(self._hyperparams['offsets'])
+        cond_idx = condition % num_offsets
+        to_shuffle = [i for i in range(num_offsets) if i != cond_idx]
         unchanged = COLOR_ORDER.index(color)
         shuffled = list(to_shuffle)
         np.random.shuffle(shuffled)
-        indices = np.array(range(len(all_offsets)))
+        indices = np.arange(num_offsets)
         indices[to_shuffle] = shuffled
         indices[[unchanged, cond_idx]] = indices[[cond_idx, unchanged]]
-        return [all_offsets[i] for i in indices]
+        print indices
+        return [self._hyperparams['offsets'][i] + [0, np.random.uniform(-.5, .5), 0] for i in indices]
     agent_dict['agent'] = {
         'type': AgentMuJoCo,
         'filename': robot_type.xml(is_3d),
