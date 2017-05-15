@@ -12,26 +12,34 @@ IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
 
-MODE = "training"
+MODE = "view-traj"
 USE_IMAGES = False
 LOAD_OLD_WEIGHTS = False
 NEURAL_NET_ITERATIONS = 20000
-ITERATIONS = 10
+ITERATIONS = 100
 ARMS_3D = True
-NAME = "PR2_vs_reachers"
+NAME = "temp"
 
 if MODE == "testing":
     IS_TESTING = True
     SAMPLES = 10
     VERBOSE_TRIALS = False
+    VIEW_TRAJECTORIES = True
 elif MODE == "check-traj":
     IS_TESTING = False
     SAMPLES = 1
     VERBOSE_TRIALS = True
+    VIEW_TRAJECTORIES = False
 elif MODE == "training":
+    IS_TESTING = False
+    SAMPLES = 1
+    VERBOSE_TRIALS = False
+    VIEW_TRAJECTORIES = False
+elif MODE == "view-traj":
     IS_TESTING = False
     SAMPLES = 10
     VERBOSE_TRIALS = False
+    VIEW_TRAJECTORIES = True
 else:
     raise RuntimeError
 
@@ -106,6 +114,7 @@ config = {
     'iterations': ITERATIONS,
     'is_testing' : IS_TESTING,
     'load_old_weights' : LOAD_OLD_WEIGHTS,
+    'view_trajectories' : VIEW_TRAJECTORIES,
     'nn_dump_path' : "nn_weights_%s" % NAME,
     'traj_distr_dump' : "traj_distr_%s.pkl" % NAME,
     'num_samples': SAMPLES,

@@ -280,6 +280,17 @@ class GPSMain(object):
                 # self.policy_opt.prepare_solver(itr_robot_status, self.)
                 print "iter", itr,"start for rn", robot_number, datetime.time(datetime.now())
                 self._take_iteration_start(itr, traj_sample_lists[robot_number], robot_number=robot_number)
+            if self._hyperparams['view_trajectories']:
+                for robot_number in range(self.num_robots):
+                    print("update traj")
+                    self.algorithm[robot_number]._update_trajectories()
+                    self.algorithm[robot_number]._advance_iteration_variables()
+                if itr == 15:
+                    raw_input("Press enter to continue: ")
+                for robot_number in range(self.num_robots):
+                    self._take_sample(itr, 0, i, robot_number=robot_number, verbose=True)
+                    self._take_sample(itr, 3, i, robot_number=robot_number, verbose=True)
+                continue
             time4 = time.clock()
             self._take_iteration_shared()
             time5 = time.clock()
@@ -468,7 +479,7 @@ class GPSMain(object):
             return itr_load + 1
 
 
-    def _take_sample(self, itr, cond, i, robot_number=0):
+    def _take_sample(self, itr, cond, i, robot_number=0, verbose=False):
         """
         Collect a sample from the agent.
         Args:
@@ -517,7 +528,7 @@ class GPSMain(object):
         else:
             self.agent[robot_number].sample(
                 pol, cond,
-                verbose=(i < self._hyperparams['verbose_trials'])
+                verbose=(i < self._hyperparams['verbose_trials']) or verbose
             )
 
     def _take_iteration(self, itr, sample_lists, robot_number=0):
