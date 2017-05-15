@@ -1368,8 +1368,8 @@ def multitask_multirobot_conv_supervised(is_testing, dim_input=[27, 27], dim_out
     #need to create taskrobot_mapping
     task_list = network_config['task_list']
     robot_list = network_config['robot_list']
-    num_robots = 3#max(robot_list)+1
-    num_tasks = 4#max(task_list)+1
+    num_robots = max(robot_list)+1
+    num_tasks = max(task_list)+1
     if is_testing:
         tasks = task_list
         robots = robot_list
