@@ -148,7 +148,6 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
         indices = np.arange(num_offsets)
         indices[to_shuffle] = shuffled
         indices[[unchanged, cond_idx]] = indices[[cond_idx, unchanged]]
-        print indices
         return [self._hyperparams['offsets'][i] + [0, np.random.uniform(-.5, .5), 0] for i in indices]
     agent_dict['agent'] = {
         'type': AgentMuJoCo,
