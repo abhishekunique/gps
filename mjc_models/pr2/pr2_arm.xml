@@ -17,7 +17,7 @@
 ====================================================== -->
 <mujoco model="PR2-Arm(v1.31)">
   <compiler coordinate="local" angle="radian" inertiafromgeom="true" meshdir="Meshes/"/>
-  <option timestep="0.005" iterations='20'/>
+  <option timestep="0.005" gravity="0 0 0" iterations='20' integrator="RK4"/>
 
   <asset>
     <mesh file="shoulder_pan.stl"/>
@@ -37,7 +37,7 @@
   </asset>
 
   <default>
-    <joint limited="false" damping="0.2" armature=".01"/>
+    <joint limited="false" range="-3.14159 3.14159" damping="0.2" armature=".01"/>
     <geom friction=".5 .1 .1" margin="0.002" contype="1" conaffinity="0" type="mesh"/>
   </default>
 
