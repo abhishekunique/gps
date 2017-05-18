@@ -51,7 +51,7 @@ class RobotType(Enum):
         elif self == RobotType.KINOVA:
             return 9
         elif self == RobotType.BAXTER:
-            return 19
+            return 10
         elif self == RobotType.PR2:
             return 7
         else:
@@ -64,7 +64,7 @@ class RobotType(Enum):
         elif self == RobotType.KINOVA:
             return 10
         elif self == RobotType.BAXTER:
-            return 35
+            return 21
         elif self == RobotType.PR2:
             return 11
         else:
