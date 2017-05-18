@@ -121,15 +121,7 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-        traj_distr = self.data_logger.unpickle('/home/abhigupta/gps/2step_final.pkl')
-        for ag in range(self.num_robots):
-            name = self.agent[ag]._hyperparams['filename'][0]
-            if name in traj_distr:
-                for cond in  self._train_idx[ag]:
-                    print ag, cond
-                    self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
-            else:
-                print name, "not in traj_distr"
+        self.read_traj_distr(self._hyperparams["traj_distr_dump"])
 
         print("starting")
         for itr in range(itr_start, self._hyperparams['iterations']):
@@ -157,7 +149,30 @@ class GPSMain(object):
 
 
         self._end()
-
+    def read_traj_distr(self, traj_distr_dump):
+        HAVE_TRAJ_DISTR = os.path.isfile(traj_distr_dump)
+        if HAVE_TRAJ_DISTR:
+            traj_distr = self.data_logger.unpickle(traj_distr_dump)
+            for ag in range(self.num_robots):
+                name =self.agent[ag]._hyperparams['filename'][0]
+                print name
+                if name in traj_distr:
+                    for cond in  self._train_idx[ag]:
+                        print ag, cond
+                        self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
+                else:
+                    print name, "not in traj_distr"
+        else:
+            print("Getting traj distr")
+            newtraj_distr = {}
+            for ag in range(self.num_robots):
+                name = self.agent[ag]._hyperparams['filename'][0]
+                print name
+                newtraj_distr[name] = []
+                for cond in  self._train_idx[ag]:
+                    print ag, cond
+                    newtraj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
+            self.data_logger.pickle(traj_distr_dump, newtraj_distr)
     def run_badmm(self, testing, load_old_weights, itr_load=None):
         """
         Run training by iteratively sampling and taking an iteration.
@@ -207,28 +222,7 @@ class GPSMain(object):
                     assign_op = v.assign(val_vars[k])
                     self.policy_opt.sess.run(assign_op)
         if not testing:
-            HAVE_TRAJ_DISTR = os.path.isfile(TRAJ_DISTR_COLOR_REACH)
-            if HAVE_TRAJ_DISTR:
-                traj_distr = self.data_logger.unpickle(TRAJ_DISTR_COLOR_REACH)
-                for ag in range(self.num_robots):
-                    name =self.agent[ag]._hyperparams['filename'][0]
-                    print name
-                    if name in traj_distr:
-                        for cond in  self._train_idx[ag]:
-                            print ag, cond
-                            self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
-                    else:
-                        print name, "not in traj_distr"
-            else:
-                newtraj_distr = {}
-                for ag in range(self.num_robots):
-                    name = self.agent[ag]._hyperparams['filename'][0]
-                    print name
-                    newtraj_distr[name] = []
-                    for cond in  self._train_idx[ag]:
-                        print ag, cond
-                        newtraj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
-                self.data_logger.pickle(TRAJ_DISTR_COLOR_REACH, newtraj_distr)
+            self.read_traj_distr(TRAJ_DISTR_COLOR_REACH)
 
 
         if False: # TODO use for blockpush, etc.
