@@ -61,7 +61,7 @@ for robot_n, robot_type in enumerate((RobotType.FOUR_LINK, RobotType.PEGGY, Robo
         robot_values.append(robot_n)
         arguments.append((color, robot_type))
 
-leave_one_out = 11
+leave_one_out = 0
 if IS_TESTING:
     task_values     = [task_values[leave_one_out]]
     robot_values    = [robot_values[leave_one_out]]
@@ -136,6 +136,7 @@ config = {
     'inner_iterations': 4,
     'robot_iters': [range(25), range(0,25,2)],
     'to_log': [END_EFFECTOR_POINTS, JOINT_ANGLES, ACTION],
+    'random_seed' : 0xABCDE
     #'val_agents': [1],
 }
 
