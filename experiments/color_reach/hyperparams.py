@@ -3,6 +3,7 @@ from __future__ import division
 from datetime import datetime
 import os.path
 import numpy as np
+from itertools import product
 
 from gps import __file__ as gps_filepath
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
@@ -32,7 +33,7 @@ elif MODE == "check-traj":
     VIEW_TRAJECTORIES = False
 elif MODE == "training":
     IS_TESTING = False
-    SAMPLES = 1
+    SAMPLES = 5
     VERBOSE_TRIALS = False
     VIEW_TRAJECTORIES = False
 elif MODE == "view-traj":
@@ -50,6 +51,7 @@ from gps.gui.config import generate_experiment_info
 from gps.generalized_agents.reacher_by_color_and_type import RobotType, reacher_by_color_and_type
 
 BLOCK_LOCATIONS = [np.asarray(loc) / 2 for loc in ([-0.3, 0., -1.65], [0.4, 0., -1.3], [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
+BLOCK_VERTICAL_LOCATIONS = [x for x in product(*([[-0.5, 0.5]] * 4)) if sum(x) == 0]
 INIT_OFFSET = np.array([0.8, 0.0, 0.5]) / 2
 
 task_values, robot_values, arguments = [], [], []
@@ -69,7 +71,7 @@ else:
     robot_values    = robot_values[:leave_one_out]+robot_values[leave_one_out+1:]
     arguments       = arguments[:leave_one_out]+arguments[leave_one_out+1:]
 
-agents = [reacher_by_color_and_type(i, len(arguments), ARMS_3D, INIT_OFFSET, BLOCK_LOCATIONS, color, robot_type, USE_IMAGES) for i, (color, robot_type) in enumerate(arguments)]
+agents = [reacher_by_color_and_type(i, len(arguments), ARMS_3D, INIT_OFFSET, BLOCK_LOCATIONS, BLOCK_VERTICAL_LOCATIONS, color, robot_type, USE_IMAGES) for i, (color, robot_type) in enumerate(arguments)]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/color_reach/'
@@ -107,7 +109,10 @@ if not os.path.exists(common['data_files_dir']):
 
 agent = [a['agent'] for a in agents]
 for a in agent:
-    a.update({'offsets': [x + INIT_OFFSET for x in BLOCK_LOCATIONS]})
+    a.update({
+        'offsets': [x + INIT_OFFSET for x in BLOCK_LOCATIONS],
+        'vertical_offsets' : BLOCK_VERTICAL_LOCATIONS
+    })
 algorithm = [a['algorithm'] for a in agents]
 
 config = {

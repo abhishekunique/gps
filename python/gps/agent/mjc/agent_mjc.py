@@ -124,7 +124,7 @@ class AgentMuJoCo(Agent):
         """
         # Create new sample, populate first time step.
         act = np.load('/home/kavi/gps/actions.npy')
-        offs_to_use = self._hyperparams['offs_to_use'](self, condition)
+        offs_to_use = self._hyperparams['offs_to_use'](condition)
         for idx, j in enumerate(self._hyperparams['pos_body_idx'][condition]):
             self._model[condition]['body_pos'][j, :] = offs_to_use[idx]
         self._world[condition].set_model(self._model[condition])

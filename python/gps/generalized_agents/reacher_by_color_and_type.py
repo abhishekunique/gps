@@ -92,7 +92,7 @@ class RobotType(Enum):
 
 COLOR_ORDER = ("red", "green", "yellow", "black")
 
-def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offsets, color, robot_type, enable_images):
+def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offsets, vert_offs, color, robot_type, enable_images):
     number_links = robot_type.number_links()
     bodies_before_color_blocks = robot_type.bodies_before_color_blocks()
     SENSOR_DIMS = {
@@ -138,9 +138,11 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
     }
     agent_dict['network_params'].update(image_dims)
-    def offset_generator(self, condition):
-        num_offsets = len(self._hyperparams['offsets'])
+    def offset_generator(condition):
+        num_offsets = len(offsets)
+        num_verts = len(vert_offs)
         cond_idx = condition % num_offsets
+        vert_idx = (condition // num_offsets) % num_verts
         to_shuffle = [i for i in range(num_offsets) if i != cond_idx]
         unchanged = COLOR_ORDER.index(color)
         shuffled = list(to_shuffle)
@@ -148,7 +150,8 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
         indices = np.arange(num_offsets)
         indices[to_shuffle] = shuffled
         indices[[unchanged, cond_idx]] = indices[[cond_idx, unchanged]]
-        return [self._hyperparams['offsets'][i] + [0, np.random.uniform(-.5, .5), 0] for i in indices]
+        return [offsets[i] + [0, vert_offs[vert_idx][i], 0] for i in indices]
+    nconditions = len(offsets) * len(vert_offs)
     agent_dict['agent'] = {
         'type': AgentMuJoCo,
         'filename': robot_type.xml(is_3d),
@@ -157,9 +160,9 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
         'substeps': 5,
         'pos_body_offset': None,
         'pos_body_idx': np.array(range(bodies_before_color_blocks + 1, bodies_before_color_blocks + 5)),
-        'conditions': 8,
-        'train_conditions': range(4),
-        'test_conditions': range(4,8),
+        'conditions': nconditions * 2,
+        'train_conditions': range(nconditions),
+        'test_conditions': range(nconditions, nconditions * 2),
         'T': 100,
         'sensor_dims': SENSOR_DIMS,
         'state_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS,
@@ -205,7 +208,7 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
 
     fk_cost_0 = [{
         'type': CostFK,
-        'target_end_effector': np.concatenate([np.array(init_offset) + offsets[i], np.zeros(12)]),
+        'target_end_effector': np.concatenate([offset_generator(i)[i % len(offsets)], np.zeros(12)]),
         'wp': np.array([1, 1, 1, 0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0]),
         'l1': 0.1,
         'l2': 10.0,
