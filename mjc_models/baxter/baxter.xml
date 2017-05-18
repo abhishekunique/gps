@@ -19,6 +19,7 @@
 <mujoco model="baxter(v1.31)">
     <compiler coordinate="local" angle="radian" meshdir="meshes/" strippath="false" />
     <size njmax="795" nconmax="250" nstack="631875" />
+    <option gravity="0 0 0" />
 
    <asset>
         <mesh name="base_link" file="torso/base_link.STL"/>
