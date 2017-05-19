@@ -52,7 +52,7 @@ from gps.gui.config import generate_experiment_info
 from gps.generalized_agents.reacher_by_color_and_type import RobotType, reacher_by_color_and_type
 
 BLOCK_LOCATIONS = [np.asarray(loc) / 2 for loc in ([-0.3, 0., -1.65], [0.4, 0., -1.3], [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
-BLOCK_VERTICAL_LOCATIONS = [x for x in product(*([[-0.5, 0.5]] * 4)) if sum(x) == 0]
+BLOCK_VERTICAL_LOCATIONS = [-0.5, 0, 0.5]
 INIT_OFFSET = np.array([0.8, 0.0, 0.5]) / 2
 
 task_values, robot_values, arguments = [], [], []

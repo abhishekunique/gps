@@ -141,8 +141,10 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
     def offset_generator(condition):
         num_offsets = len(offsets)
         num_verts = len(vert_offs)
-        cond_idx = condition % num_offsets
-        vert_idx = (condition // num_offsets) % num_verts
+        vert_idx = condition % num_verts
+        cond_idx = (condition // num_verts) % num_offsets
+        vertical = [np.random.choice(vert_offs) for _ in range(len(offsets))]
+        vertical[cond_idx] = vert_offs[vert_idx]
         to_shuffle = [i for i in range(num_offsets) if i != cond_idx]
         unchanged = COLOR_ORDER.index(color)
         shuffled = list(to_shuffle)
@@ -150,7 +152,7 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
         indices = np.arange(num_offsets)
         indices[to_shuffle] = shuffled
         indices[[unchanged, cond_idx]] = indices[[cond_idx, unchanged]]
-        return [offsets[i] + [0, vert_offs[vert_idx][i], 0] for i in indices]
+        return [offsets[i] + [0, vertical[i], 0] for i in indices]
     nconditions = len(offsets) * len(vert_offs)
     agent_dict['agent'] = {
         'type': AgentMuJoCo,
