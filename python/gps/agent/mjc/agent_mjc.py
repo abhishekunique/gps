@@ -105,11 +105,12 @@ class AgentMuJoCo(Agent):
                 self.x0[i] = np.concatenate([self.x0[i], np.zeros((self._hyperparams['sensor_dims'][IMAGE_FEAT],))])
 
         cam_pos = self._hyperparams['camera_pos']
-        for i in range(self._hyperparams['conditions']):
-            self._world[i].init_viewer(AGENT_MUJOCO['image_width'],
-                                       AGENT_MUJOCO['image_height'],
-                                       cam_pos[0], cam_pos[1], cam_pos[2],
-                                       cam_pos[3], cam_pos[4], cam_pos[5])
+        if self._hyperparams['show_viewer']:
+            for i in range(self._hyperparams['conditions']):
+                self._world[i].init_viewer(AGENT_MUJOCO['image_width'],
+                                           AGENT_MUJOCO['image_height'],
+                                           cam_pos[0], cam_pos[1], cam_pos[2],
+                                           cam_pos[3], cam_pos[4], cam_pos[5])
 
     def sample(self, policy, condition, verbose=True, save=True, noisy=True):
         """

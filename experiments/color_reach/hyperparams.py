@@ -13,6 +13,7 @@ IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
 
+SHOW_VIEWER = False
 MODE = "view-traj"
 USE_IMAGES = False
 LOAD_OLD_WEIGHTS = False
@@ -111,7 +112,8 @@ agent = [a['agent'] for a in agents]
 for a in agent:
     a.update({
         'offsets': [x + INIT_OFFSET for x in BLOCK_LOCATIONS],
-        'vertical_offsets' : BLOCK_VERTICAL_LOCATIONS
+        'vertical_offsets' : BLOCK_VERTICAL_LOCATIONS,
+        'show_viewer' : SHOW_VIEWER
     })
 algorithm = [a['algorithm'] for a in agents]
 
