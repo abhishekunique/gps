@@ -210,7 +210,7 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
 
     fk_cost_0 = [{
         'type': CostFK,
-        'target_end_effector': np.concatenate([offset_generator(i)[i % len(offsets)], np.zeros(12)]),
+        'target_end_effector': np.concatenate([offset_generator(i)[COLOR_ORDER.index(color)], np.zeros(12)]),
         'wp': np.array([1, 1, 1, 0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0]),
         'l1': 0.1,
         'l2': 10.0,
