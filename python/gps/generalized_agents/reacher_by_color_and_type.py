@@ -205,7 +205,7 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
 
     torque_cost_0 = [{
         'type': CostAction,
-        'wu': 1e-1 / robot_type.gains(),
+        'wu': 1e-3 / robot_type.gains(),
     } for i in agent_dict['agent']['train_conditions']]
 
     fk_cost_0 = [{
