@@ -9,6 +9,12 @@ from gps import __file__ as gps_filepath
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy_opt.tf_model_example_multirobot import multitask_multirobot_conv_supervised
 
+from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
+        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
+from gps.gui.config import generate_experiment_info
+
+from gps.generalized_agents.reacher_by_color_and_type import RobotType, reacher_by_color_and_type
+
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
@@ -44,12 +50,6 @@ elif MODE == "view-traj":
     VIEW_TRAJECTORIES = True
 else:
     raise RuntimeError
-
-from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
-        END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
-from gps.gui.config import generate_experiment_info
-
-from gps.generalized_agents.reacher_by_color_and_type import RobotType, reacher_by_color_and_type
 
 BLOCK_LOCATIONS = [np.asarray(loc) / 2 for loc in ([-0.3, 0., -1.65], [0.4, 0., -1.3], [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
 BLOCK_VERTICAL_LOCATIONS = [-0.5, 0, 0.5]
