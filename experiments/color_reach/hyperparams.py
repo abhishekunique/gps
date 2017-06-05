@@ -27,6 +27,7 @@ NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 100
 ARMS_3D = True
 NAME = "temp"
+ROBOT_TYPES = RobotType.PEGGY, RobotType.PR2, RobotType.FOUR_LINK
 
 if MODE == "testing":
     IS_TESTING = True
@@ -56,7 +57,7 @@ BLOCK_VERTICAL_LOCATIONS = [-0.5, 0, 0.5]
 INIT_OFFSET = np.array([0.8, 0.0, 0.5]) / 2
 
 task_values, robot_values, arguments = [], [], []
-for robot_n, robot_type in enumerate((RobotType.FOUR_LINK, RobotType.PEGGY, RobotType.THREE_LINK_SHORT_JOINT)):
+for robot_n, robot_type in enumerate(ROBOT_TYPES):
     for task_n, color in enumerate(("red", "green", "yellow", "black")):
         task_values.append(task_n)
         robot_values.append(robot_n)
