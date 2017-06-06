@@ -20,14 +20,14 @@ IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
 
 SHOW_VIEWER = False
-MODE = "view-traj"
+MODE = "training"
 USE_IMAGES = False
-LOAD_OLD_WEIGHTS = False
+LOAD_OLD_WEIGHTS = True
 NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 100
 ARMS_3D = True
-NAME = "temp"
-ROBOT_TYPES = RobotType.PEGGY, RobotType.PR2, RobotType.FOUR_LINK
+ROBOT_TYPES = RobotType.BAXTER, RobotType.THREE_LINK, RobotType.FOUR_LINK
+NAME = "baxter_demonstration"
 
 if MODE == "testing":
     IS_TESTING = True
