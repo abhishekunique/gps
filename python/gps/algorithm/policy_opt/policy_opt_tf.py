@@ -55,7 +55,8 @@ class PolicyOptTf(PolicyOpt):
         self.sess = tf.Session()
         self.policy = []
         for dU_ind, ot, ap in zip(dU, self.obs_tensors, self.act_ops):
-            self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string, self.ls['keep_prob']))
+            taskout = self.ls["task_output"] if ("print_task_out" in self._hyperparams and self._hyperparams["print_task_out"]) else None
+            self.policy.append(TfPolicy(dU_ind, ot, ap, np.zeros(dU_ind), self.sess, self.device_string, self.ls['keep_prob'], taskout=taskout))
         # List of indices for state (vector) data and image (tensor) data in observation.
 
         self.x_idx = []

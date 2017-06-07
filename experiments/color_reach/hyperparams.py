@@ -123,6 +123,7 @@ config = {
     'is_testing' : IS_TESTING,
     'load_old_weights' : LOAD_OLD_WEIGHTS,
     'view_trajectories' : VIEW_TRAJECTORIES,
+    'print_task_out' : False,
     'nn_dump_path' : "nn_weights_%s" % NAME,
     'traj_distr_dump' : "traj_distr_%s.pkl" % NAME,
     'num_samples': SAMPLES,

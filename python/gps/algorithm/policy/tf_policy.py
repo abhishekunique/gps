@@ -20,7 +20,7 @@ class TfPolicy(Policy):
         sess: tf session.
         device_string: tf device string for running on either gpu or cpu.
     """
-    def __init__(self, dU, obs_tensor, act_op, var, sess, device_string, keep_prob, copy_param_scope=None):
+    def __init__(self, dU, obs_tensor, act_op, var, sess, device_string, keep_prob, copy_param_scope=None, taskout=None):
         Policy.__init__(self)
         self.dU = dU
         self.obs_tensor = obs_tensor
@@ -32,6 +32,7 @@ class TfPolicy(Policy):
         self.bias = None
         self.x_idx = None
         self.keep_prob = keep_prob
+        self.taskout = taskout
 
         if copy_param_scope:
             self.copy_params = tf.get_collection(tf.GraphKeys.VARIABLES, scope=copy_param_scope)
@@ -57,6 +58,11 @@ class TfPolicy(Policy):
             obs = np.expand_dims(obs, axis=0)
         obs[:, self.x_idx] = obs[:, self.x_idx].dot(self.scale) + self.bias
         with tf.device(self.device_string):
+            if self.taskout is not None:
+                assert len(obs) == 1
+                print "[%s]" % ",".join("%8.4f" % x for x in obs[0])
+                for taskout_cur in self.taskout:
+                    print list(self.sess.run(taskout_cur, feed_dict={self.obs_tensor: obs, self.keep_prob:1.0})[0])
             action_mean = self.sess.run(self.act_op, feed_dict={self.obs_tensor: obs, self.keep_prob:1.0})
         if noise is None:
             u = action_mean
