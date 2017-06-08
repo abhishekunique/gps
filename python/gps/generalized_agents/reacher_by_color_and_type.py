@@ -108,22 +108,31 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
             RGB_IMAGE_SIZE: 3
         })
     image_data = [RGB_IMAGE] if enable_images else []
-    start_of_end_eff_pts = SENSOR_DIMS[JOINT_ANGLES] + SENSOR_DIMS[JOINT_VELOCITIES]
+
+    start_of_robot_vel = SENSOR_DIMS[JOINT_ANGLES]
+    start_of_end_eff_pts = start_of_robot_vel + SENSOR_DIMS[JOINT_VELOCITIES]
     start_of_end_eff_vel = start_of_end_eff_pts + SENSOR_DIMS[END_EFFECTOR_POINTS]
     end_of_end_eff_vel = start_of_end_eff_vel + SENSOR_DIMS[END_EFFECTOR_POINT_VELOCITIES]
+
+    robot_joint_idx = range(number_links) + range(start_of_robot_vel, start_of_robot_vel + number_links)
+    env_joint_idx = range(number_links, start_of_robot_vel) + range(start_of_robot_vel + number_links, start_of_end_eff_pts)
+    robot_end_effector_idx = range(start_of_end_eff_pts, start_of_end_eff_pts + 3) + range(start_of_end_eff_vel, start_of_end_eff_vel + 3)
+    env_end_effector_idx = range(start_of_end_eff_pts + 3, start_of_end_eff_vel) + range(start_of_end_eff_vel + 3, end_of_end_eff_vel)
+
+    robot_specific_indices = robot_joint_idx + robot_end_effector_idx
+    task_specific_indices = robot_end_effector_idx
     if enable_images:
         image_dims = {
             'image_width': IMAGE_WIDTH,
             'image_height': IMAGE_HEIGHT,
             'image_channels': IMAGE_CHANNELS,
         }
-        robot_specific_indices = range(3 + start_of_end_eff_pts)+range(start_of_end_eff_vel,start_of_end_eff_vel + 3)
-        task_specific_indices = range(start_of_end_eff_pts,3 + start_of_end_eff_pts) + range(start_of_end_eff_vel,start_of_end_eff_vel + 3)
     else:
         image_dims = {}
-        robot_specific_indices = range(end_of_end_eff_vel)
-        task_specific_indices = range(start_of_end_eff_pts, end_of_end_eff_vel)
-    agent_dict= {}
+        robot_specific_indices += env_joint_idx + env_end_effector_idx
+        task_specific_indices += env_end_effector_idx
+    robot_specific_indices, task_specific_indices = map(sorted, (robot_specific_indices, task_specific_indices))
+    agent_dict = {}
     agent_dict['network_params']= {
         'dim_hidden': [10],
         'num_filters': [10, 20],
