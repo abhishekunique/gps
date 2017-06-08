@@ -140,7 +140,7 @@ config = {
     'inner_iterations': 4,
     'robot_iters': [range(25), range(0,25,2)],
     'to_log': [END_EFFECTOR_POINTS, JOINT_ANGLES, ACTION],
-    'random_seed' : 0xABCDE
+    'random_seed' : 0xB0BACAFE
     #'val_agents': [1],
 }
 
