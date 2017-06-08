@@ -13,7 +13,7 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
 from gps.gui.config import generate_experiment_info
 
-from gps.generalized_agents.reacher_by_color_and_type import RobotType, reacher_by_color_and_type
+from gps.generalized_agents.reacher_by_color_and_type import RobotType, reacher_by_color_and_type, BlockPush, ColorReach, COLOR_ORDER
 
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
@@ -27,6 +27,7 @@ NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 100
 ARMS_3D = True
 ROBOT_TYPES = RobotType.BAXTER, RobotType.THREE_LINK, RobotType.FOUR_LINK
+TASK_TYPES = map(ColorReach, COLOR_ORDER)
 NAME = "baxter_demonstration"
 
 if MODE == "testing":
@@ -58,10 +59,10 @@ INIT_OFFSET = np.array([0.8, 0.0, 0.5]) / 2
 
 task_values, robot_values, arguments = [], [], []
 for robot_n, robot_type in enumerate(ROBOT_TYPES):
-    for task_n, color in enumerate(("red", "green", "yellow", "black")):
+    for task_n, task_type in enumerate(TASK_TYPES):
         task_values.append(task_n)
         robot_values.append(robot_n)
-        arguments.append((color, robot_type))
+        arguments.append((task_type, robot_type))
 
 leave_one_out = 0
 if IS_TESTING:
@@ -73,7 +74,16 @@ else:
     robot_values    = robot_values[:leave_one_out]+robot_values[leave_one_out+1:]
     arguments       = arguments[:leave_one_out]+arguments[leave_one_out+1:]
 
-agents = [reacher_by_color_and_type(i, len(arguments), ARMS_3D, INIT_OFFSET, BLOCK_LOCATIONS, BLOCK_VERTICAL_LOCATIONS, color, robot_type, USE_IMAGES) for i, (color, robot_type) in enumerate(arguments)]
+agents = [reacher_by_color_and_type(i,
+                                    len(arguments),
+                                    ARMS_3D,
+                                    INIT_OFFSET,
+                                    BLOCK_LOCATIONS,
+                                    BLOCK_VERTICAL_LOCATIONS,
+                                    robot_type,
+                                    USE_IMAGES,
+                                    task_type)
+            for i, (task_type, robot_type) in enumerate(arguments)]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/color_reach/'
