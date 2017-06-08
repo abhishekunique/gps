@@ -19,6 +19,7 @@ IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
 
+PASS_ENVIRONMENT_EFFECTORS_TO_ROBOT = False # False for mixing blockpush and color reachers. True to load old models
 SHOW_VIEWER = False
 MODE = "training"
 USE_IMAGES = False
@@ -82,7 +83,8 @@ agents = [reacher_by_color_and_type(i,
                                     BLOCK_VERTICAL_LOCATIONS,
                                     robot_type,
                                     USE_IMAGES,
-                                    task_type)
+                                    task_type,
+                                    pass_environment_effectors_to_robot=PASS_ENVIRONMENT_EFFECTORS_TO_ROBOT)
             for i, (task_type, robot_type) in enumerate(arguments)]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])

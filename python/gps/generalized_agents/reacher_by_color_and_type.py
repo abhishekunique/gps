@@ -45,7 +45,9 @@ class BlockPush(object):
     @staticmethod
     def xml(is_3d, robot_type):
         filename = {
-            RobotType.THREE_LINK : './mjc_models/3link_gripper_push'
+            RobotType.THREE_LINK : './mjc_models/3link_gripper_push',
+            RobotType.THREE_LINK_SHORT_JOINT : './mjc_models/3link_gripper_push_shortjoint',
+            RobotType.FOUR_LINK : './mjc_models/4link_gripper_push',
         }[robot_type]
         return filename + ".xml"
     @classmethod
@@ -163,7 +165,7 @@ class RobotType(Enum):
 
 COLOR_ORDER = ("red", "green", "yellow", "black")
 
-def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offsets, vert_offs, robot_type, enable_images, task_type):
+def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offsets, vert_offs, robot_type, enable_images, task_type, pass_environment_effectors_to_robot=False):
     number_links = robot_type.number_links()
     number_joints = number_links + task_type.additional_joints
     end_effector_points = 3 * task_type.number_end_effectors
@@ -201,8 +203,9 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
         }
     else:
         image_dims = {}
-        robot_specific_indices += env_joint_idx + env_end_effector_idx
-        task_specific_indices += env_end_effector_idx
+        if pass_environment_effectors_to_robot:
+            robot_specific_indices += env_end_effector_idx
+        task_specific_indices += env_joint_idx + env_end_effector_idx
     robot_specific_indices, task_specific_indices = map(sorted, (robot_specific_indices, task_specific_indices))
     agent_dict = {}
     agent_dict['network_params']= {
