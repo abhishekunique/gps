@@ -55,7 +55,7 @@ else:
     raise RuntimeError
 
 BLOCK_LOCATIONS = [np.asarray(loc) / 2 for loc in ([-0.3, 0., -1.65], [0.4, 0., -1.3], [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
-BLOCK_VERTICAL_LOCATIONS = [-0.5, 0, 0.5]
+BLOCK_VERTICAL_LOCATIONS = [-0.5, 0, 0.5] if ARMS_3D else [0]
 
 task_values, robot_values, arguments = [], [], []
 for robot_n, robot_type in enumerate(ROBOT_TYPES):
