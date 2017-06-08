@@ -101,6 +101,7 @@ common = {
         'iterations': NEURAL_NET_ITERATIONS,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
+        'print_task_out' : False,
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
     }
 }
@@ -123,7 +124,6 @@ config = {
     'is_testing' : IS_TESTING,
     'load_old_weights' : LOAD_OLD_WEIGHTS,
     'view_trajectories' : VIEW_TRAJECTORIES,
-    'print_task_out' : False,
     'nn_dump_path' : "nn_weights_%s" % NAME,
     'traj_distr_dump' : "traj_distr_%s.pkl" % NAME,
     'num_samples': SAMPLES,

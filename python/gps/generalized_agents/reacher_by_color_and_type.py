@@ -108,7 +108,6 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
             RGB_IMAGE_SIZE: 3
         })
     image_data = [RGB_IMAGE] if enable_images else []
-    agent_dict= {}
     start_of_end_eff_pts = SENSOR_DIMS[JOINT_ANGLES] + SENSOR_DIMS[JOINT_VELOCITIES]
     start_of_end_eff_vel = start_of_end_eff_pts + SENSOR_DIMS[END_EFFECTOR_POINTS]
     end_of_end_eff_vel = start_of_end_eff_vel + SENSOR_DIMS[END_EFFECTOR_POINT_VELOCITIES]
@@ -124,11 +123,12 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offs
         image_dims = {}
         robot_specific_indices = range(end_of_end_eff_vel)
         task_specific_indices = range(start_of_end_eff_pts, end_of_end_eff_vel)
+    agent_dict= {}
     agent_dict['network_params']= {
         'dim_hidden': [10],
         'num_filters': [10, 20],
         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES] + image_data,
-        'obs_image_data':image_data,
+        'obs_image_data': image_data,
         'sensor_dims': SENSOR_DIMS,
         'batch_size': 25,
         'robot_specific_idx': robot_specific_indices,
