@@ -165,7 +165,7 @@ class RobotType(Enum):
 
 COLOR_ORDER = ("red", "green", "yellow", "black")
 
-def reacher_by_color_and_type(robot_number, num_robots, is_3d, init_offset, offsets, vert_offs, robot_type, enable_images, task_type, pass_environment_effectors_to_robot=False):
+def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, robot_type, enable_images, task_type, pass_environment_effectors_to_robot=False):
     number_links = robot_type.number_links()
     number_joints = number_links + task_type.additional_joints
     end_effector_points = 3 * task_type.number_end_effectors

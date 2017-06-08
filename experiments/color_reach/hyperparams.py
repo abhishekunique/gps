@@ -56,7 +56,6 @@ else:
 
 BLOCK_LOCATIONS = [np.asarray(loc) / 2 for loc in ([-0.3, 0., -1.65], [0.4, 0., -1.3], [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
 BLOCK_VERTICAL_LOCATIONS = [-0.5, 0, 0.5]
-INIT_OFFSET = np.array([0.8, 0.0, 0.5]) / 2
 
 task_values, robot_values, arguments = [], [], []
 for robot_n, robot_type in enumerate(ROBOT_TYPES):
@@ -78,7 +77,6 @@ else:
 agents = [reacher_by_color_and_type(i,
                                     len(arguments),
                                     ARMS_3D,
-                                    INIT_OFFSET,
                                     BLOCK_LOCATIONS,
                                     BLOCK_VERTICAL_LOCATIONS,
                                     robot_type,
@@ -125,8 +123,6 @@ if not os.path.exists(common['data_files_dir']):
 agent = [a['agent'] for a in agents]
 for a in agent:
     a.update({
-        'offsets': [x + INIT_OFFSET for x in BLOCK_LOCATIONS],
-        'vertical_offsets' : BLOCK_VERTICAL_LOCATIONS,
         'show_viewer' : SHOW_VIEWER
     })
 algorithm = [a['algorithm'] for a in agents]
