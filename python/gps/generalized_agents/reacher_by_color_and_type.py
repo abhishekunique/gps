@@ -8,6 +8,7 @@ import operator
 from gps.agent.mjc.agent_mjc import AgentMuJoCo
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.cost.cost_fk import CostFK
+from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
 from gps.algorithm.dynamics.dynamics_lr_prior import DynamicsLRPrior
@@ -52,13 +53,19 @@ class BlockPush(object):
         }[robot_type]
         return filename + ".xml"
     @classmethod
-    def blockpush_cost(cls, offset_generator, train_conditions):
+    def task_specific_cost(cls, offset_generator, train_conditions):
         return [[{
             'type': CostFK,
             'target_end_effector': np.concatenate([np.array([0,0,0]),
                                                    offset_generator(i)[cls.target_effector_index],
                                                    np.array([0,0,0])]),
             'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+            'l1': 0.1,
+            'l2': 10.0,
+            'alpha': 1e-5,
+        }, {
+            'type': CostFKBlock,
+            'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,
@@ -110,9 +117,16 @@ class ColorReach(object):
     @property
     def target_effector_index(self):
         return COLOR_ORDER.index(self.color)
-    @staticmethod
-    def blockpush_cost(offset_generator, train_conditions):
-        return [[]] * len(train_conditions)
+    def task_specific_cost(self, offset_generator, train_conditions):
+        zero_padding = self.number_end_effectors * 3 - 3
+        return[[{
+            'type': CostFK,
+            'target_end_effector': np.concatenate([offset_generator(i)[self.target_effector_index], np.zeros(zero_padding)]),
+            'wp': np.array([1, 1, 1] + [0] * zero_padding),
+            'l1': 0.1,
+            'l2': 10.0,
+            'alpha': 1e-5,
+        }] for i in train_conditions]
 
 class RobotType(Enum):
     THREE_LINK = 1
@@ -232,7 +246,7 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
     agent_dict['agent'] = {
         'type': AgentMuJoCo,
         'filename': task_type.xml(is_3d, robot_type),
-        'x0': np.zeros(2 * number_joints),
+        'x0': np.zeros(2 * number_joints), # TODO start with pi/2?
         'dt': 0.05,
         'substeps': 5,
         'pos_body_offset': None,
@@ -271,7 +285,7 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
     }
     agent_dict['algorithm']['init_traj_distr'] = {
         'type': init_pd,
-        'init_var': 10.0, # TODO can be useful to use
+        'init_var': 10.0, # TODO can be useful to use (50 in blockpush)
         'pos_gains': 10.0,
         'dQ': SENSOR_DIMS[ACTION],
         'dt':  agent_dict['agent']['dt'],
@@ -283,21 +297,10 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
         'wu': 1e-3 / robot_type.gains(),
     } for i in agent_dict['agent']['train_conditions']]
 
-    zero_padding = end_effector_points - 3
-
-    fk_cost_gripper = [{
-        'type': CostFK,
-        'target_end_effector': np.concatenate([offset_generator(i)[task_type.target_effector_index], np.zeros(zero_padding)]),
-        'wp': np.array([1, 1, 1] + [0] * zero_padding),
-        'l1': 0.1,
-        'l2': 10.0,
-        'alpha': 1e-5,
-    } for i in agent_dict['agent']['train_conditions']]
-
 
     agent_dict['algorithm']['cost'] = [{
         'type': CostSum,
-        'costs': [torque_cost_0[i], fk_cost_gripper[i]] + task_type.blockpush_cost(offset_generator, agent_dict['agent']['train_conditions'])[i],
+        'costs': [torque_cost_0[i]] + task_type.task_specific_cost(offset_generator, agent_dict['agent']['train_conditions'])[i],
         'weights': task_type.cost_weights,
     } for i in agent_dict['agent']['train_conditions']]
 
