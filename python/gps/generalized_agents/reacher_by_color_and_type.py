@@ -48,6 +48,7 @@ class BlockPush(object):
             RobotType.THREE_LINK : './mjc_models/3link_gripper_push',
             RobotType.THREE_LINK_SHORT_JOINT : './mjc_models/3link_gripper_push_shortjoint',
             RobotType.FOUR_LINK : './mjc_models/4link_gripper_push',
+            RobotType.FIVE_LINK : './mjc_models/5link_gripper_push',
         }[robot_type]
         return filename + ".xml"
     @classmethod
@@ -97,6 +98,7 @@ class ColorReach(object):
             RobotType.THREE_LINK_SHORT_JOINT : './mjc_models/arm_3link_reach_colors_shortjoint',
             RobotType.THREE_LINK : './mjc_models/arm_3link_reach_colors',
             RobotType.FOUR_LINK : './mjc_models/arm_4link_reach_colors',
+            RobotType.FIVE_LINK : './mjc_models/arm_5link_reach_colors',
             RobotType.PEGGY : './mjc_models/peggy_arm3d_reach_colors',
             RobotType.KINOVA : './mjc_models/kinova/jaco',
             RobotType.BAXTER : './mjc_models/baxter/baxter',
@@ -116,12 +118,13 @@ class RobotType(Enum):
     THREE_LINK = 1
     THREE_LINK_SHORT_JOINT = 2
     FOUR_LINK = 3
+    FIVE_LINK = 3.5
     PEGGY = 4
     KINOVA = 5
     BAXTER = 6
     PR2 = 7
     def is_arm(self):
-        if self in {RobotType.THREE_LINK, RobotType.THREE_LINK_SHORT_JOINT, RobotType.FOUR_LINK}:
+        if self in {RobotType.THREE_LINK, RobotType.THREE_LINK_SHORT_JOINT, RobotType.FOUR_LINK, RobotType.FIVE_LINK}:
             return True
         elif self in {RobotType.PEGGY, RobotType.KINOVA, RobotType.BAXTER, RobotType.PR2}:
             return False
@@ -132,6 +135,8 @@ class RobotType(Enum):
             return 3
         elif self == RobotType.FOUR_LINK:
             return 4
+        elif self == RobotType.FIVE_LINK:
+            return 5
         elif self == RobotType.PEGGY:
             return 7
         elif self == RobotType.KINOVA:
