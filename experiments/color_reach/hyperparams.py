@@ -21,6 +21,7 @@ BLOCKPUSH_SECOND = ColorReach("red"), BlockPush, ColorReach("green"), ColorReach
 
 ARMS = RobotType.THREE_LINK, RobotType.FOUR_LINK, RobotType.FIVE_LINK
 PR2_VS_ARMS = RobotType.PR2, RobotType.THREE_LINK, RobotType.FOUR_LINK
+BAXTER_VS_ARMS = RobotType.BAXTER, RobotType.THREE_LINK, RobotType.FOUR_LINK
 
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
@@ -35,8 +36,8 @@ LOAD_OLD_WEIGHTS = True
 NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 100
 ARMS_3D = True
-ROBOT_TYPES = RobotType.BAXTER, RobotType.THREE_LINK, RobotType.FOUR_LINK
-TASK_TYPES = map(ColorReach, COLOR_ORDER)
+ROBOT_TYPES = BAXTER_VS_ARMS
+TASK_TYPES = REACHERS
 NAME = "baxter_demonstration"
 
 if MODE == "testing":
@@ -52,7 +53,7 @@ elif MODE == "check-traj":
 elif MODE == "training":
     IS_TESTING = False
     SAMPLES = 5
-    VERBOSE_TRIALS = False
+    VERBOSE_TRIALS = SHOW_VIEWER
     VIEW_TRAJECTORIES = False
 elif MODE == "view-traj":
     IS_TESTING = False
