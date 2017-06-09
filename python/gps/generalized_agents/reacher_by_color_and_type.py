@@ -50,6 +50,8 @@ class BlockPush(object):
             RobotType.THREE_LINK_SHORT_JOINT : './mjc_models/3link_gripper_push_shortjoint',
             RobotType.FOUR_LINK : './mjc_models/4link_gripper_push',
             RobotType.FIVE_LINK : './mjc_models/5link_gripper_push',
+            RobotType.PR2 : './mjc_models/pr2/pr2_arm_blockpush',
+            RobotType.PEGGY : './mjc_models/pr2/peggy_arm3d_blockpush',
         }[robot_type]
         return filename + ".xml"
     @classmethod
