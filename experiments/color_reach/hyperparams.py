@@ -15,6 +15,13 @@ from gps.gui.config import generate_experiment_info
 
 from gps.generalized_agents.reacher_by_color_and_type import RobotType, reacher_by_color_and_type, BlockPush, ColorReach, COLOR_ORDER
 
+REACHERS = map(ColorReach, COLOR_ORDER)
+BLOCKPUSH_FIRST = [BlockPush] + REACHERS[:3]
+BLOCKPUSH_SECOND = ColorReach("red"), BlockPush, ColorReach("green"), ColorReach("yellow")
+
+ARMS = RobotType.THREE_LINK, RobotType.FOUR_LINK, RobotType.FIVE_LINK
+PR2_VS_ARMS = RobotType.PR2, RobotType.THREE_LINK, RobotType.FOUR_LINK
+
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
