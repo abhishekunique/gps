@@ -519,21 +519,20 @@ class PolicyOptTf(PolicyOpt):
                 #avg_val_loss += val_loss
                 average_loss += train_loss
                 # avg_taskloss += task_loss
-                if i % 500 == 0:
+                if (i + 1) % 500 == 0:
                     LOGGER.debug('tensorflow iteration %d, average loss %f',
                                  i, average_loss / 500)
                     print 'robot loss is ', (average_loss/500)
                     #print 'task loss is ', (avg_taskloss/500
                     #print 'task loss is ', (avg_val_loss/500)
-                    #all_val_losses.append(avg_val_loss)
+                    all_val_losses.append(average_loss)
                     average_loss = 0
                     avg_val_loss = 0
-                    if len(all_val_losses) >2:
-                        print "checking past val losses"
-                        # print all_val_losses
-                        # if all_val_losses[-1] >all_val_losses[-2] and all_val_losses[-2] > all_val_losses[-3]:
-                        #     print "Val loss is increasing, stop iters"
-                        #     continue_iters = False
+                    if len(all_val_losses) > 2:
+                        print "checking past val losses", all_val_losses
+                        if all_val_losses[-1] > all_val_losses[-2] and all_val_losses[-2] > all_val_losses[-3]:
+                            print "Val loss is increasing, stop iters"
+                            continue_iters = False
                 # avg_taskloss = 0
         for robot_number in range(self.num_robots):
             # Keep track of tensorflow iterations for loading solver states.
