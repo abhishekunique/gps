@@ -143,10 +143,6 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 pol_sample_lists = None #self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-            if itr %  8 == 0 and itr > 0:
-                import IPython
-                IPython.embed()
-
 
         self._end()
     def read_traj_distr(self, traj_distr_dump):
