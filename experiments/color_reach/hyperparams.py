@@ -29,6 +29,7 @@ IMAGE_CHANNELS = 3
 
 PASS_ENVIRONMENT_EFFECTORS_TO_ROBOT = False # False for mixing blockpush and color reachers. True to load old models
 LEGACY_BLOCK_POSITIONS = False
+SHOW_VIEWER = False
 MODE = "training"
 USE_IMAGES = False
 LOAD_OLD_WEIGHTS = True
@@ -40,19 +41,16 @@ TASK_TYPES = REACHERS
 NAME = "baxter_demonstration"
 
 if MODE == "testing":
-    SHOW_VIEWER = False
     IS_TESTING = True
     SAMPLES = 10
     VERBOSE_TRIALS = False
     VIEW_TRAJECTORIES = True
 elif MODE == "check-traj":
-    SHOW_VIEWER = False
     IS_TESTING = False
     SAMPLES = 1
     VERBOSE_TRIALS = True
     VIEW_TRAJECTORIES = False
 elif MODE == "training":
-    SHOW_VIEWER = False
     IS_TESTING = False
     SAMPLES = 5
     VERBOSE_TRIALS = SHOW_VIEWER
@@ -64,7 +62,6 @@ elif MODE == "check-model":
     VERBOSE_TRIALS = SHOW_VIEWER
     VIEW_TRAJECTORIES = False
 elif MODE == "view-traj":
-    SHOW_VIEWER = False
     IS_TESTING = False
     SAMPLES = 10
     VERBOSE_TRIALS = False
