@@ -25,7 +25,7 @@ IMAGE_CHANNELS = 3
 from enum import Enum
 
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
-    END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
+    END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, IMAGE_FEAT, ACTION
 
 class BlockPush(object):
     additional_joints = 2
@@ -200,7 +200,8 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
     if enable_images:
         SENSOR_DIMS.update({
             RGB_IMAGE: IMAGE_WIDTH*IMAGE_HEIGHT*IMAGE_CHANNELS,
-            RGB_IMAGE_SIZE: 3
+            RGB_IMAGE_SIZE: 3,
+            IMAGE_FEAT: 0
         })
     image_data = [RGB_IMAGE] if enable_images else []
 
