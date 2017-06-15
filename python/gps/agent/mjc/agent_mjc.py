@@ -333,6 +333,14 @@ class AgentMuJoCo(Agent):
             idx = site * 3
             jac[idx:(idx+3), :] = self._world[condition].get_jac_site(site)
         sample.set(END_EFFECTOR_POINT_JACOBIANS, jac, t=t+1)
+        if self._hyperparams["write_video"]:
+            from os import system
+            from sys import stderr
+            import scipy.misc
+            system("mkdir -p %s" % self._hyperparams["write_video"])
+            img = self._world[condition].get_image_scaled(self._hyperparams['image_width'],
+                                                          self._hyperparams['image_height'])
+            scipy.misc.imsave('%s/%02d-%03d.png' % (self._hyperparams["write_video"], condition, t), img["img"])
         if RGB_IMAGE in self.obs_data_types:
             img = self._world[condition].get_image_scaled(self._hyperparams['image_width'],
                                                           self._hyperparams['image_height'])

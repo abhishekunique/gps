@@ -39,6 +39,7 @@ ARMS_3D = True
 ROBOT_TYPES = BAXTER_VS_ARMS
 TASK_TYPES = REACHERS
 NAME = "baxter_demonstration"
+VIDEO_PATH = None
 
 if MODE == "testing":
     IS_TESTING = True
@@ -140,6 +141,8 @@ for a in agent:
     a.update({
         'show_viewer' : SHOW_VIEWER
     })
+for a in agents:
+    a['agent']['write_video'] = VIDEO_PATH
 algorithm = [a['algorithm'] for a in agents]
 
 config = {
