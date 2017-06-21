@@ -186,7 +186,7 @@ class GPSMain(object):
         self.policy_opt.validation_samples = self.data_logger.unpickle('4peg_val.pkl')
 
         if testing:
-            size = 36 # FIXME MAGIC NUMBER; sample.getObs
+            _, size = [x.value for x in self.policy_opt.policy[0].obs_tensor.get_shape()]
             self.policy_opt.policy[0].scale = np.eye(size)
             self.policy_opt.policy[0].bias = np.zeros((size,))
             # FIXME READ IN THE VARIANCE FOR BLOCKPUSH, etc.

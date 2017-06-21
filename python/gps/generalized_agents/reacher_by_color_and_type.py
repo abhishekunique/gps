@@ -31,7 +31,7 @@ class BlockPush(object):
     additional_joints = 2
     number_end_effectors = 3
     target_effector_index = 1
-    cost_weights = [0.5, 0.5, 1]
+    cost_weights = [0.5, 0.5, 4]
     @staticmethod
     def body_indices(robot_type):
         start = robot_type.bodies_before_color_blocks()
@@ -42,7 +42,7 @@ class BlockPush(object):
     @classmethod
     def offset_generator(cls, offsets, vert_offs, condition):
         condition = condition % cls.nconditions(len(offsets), len(vert_offs))
-        return [[x, y] for x in offsets for y in offsets if not np.array_equal(x, y)][condition]
+        return [[x * 0.75, y * 0.75] for x in offsets for y in offsets if not np.array_equal(x, y)][condition]
     @staticmethod
     def xml(is_3d, robot_type):
         filename = {
