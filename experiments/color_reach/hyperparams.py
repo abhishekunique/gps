@@ -74,6 +74,18 @@ else:
 BLOCK_LOCATIONS = [np.asarray(loc) / 2 + (1 - LEGACY_BLOCK_POSITIONS) * np.array([0.1, 0, 0.2]) for loc in ([-0.3, 0., -1.65], [0.4, 0., -1.3], [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
 BLOCK_VERTICAL_LOCATIONS = [-0.5, 0, 0.5] if ARMS_3D else [0]
 
+BLOCKPUSH_BLOCK_LOCATIONS = [[np.array(x) / 2 for x in y] for y in [
+        [[-0.25, 0.0, -0.85], [-0.25, 0.0, -0.45]],
+        [[-0.25, 0.0, -1.25], [-0.25, 0.0, -0.45]],
+        [[-0.25, 0.0, 0.85], [-0.25, 0.0, 0.45]],
+        [[-0.25, 0.0, 1.15], [-0.25, 0.0, 0.45]],
+
+        [[0.0, 0.0, -0.85], [0.0, 0.0, -0.55]],
+        [[0.0, 0.0, -1.15], [0.0, 0.0, -0.55]],
+        [[0.0, 0.0, 0.85], [0.0, 0.0, 0.55]],
+        [[0.0, 0.0, 1.15], [0.0, 0.0, 0.55]]
+    ]]
+
 task_values, robot_values, arguments = [], [], []
 for robot_n, robot_type in enumerate(ROBOT_TYPES):
     for task_n, task_type in enumerate(TASK_TYPES):
@@ -96,6 +108,7 @@ agents = [reacher_by_color_and_type(i,
                                     ARMS_3D,
                                     BLOCK_LOCATIONS,
                                     BLOCK_VERTICAL_LOCATIONS,
+                                    BLOCKPUSH_BLOCK_LOCATIONS,
                                     robot_type,
                                     USE_IMAGES,
                                     task_type,

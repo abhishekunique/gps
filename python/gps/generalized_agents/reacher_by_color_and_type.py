@@ -37,12 +37,13 @@ class BlockPush(object):
         start = robot_type.bodies_before_color_blocks()
         return [start + 1, start + 3]
     @staticmethod
-    def nconditions(n_offs, n_verts):
-        return n_offs * (n_offs - 1)
+    def nconditions(n_offs, n_verts, n_blocks):
+        del n_offs, n_verts
+        return n_blocks
     @classmethod
-    def offset_generator(cls, offsets, vert_offs, condition):
-        condition = condition % cls.nconditions(len(offsets), len(vert_offs))
-        return [[x * 0.75, y * 0.75] for x in offsets for y in offsets if not np.array_equal(x, y)][condition]
+    def offset_generator(cls, offsets, vert_offs, block_locs, condition):
+        condition = condition % cls.nconditions(len(offsets), len(vert_offs), len(block_locs))
+        return block_locs[condition]
     @staticmethod
     def xml(is_3d, robot_type):
         filename = {
@@ -84,9 +85,9 @@ class ColorReach(object):
         start = robot_type.bodies_before_color_blocks()
         return range(start + 1, start + 5)
     @staticmethod
-    def nconditions(n_offs, n_verts):
+    def nconditions(n_offs, n_verts, _):
         return n_offs * n_verts
-    def offset_generator(self, offsets, vert_offs, condition):
+    def offset_generator(self, offsets, vert_offs, _, condition):
         num_offsets = len(offsets)
         num_verts = len(vert_offs)
         vert_idx = condition % num_verts
@@ -186,7 +187,7 @@ class RobotType(Enum):
 
 COLOR_ORDER = ("red", "green", "yellow", "black")
 
-def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, robot_type, enable_images, task_type, pass_environment_effectors_to_robot=False):
+def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, blockpush_locations, robot_type, enable_images, task_type, pass_environment_effectors_to_robot=False):
     number_links = robot_type.number_links()
     number_joints = number_links + task_type.additional_joints
     end_effector_points = 3 * task_type.number_end_effectors
@@ -244,8 +245,8 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
         # 'dim_input': reduce(operator.mul, [SENSOR_DIMS[0][s] for s in OBS_INCLUDE]),
     }
     agent_dict['network_params'].update(image_dims)
-    nconditions = task_type.nconditions(len(offsets), len(vert_offs))
-    offset_generator = lambda condition: task_type.offset_generator(offsets, vert_offs, condition)
+    nconditions = task_type.nconditions(len(offsets), len(vert_offs), len(blockpush_locations))
+    offset_generator = lambda condition: task_type.offset_generator(offsets, vert_offs, blockpush_locations, condition)
     agent_dict['agent'] = {
         'type': AgentMuJoCo,
         'filename': task_type.xml(is_3d, robot_type),
