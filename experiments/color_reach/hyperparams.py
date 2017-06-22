@@ -2,6 +2,7 @@ from __future__ import division
 
 from datetime import datetime
 import os.path
+from sys import argv
 import numpy as np
 from itertools import product
 
@@ -34,16 +35,15 @@ LOAD_OLD_WEIGHTS = True
 NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 100
 
-SHOW_VIEWER = False
-MODE = "training"
-USE_IMAGES = False
-ARMS_3D = True
-ROBOT_TYPES = BAXTER_VS_ARMS
-TASK_TYPES = REACHERS
-NAME = "baxter_demonstration"
-VIDEO_PATH = None
+LEAVE_ONE_OUT = 0
 
-if MODE == "testing":
+CONFIG_FILE = argv[argv.index("--config") + 1]
+execfile(CONFIG_FILE)
+
+SHOW_VIEWER, MODE, USE_IMAGES, ARMS_3D, ROBOT_TYPES, TASK_TYPES, NAME, VIDEO_PATH # ensure that all these names exist
+
+if MODE == "testing" or MODE == "taskout-print":
+    SHOW_VIEWER = True
     IS_TESTING = True
     SAMPLES = 10
     VERBOSE_TRIALS = False
@@ -72,6 +72,8 @@ elif MODE == "view-traj":
 else:
     raise RuntimeError
 
+taskout_print = MODE == "taskout-print"
+
 BLOCK_LOCATIONS = [np.asarray(loc) / 2 + (1 - LEGACY_BLOCK_POSITIONS) * np.array([0.1, 0, 0.2]) for loc in ([-0.3, 0., -1.65], [0.4, 0., -1.3], [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
 BLOCK_VERTICAL_LOCATIONS = [-0.5, 0, 0.5] if ARMS_3D else [0]
 
@@ -94,7 +96,7 @@ for robot_n, robot_type in enumerate(ROBOT_TYPES):
         robot_values.append(robot_n)
         arguments.append((task_type, robot_type))
 
-leave_one_out = 0
+leave_one_out = LEAVE_ONE_OUT
 if IS_TESTING:
     task_values     = [task_values[leave_one_out]]
     robot_values    = [robot_values[leave_one_out]]
@@ -142,7 +144,7 @@ common = {
         'iterations': NEURAL_NET_ITERATIONS,
         'fc_only_iterations': 5000,
         'checkpoint_prefix': EXP_DIR + 'data_files/policy',
-        'print_task_out' : False,
+        'print_task_out' : taskout_print,
         # 'restore_all_wts':'/home/abhigupta/gps/allweights_push_4link.npy'
     }
 }

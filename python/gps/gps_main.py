@@ -622,6 +622,8 @@ def main():
                         help='experiment name')
     parser.add_argument('-n', '--new', action='store_true',
                         help='create new experiment')
+    parser.add_argument('-c', '--config', type=str,
+                        help='ignored')
     parser.add_argument('-t', '--targetsetup', action='store_true',
                         help='run target setup')
     parser.add_argument('-r', '--resume', metavar='N', type=int,
