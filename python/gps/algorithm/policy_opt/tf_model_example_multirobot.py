@@ -1373,6 +1373,7 @@ def multitask_multirobot_conv_supervised(is_testing, dim_input=[27, 27], dim_out
     if is_testing:
         tasks = task_list
         robots = robot_list
+        assert len(tasks) == 1 and len(robots) == 1
     else:
        tasks= range(num_tasks)
        robots=range(num_robots)
