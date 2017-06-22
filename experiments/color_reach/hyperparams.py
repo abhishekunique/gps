@@ -30,12 +30,13 @@ IMAGE_CHANNELS = 3
 
 PASS_ENVIRONMENT_EFFECTORS_TO_ROBOT = False # False for mixing blockpush and color reachers. True to load old models
 LEGACY_BLOCK_POSITIONS = False
-SHOW_VIEWER = False
-MODE = "training"
-USE_IMAGES = False
 LOAD_OLD_WEIGHTS = True
 NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 100
+
+SHOW_VIEWER = False
+MODE = "training"
+USE_IMAGES = False
 ARMS_3D = True
 ROBOT_TYPES = BAXTER_VS_ARMS
 TASK_TYPES = REACHERS
