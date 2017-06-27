@@ -54,6 +54,8 @@ class BlockPush(object):
             RobotType.PR2 : './mjc_models/pr2/pr2_arm_blockpush',
             RobotType.PEGGY : './mjc_models/peggy_arm3d_blockpush',
         }[robot_type]
+        if robot_type.is_arm() and is_3d:
+            filename += "_3d"
         return filename + ".xml"
     @classmethod
     def task_specific_cost(cls, offset_generator, train_conditions):
