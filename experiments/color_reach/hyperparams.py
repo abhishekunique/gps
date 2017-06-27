@@ -36,6 +36,7 @@ NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 100
 
 LEAVE_ONE_OUT = 0
+N_BLOCK_CONDITIONS = 6
 NAME = None
 COLOR_BLOCKS_3D = None
 
@@ -86,17 +87,12 @@ if COLOR_BLOCKS_3D is None:
 BLOCK_LOCATIONS = [np.asarray(loc) / 2 + (1 - LEGACY_BLOCK_POSITIONS) * np.array([0.1, 0, 0.2]) for loc in ([-0.3, 0., -1.65], [0.4, 0., -1.3], [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
 BLOCK_VERTICAL_LOCATIONS = [-0.5, 0, 0.5] if COLOR_BLOCKS_3D else [0]
 
-BLOCKPUSH_BLOCK_LOCATIONS = [[np.array(x) / 2 for x in y] for y in [
-        [[-0.25, 0.0, -0.85], [-0.25, 0.0, -0.45]],
-        [[-0.25, 0.0, -1.25], [-0.25, 0.0, -0.45]],
-        [[-0.25, 0.0, 0.85], [-0.25, 0.0, 0.45]],
-        [[-0.25, 0.0, 1.15], [-0.25, 0.0, 0.45]],
 
-        [[0.0, 0.0, -0.85], [0.0, 0.0, -0.55]],
-        [[0.0, 0.0, -1.15], [0.0, 0.0, -0.55]],
-        [[0.0, 0.0, 0.85], [0.0, 0.0, 0.55]],
-        [[0.0, 0.0, 1.15], [0.0, 0.0, 0.55]]
-    ]]
+BLOCKPUSH_BLOCK_LOCATIONS = [[np.array([x, 0, z]) / 2 for x, z in both] for both in
+    [[[np.cos(theta), np.sin(theta)], [np.cos(theta) + np.cos(theta + off), np.sin(theta) + np.sin(theta + off)]]
+        for theta in [np.pi / N_BLOCK_CONDITIONS * i - np.pi/2 for i in range(N_BLOCK_CONDITIONS)]
+        for off in (-np.pi/2, np.pi/2)
+]]
 
 task_values, robot_values, arguments = [], [], []
 for robot_n, robot_type in enumerate(ROBOT_TYPES):
