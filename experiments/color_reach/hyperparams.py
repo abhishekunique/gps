@@ -36,11 +36,16 @@ NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 100
 
 LEAVE_ONE_OUT = 0
+NAME = None
 
 CONFIG_FILE = argv[argv.index("--config") + 1]
 execfile(CONFIG_FILE)
 
-SHOW_VIEWER, MODE, USE_IMAGES, ARMS_3D, ROBOT_TYPES, TASK_TYPES, NAME, VIDEO_PATH # ensure that all these names exist
+if NAME is None:
+    NAME = os.path.basename(CONFIG_FILE)[:-3]
+    print "Name", NAME
+
+SHOW_VIEWER, MODE, USE_IMAGES, ARMS_3D, ROBOT_TYPES, TASK_TYPES, VIDEO_PATH # ensure that all these names exist
 
 if MODE == "testing" or MODE == "taskout-print":
     SHOW_VIEWER = True
