@@ -39,6 +39,7 @@ LEAVE_ONE_OUT = 0
 N_BLOCK_CONDITIONS = 6
 NAME = None
 COLOR_BLOCKS_3D = None
+RANDOM_SEED = 0x123ABC
 
 CONFIG_FILE = argv[argv.index("--config") + 1]
 execfile(CONFIG_FILE)
@@ -188,7 +189,7 @@ config = {
     'inner_iterations': 4,
     'robot_iters': [range(25), range(0,25,2)],
     'to_log': [END_EFFECTOR_POINTS, JOINT_ANGLES, ACTION],
-    'random_seed' : 0xB0BACAFE
+    'random_seed' : RANDOM_SEED
     #'val_agents': [1],
 }
 
