@@ -30,7 +30,6 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
 class BlockPush(object):
     additional_joints = 2
     number_end_effectors = 3
-    target_effector_index = 1
     cost_weights = [0.5, 0.5, 4]
     @staticmethod
     def body_indices(robot_type):
@@ -62,7 +61,7 @@ class BlockPush(object):
         return [[{
             'type': CostFK,
             'target_end_effector': np.concatenate([np.array([0,0,0]),
-                                                   offset_generator(i)[cls.target_effector_index],
+                                                   offset_generator(i)[1],
                                                    np.array([0,0,0])]),
             'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
             'l1': 0.1,
@@ -119,19 +118,53 @@ class ColorReach(object):
         if robot_type.is_arm() and is_3d:
             filename += "_3d"
         return filename + ".xml"
-    @property
-    def target_effector_index(self):
-        return COLOR_ORDER.index(self.color)
     def task_specific_cost(self, offset_generator, train_conditions):
         zero_padding = self.number_end_effectors * 3 - 3
+        target_effector_index = COLOR_ORDER.index(self.color)
         return[[{
             'type': CostFK,
-            'target_end_effector': np.concatenate([offset_generator(i)[self.target_effector_index], np.zeros(zero_padding)]),
+            'target_end_effector': np.concatenate([offset_generator(i)[target_effector_index], np.zeros(zero_padding)]),
             'wp': np.array([1, 1, 1] + [0] * zero_padding),
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,
         }] for i in train_conditions]
+
+class ColorPush(ColorReach):
+    additional_joints = 8
+    cost_weights = BlockPush.cost_weights
+    def __init__(self, color_to, color_from):
+        ColorReach.__init__(self, color_to)
+        self.color_from = color_from
+    @staticmethod
+    def xml(is_3d, robot_type):
+        filename = ColorReach.xml(is_3d, robot_type)
+        assert "reach" in filename
+        return filename.replace("reach", "push")
+    def task_specific_cost(self, offset_generator, train_conditions):
+        movable_block = COLOR_ORDER.index(self.color_from)
+        target_block = COLOR_ORDER.index(self.color)
+        costs = []
+        for i in train_conditions:
+            final_locations = offset_generator(i)
+            final_locations[movable_block] = final_locations[target_block]
+            costs.append([
+                {
+                    'type': CostFK,
+                    'target_end_effector': np.concatenate([[0, 0, 0]] + final_locations),
+                    'wp': np.array([0] * 3 + [1] * (len(final_locations) * 3)),
+                    'l1': 0.1,
+                    'l2': 10.0,
+                    'alpha': 1e-5,
+                }, {
+                    'type': lambda hyper: CostFKBlock(hyper, first_effector=0, second_effector=movable_block),
+                    'wp': np.array([1] * 3 + [0] * (len(final_locations) * 3)),
+                    'l1': 0.1,
+                    'l2': 10.0,
+                    'alpha': 1e-5,
+                }
+            ])
+        return costs
 
 class RobotType(Enum):
     THREE_LINK = 1

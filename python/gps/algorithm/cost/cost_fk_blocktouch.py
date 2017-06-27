@@ -12,13 +12,15 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, END_EFFECTOR_POINTS, \
 
 class CostFKBlock(Cost):
     """
-    Forward kinematics cost function. Used for costs involving the end
-    effector position.
+    Forward kinematics cost function. Used to enforce the constraint that two end
+        effectors should be adjacent.
     """
-    def __init__(self, hyperparams):
+    def __init__(self, hyperparams, first_effector=0, second_effector=1):
         config = copy.deepcopy(COST_FK)
         config.update(hyperparams)
         Cost.__init__(self, config)
+        self.first_idx = range(first_effector * 3, (first_effector + 1) * 3)
+        self.second_idx = range(second_effector * 3, (second_effector + 1) * 3)
 
     def eval(self, sample):
         """
@@ -49,8 +51,8 @@ class CostFKBlock(Cost):
 
         # Choose target.
         pt = sample.get(END_EFFECTOR_POINTS)
-        pt_ee_avg = pt[:, 0:3]
-        pt_block = pt[:, 3:6]
+        pt_ee_avg = pt[:, self.first_idx]
+        pt_block = pt[:, self.second_idx]
         dist = pt_ee_avg - pt_block
         # dist = np.concatenate([dist, np.zeros((T,3))], axis=1)
         wp= np.ones((T,3))
@@ -61,7 +63,7 @@ class CostFKBlock(Cost):
         #        counting.
         #        (see pts_jacobian_only in matlab costinfos code)
         jx = sample.get(END_EFFECTOR_POINT_JACOBIANS)
-        jx_1 = jx[:, 0:3, :] - jx[:, 3:6, :]
+        jx_1 = jx[:, self.first_idx, :] - jx[:, self.second_idx, :]
         # Evaluate penalty term. Use estimated Jacobians and no higher
         # order terms.
         jxx_zeros = np.zeros((T, dist.shape[1], jx.shape[2], jx.shape[2]))

@@ -14,7 +14,7 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
 from gps.gui.config import generate_experiment_info
 
-from gps.generalized_agents.reacher_by_color_and_type import RobotType, reacher_by_color_and_type, BlockPush, ColorReach, COLOR_ORDER
+from gps.generalized_agents.reacher_by_color_and_type import RobotType, reacher_by_color_and_type, BlockPush, ColorReach, ColorPush, COLOR_ORDER
 
 REACHERS = map(ColorReach, COLOR_ORDER)
 BLOCKPUSH_FIRST = [BlockPush] + REACHERS[:3]
