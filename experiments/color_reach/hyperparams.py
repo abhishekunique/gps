@@ -67,6 +67,7 @@ elif MODE == "training":
     VERBOSE_TRIALS = SHOW_VIEWER
     VIEW_TRAJECTORIES = False
 elif MODE == "check-model":
+    LEAVE_ONE_OUT = 1
     SHOW_VIEWER = True
     IS_TESTING = False
     SAMPLES = 1
