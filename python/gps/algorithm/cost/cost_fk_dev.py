@@ -61,8 +61,6 @@ class CostFKDev(Cost):
 
         # Evaluate penalty term. Use estimated Jacobians and no higher
         # order terms.
-        # import IPython
-        # IPython.embed()
         jxx_zeros = np.zeros((T, dist.shape[1], jx.shape[2], jx.shape[2]))
         l, ls, lss = self._hyperparams['evalnorm'](
             wp, dist, jx, jxx_zeros, self._hyperparams['l1'],

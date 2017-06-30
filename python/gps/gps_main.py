@@ -246,7 +246,6 @@ class GPSMain(object):
             return
         self.check_itr = 8
         import IPython
-        #IPython.embed()
         for itr in range(itr_start, self._hyperparams['iterations']):
             time2 = time.clock()
             traj_sample_lists = {}
@@ -301,9 +300,6 @@ class GPSMain(object):
             data_dump =[vars, self.policy_opt.var]
             with open('{0}/weights_itr{1}.pkl'.format(nn_dump_path, itr + weights_pkl_offset),'wb') as f:
                 pickle.dump(data_dump, f)
-            if itr % self.check_itr == 0 and itr >0:
-                import IPython
-                IPython.embed()
             traj_distr = {}
             for ag in range(self.num_robots):
                 name = self.agent[ag]._hyperparams['filename'][0]

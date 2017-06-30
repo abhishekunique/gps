@@ -738,8 +738,6 @@ def multitask_multirobot_fc_hardcoded(dim_input=[27, 27], dim_output=[7, 7], bat
         shared_weights['w2_tn_' + str(task_number)] = init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
         shared_weights['b2_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
 
-    # import IPython
-    # IPython.embed()
     for robot_number, robot_params in enumerate(network_config):
         robot_index = robot_list[robot_number]
         task_index = task_list[robot_number]
@@ -1013,8 +1011,6 @@ def multitask_multirobot_fc_forward(dim_input=[27, 27], dim_output=[7, 7], batch
         shared_weights['w2_tn_' + str(task_number)] = init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
         shared_weights['b2_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
 
-    # import IPython
-    # IPython.embed()
     for robot_number, robot_params in enumerate(network_config):
         # robot_index =0# robot_list[robot_number]
         # task_index = 2#task_list[robot_number]
@@ -1102,8 +1098,6 @@ def multitask_forward(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, netw
         shared_weights['w2_tn_' + str(task_number)] = init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
         shared_weights['b2_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
 
-    # import IPython
-    # IPython.embed()
     for robot_number, robot_params in enumerate(network_config):
         robot_index = 1
         task_index = 2
@@ -1186,8 +1180,6 @@ def blockpushnet(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_c
         shared_weights['w2_tn_' + str(task_number)] = init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
         shared_weights['b2_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
 
-    # import IPython
-    # IPython.embed()
     for robot_number, robot_params in enumerate(network_config):
         robot_index = 1
         task_index = 1

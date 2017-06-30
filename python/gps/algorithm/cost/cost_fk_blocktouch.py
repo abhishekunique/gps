@@ -56,8 +56,6 @@ class CostFKBlock(Cost):
         dist = pt_ee_avg - pt_block
         # dist = np.concatenate([dist, np.zeros((T,3))], axis=1)
         wp= np.ones((T,3))
-        # import IPython
-        # IPython.embed()
         # print(wp)
         # TODO - These should be partially zeros so we're not double
         #        counting.

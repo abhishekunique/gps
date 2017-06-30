@@ -64,5 +64,3 @@ if __name__ == "__main__":
 	# 	ax1 = fig1.add_subplot(111)
 	# 	ax1.plot(range(len(dists)), dist_to_plot)
 	# plt.show()
-	# import IPython
-	# IPython.embed()
