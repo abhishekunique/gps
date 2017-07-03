@@ -75,6 +75,41 @@ class BlockPush(object):
             'alpha': 1e-5,
         }] for i in train_conditions]
 
+class Cleaning(object):
+    additional_joints = 12
+    number_end_effectors = 7
+    cost_weights = [1]
+    x_offs = np.linspace(-0.15, 0.15, 4)
+    y_offs = np.linspace(-0.15, 0.15, 4)
+    @staticmethod
+    def body_indices(robot_type):
+        start = robot_type.bodies_before_color_blocks()
+        return range(start + 1, start + 7)
+    @staticmethod
+    def nconditions(n_offs, n_verts, n_blocks):
+        return len(Cleaning.x_offs) * len(Cleaning.y_offs)
+    @classmethod
+    def offset_generator(cls, offsets, vert_offs, block_locs, condition):
+        xpos = Cleaning.x_offs[condition % len(Cleaning.x_offs)] - 1.8
+        ypos = Cleaning.y_offs[condition // len(Cleaning.x_offs)] - 1.5
+        ball_location = 0.5
+        goal_loc = [xpos, 0, ypos]
+        items = [[np.cos(x) / 4 + xpos, -0.25, np.sin(x) / 4 + ypos * ball_location] for x in np.linspace(0, np.pi, 5)]
+        return items + [goal_loc]
+    @staticmethod
+    def xml(is_3d, robot_type):
+        filename = {
+            RobotType.THREE_LINK : './mjc_models/3link_cleaning_task',
+            RobotType.THREE_LINK_SHORT_JOINT : './mjc_models/3link_cleaning_task_shortjoint',
+            RobotType.FOUR_LINK : './mjc_models/4link_cleaning_task',
+        }[robot_type]
+        if robot_type.is_arm() and is_3d:
+            filename += "_3d"
+        return filename + ".xml"
+    @classmethod
+    def task_specific_cost(cls, offset_generator, train_conditions):
+        return [[] for i in train_conditions]
+
 class ColorReach(object):
     cost_weights = [1, 1]
     additional_joints = 0
