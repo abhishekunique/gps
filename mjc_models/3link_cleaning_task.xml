@@ -87,7 +87,7 @@
             <!-- <geom rgba="1. 1. 1. 1" type="box" size="0.14 0.14 0.01" density='0.00001' contype="0" conaffinity="0"/> -->
             <joint name="goal_slidey" type="slide" pos="0 0 0" axis="0 1 0" range="-10.3213 10.3" damping="0.5"/>
             <joint name="goal_slidex" type="slide" pos="0 0 0" axis="1 0 0" range="-10.3213 10.3" damping="0.5"/>
-            <site name="siteg" pos="0 0 -0.12" size="0.01" />
+            <site name="siteg" pos="0 0 0" size="0.01" />
         </body>
 
     </worldbody>

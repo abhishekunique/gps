@@ -108,7 +108,22 @@ class Cleaning(object):
         return filename + ".xml"
     @classmethod
     def task_specific_cost(cls, offset_generator, train_conditions):
-        return [[] for i in train_conditions]
+        cost_components = []
+        for i in train_conditions:
+            target = [0, 0, 0]
+            for item in range(Cleaning.number_end_effectors - 2):
+                target += offset_generator(i)[item]
+            target += [0, 0, 0]
+            current = {
+                "type" : CostFK,
+                "target_end_effector" : np.array(target),
+                "wp" : np.array([0] * 3 + [1] * (3 * Cleaning.number_end_effectors - 6) + [0] * 3),
+                "l1" : 0.1,
+                "l2" : 10.0,
+                "alpha" : 1e-5
+            }
+            cost_components.append([current])
+        return cost_components
 
 class ColorReach(object):
     cost_weights = [1, 1]
