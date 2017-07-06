@@ -78,7 +78,7 @@ class BlockPush(object):
 class Cleaning(object):
     additional_joints = 12
     number_end_effectors = 7
-    cost_weights = [1]
+    cost_weights = [1, 1]
     x_offs = np.linspace(-0.15, 0.15, 4)
     y_offs = np.linspace(-0.15, 0.15, 4)
     @staticmethod
