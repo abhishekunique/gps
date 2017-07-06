@@ -198,6 +198,30 @@ class ColorPush(ColorReach):
         filename = ColorReach.xml(is_3d, robot_type)
         assert "reach" in filename
         return filename.replace("reach", "push")
+    @staticmethod
+    def nconditions(n_offs, vert_offs, blockpush_offs):
+        del vert_offs, blockpush_offs
+        return 2 + (n_offs - 2) * 2
+    def offset_generator(self, offsets, vert_offs, blockpush_offs, condition):
+        condition += 1
+        condition %= self.nconditions(len(offsets), len(vert_offs), len(blockpush_offs))
+        if condition == 0:
+            fro, to = len(offsets) - 1, len(offsets) - 2
+        elif condition == 1:
+            fro, to = 0, 1
+        else:
+            fro, direction = condition // 2, condition % 2
+            to = fro + (1 if direction else -1)
+        movable_block = COLOR_ORDER.index(self.color_from)
+        target_block = COLOR_ORDER.index(self.color)
+        results = [None] * len(offsets)
+        results[movable_block] = offsets[fro]
+        results[target_block] = offsets[to]
+        unused_result_idx = [idx for idx in range(len(offsets)) if idx not in {movable_block, target_block}]
+        np.random.shuffle(unused_result_idx)
+        for off_idx, res_idx in zip([idx for idx in range(len(offsets)) if idx not in {fro, to}], unused_result_idx):
+            results[res_idx] = offsets[off_idx]
+        return results
     def task_specific_cost(self, offset_generator, train_conditions):
         movable_block = COLOR_ORDER.index(self.color_from)
         target_block = COLOR_ORDER.index(self.color)
