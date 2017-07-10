@@ -114,7 +114,7 @@ class CleaningPerObject(object):
     def task_specific_cost(self, offset_generator, train_conditions):
         cost_components = []
         for i in train_conditions:
-            target = offset_generator(i)[-1] if self.smoothing else [0, 0, 0]
+            target = list(np.array(offset_generator(i)[-1]) + [-0.5, 0, 0]) if self.smoothing else [0, 0, 0]
             for _ in range(self.number_end_effectors - 2):
                 target += offset_generator(i)[-1]
             target += [0, 0, 0]
