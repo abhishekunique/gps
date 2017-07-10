@@ -40,6 +40,7 @@ N_BLOCK_CONDITIONS = 6
 NAME = None
 COLOR_BLOCKS_3D = None
 RANDOM_SEED = 0x123ABC
+SAMPLES = None
 
 CONFIG_FILE = argv[argv.index("--config") + 1]
 execfile(CONFIG_FILE)
@@ -53,29 +54,34 @@ SHOW_VIEWER, MODE, USE_IMAGES, ARMS_3D, ROBOT_TYPES, TASK_TYPES, VIDEO_PATH # en
 if MODE == "testing" or MODE == "taskout-print":
     SHOW_VIEWER = True
     IS_TESTING = True
-    SAMPLES = 10
+    if SAMPLES is None:
+        SAMPLES = 10
     VERBOSE_TRIALS = False
     VIEW_TRAJECTORIES = True
 elif MODE == "check-traj":
     IS_TESTING = False
-    SAMPLES = 1
+    if SAMPLES is None:
+        SAMPLES = 1
     VERBOSE_TRIALS = True
     VIEW_TRAJECTORIES = False
 elif MODE == "training":
     IS_TESTING = False
-    SAMPLES = 5
+    if SAMPLES is None:
+        SAMPLES = 5
     VERBOSE_TRIALS = SHOW_VIEWER
     VIEW_TRAJECTORIES = False
 elif MODE == "check-model":
     LEAVE_ONE_OUT = 1
     SHOW_VIEWER = True
     IS_TESTING = False
-    SAMPLES = 1
+    if SAMPLES is None:
+        SAMPLES = 1
     VERBOSE_TRIALS = SHOW_VIEWER
     VIEW_TRAJECTORIES = False
 elif MODE == "view-traj":
     IS_TESTING = False
-    SAMPLES = 10
+    if SAMPLES is None:
+        SAMPLES = 10
     VERBOSE_TRIALS = False
     VIEW_TRAJECTORIES = True
 else:
