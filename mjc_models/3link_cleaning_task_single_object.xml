@@ -39,7 +39,7 @@
         <body name="object0" pos="0 0 -0.08">
             <!--<geom rgba="1. 1. 1. 1" type="box" size="0.05 0.05 0.05" density='0.00001' contype="1" conaffinity="1"/>-->
             <geom rgba="1 0 0 1" type="sphere" size="0.05" density='0.001' contype="1" conaffinity="1"/>
-            <joint name="obj0_slidey" type="slide" pos="0 0 0" axis="0 1 0" range="-10.3213 10.3" damping="0.5"/>
+            <joint name="obj0_slidey" type="slide" pos="0 0 0" axis="0 0 1" range="-10.3213 10.3" damping="0.5"/>
             <joint name="obj0_slidex" type="slide" pos="0 0 0" axis="1 0 0" range="-10.3213 10.3" damping="0.5"/>
             <site name="site0" pos="0 0 -0.12" size="0.01" />
         </body>
@@ -54,7 +54,7 @@
             <geom type="box" size="0.06 0.3 0.06" pos="0. -0.50 0.14" density='1000' contype="1" conaffinity="1"/>
 
             <!-- <geom rgba="1. 1. 1. 1" type="box" size="0.14 0.14 0.01" density='0.00001' contype="0" conaffinity="0"/> -->
-            <joint name="goal_slidey" type="slide" pos="0 0 0" axis="0 1 0" range="-10.3213 10.3" damping="0.5"/>
+            <joint name="goal_slidey" type="slide" pos="0 0 0" axis="0 0 1" range="-10.3213 10.3" damping="0.5"/>
             <joint name="goal_slidex" type="slide" pos="0 0 0" axis="1 0 0" range="-10.3213 10.3" damping="0.5"/>
             <site name="siteg" pos="0 0 0" size="0.01" />
         </body>
