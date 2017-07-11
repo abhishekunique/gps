@@ -15,7 +15,7 @@ def init_bias(shape, name=None):
 def batched_matrix_vector_multiply(vector, matrix):
     """ computes x^T A in mini-batches. """
     vector_batch_as_matricies = tf.expand_dims(vector, [1])
-    mult_result = tf.batch_matmul(vector_batch_as_matricies, matrix)
+    mult_result = tf.matmul(vector_batch_as_matricies, matrix)
     squeezed_result = tf.squeeze(mult_result, [1])
     return squeezed_result
 
@@ -156,7 +156,7 @@ def multi_modal_network(dim_input=27, dim_output=7, batch_size=25, network_confi
 
     conv_out_flat = tf.reshape(conv_layer_1, [-1, conv_out_size])
 
-    fc_input = tf.concat(concat_dim=1, values=[conv_out_flat, state_input])
+    fc_input = tf.concat(axis=1, values=[conv_out_flat, state_input])
 
     fc_output, _, _ = get_mlp_layers(fc_input, n_layers, dim_hidden)
 
@@ -249,12 +249,12 @@ def multi_modal_network_fp(dim_input=27, dim_output=7, batch_size=25, network_co
                           [-1, num_rows*num_cols])
     softmax = tf.nn.softmax(features)
 
-    fp_x = tf.reduce_sum(tf.mul(x_map, softmax), [1], keep_dims=True)
-    fp_y = tf.reduce_sum(tf.mul(y_map, softmax), [1], keep_dims=True)
+    fp_x = tf.reduce_sum(tf.multiply(x_map, softmax), [1], keep_dims=True)
+    fp_y = tf.reduce_sum(tf.multiply(y_map, softmax), [1], keep_dims=True)
 
-    fp = tf.reshape(tf.concat(1, [fp_x, fp_y]), [-1, num_fp*2])
+    fp = tf.reshape(tf.concat(axis=1, values=[fp_x, fp_y]), [-1, num_fp*2])
 
-    fc_input = tf.concat(concat_dim=1, values=[fp, state_input])
+    fc_input = tf.concat(axis=1, values=[fp, state_input])
 
     fc_output, weights_FC, biases_FC = get_mlp_layers(fc_input, n_layers, dim_hidden)
     fc_vars = weights_FC + biases_FC
@@ -282,5 +282,3 @@ def get_xavier_weights(filter_shape, poolsize=(2, 2)):
     low = -4*np.sqrt(6.0/(fan_in + fan_out)) # use 4 for sigmoid, 1 for tanh activation
     high = 4*np.sqrt(6.0/(fan_in + fan_out))
     return tf.Variable(tf.random_uniform(filter_shape, minval=low, maxval=high, dtype=tf.float32))
-
-

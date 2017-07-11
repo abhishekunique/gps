@@ -80,7 +80,7 @@ class PolicyOptTf(PolicyOpt):
             self.ent_reg = [self._hyperparams['ent_reg']]*self.num_robots
         else:
             self.ent_reg = self._hyperparams['ent_reg']
-        init_op = tf.initialize_all_variables()
+        init_op = tf.global_variables_initializer()
         self.sess.run(init_op)
         # import pickle
         # val_vars, pol_var = pickle.load(open('/home/coline/abhishek_gps/gps/weights_bottleneck_itr0.pkl', 'rb'))

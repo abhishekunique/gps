@@ -139,7 +139,7 @@ class TfPolicy(Policy):
                               batch_size=1, network_config=network_config)
 
         sess = tf.Session()
-        init_op = tf.initialize_all_variables()
+        init_op = tf.global_variables_initializer()
         sess.run(init_op)
         saver = tf.train.Saver()
         check_file = pol_dict['checkpoint_path_tf']

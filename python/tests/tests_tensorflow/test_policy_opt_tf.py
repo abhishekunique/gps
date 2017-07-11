@@ -166,7 +166,7 @@ def test_euclidean_loss_layer():
     loss = euclidean_loss_layer(predicted_action, action, precision, batch_size)
     mat_vec_prod = batched_matrix_vector_multiply(predicted_action-action, precision)
     sess = tf.Session()
-    init_op = tf.initialize_all_variables()
+    init_op = tf.global_variables_initializer()
     sess.run(init_op)
     PRECISION = np.arange(batch_size*dim_output*dim_output).reshape((batch_size, dim_output, dim_output))
     PREDICTED_ACTION = np.arange(batch_size*dim_output).reshape((batch_size, dim_output))
