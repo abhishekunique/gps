@@ -529,7 +529,6 @@ class PolicyOptTf(PolicyOpt):
                     average_loss = 0
                     avg_val_loss = 0
                     if len(all_val_losses) > 2:
-                        print "checking past val losses", all_val_losses
                         if all_val_losses[-1] > all_val_losses[-2] and all_val_losses[-2] > all_val_losses[-3]:
                             print "Val loss is increasing, stop iters"
                             continue_iters = False
