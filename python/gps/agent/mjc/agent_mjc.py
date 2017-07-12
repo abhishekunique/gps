@@ -5,6 +5,8 @@ import numpy as np
 
 import mjcpy
 import random
+from datetime import datetime
+
 from gps.agent.agent import Agent
 from gps.agent.agent_utils import generate_noise, setup
 from gps.agent.config import AGENT_MUJOCO
@@ -339,7 +341,7 @@ class AgentMuJoCo(Agent):
             system("mkdir -p %s" % self._hyperparams["write_video"])
             img = self._world[condition].get_image_scaled(self._hyperparams['image_width'],
                                                           self._hyperparams['image_height'])
-            scipy.misc.imsave('%s/%02d-%03d.png' % (self._hyperparams["write_video"], condition, t), img["img"])
+            scipy.misc.imsave('%s/%s-%02d-%03d.png' % (self._hyperparams["write_video"], datetime.now().strftime("%H-%M-%S"), condition, t), img["img"])
         if RGB_IMAGE in self.obs_data_types:
             img = self._world[condition].get_image_scaled(self._hyperparams['image_width'],
                                                           self._hyperparams['image_height'])
