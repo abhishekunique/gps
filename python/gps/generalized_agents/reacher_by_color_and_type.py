@@ -76,10 +76,11 @@ class BlockPush(object):
         }] for i in train_conditions]
 
 class CleaningPerObject(object):
-    def __init__(self, num_objects, file_tail, smoothing):
+    def __init__(self, num_objects, file_tail, smoothing, goal_z=0):
         self.file_tail = file_tail
         self.num_objects = num_objects
         self.smoothing = smoothing
+        self.goal_z = goal_z
         self.additional_joints = (self.num_objects + 1) * 2
         self.number_end_effectors = self.num_objects + 3
     cost_weights = [1, 1]
@@ -95,7 +96,7 @@ class CleaningPerObject(object):
         xpos = self.x_offs[condition % len(self.x_offs)] - 1.8
         ypos = self.y_offs[condition // len(self.x_offs)] - 1.5
         ball_location = 0.5
-        goal_loc = [xpos, 0, ypos]
+        goal_loc = [xpos, self.goal_z, ypos]
         obj_center = np.array([xpos, -0.25, ypos * ball_location])
         if self.num_objects == 1:
             items = [obj_center]
@@ -129,8 +130,8 @@ class CleaningPerObject(object):
             cost_components.append([current])
         return cost_components
 
-Cleaning = lambda smoothing: CleaningPerObject(5, "", smoothing)
-CleaningSingleObject = lambda smoothing: CleaningPerObject(1, "_single_object", smoothing)
+Cleaning = lambda smoothing, **kwargs: CleaningPerObject(5, "", smoothing, **kwargs)
+CleaningSingleObject = lambda smoothing, **kwargs: CleaningPerObject(1, "_single_object", smoothing, **kwargs)
 
 class ColorReach(object):
     cost_weights = [1, 1]
