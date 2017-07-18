@@ -81,7 +81,7 @@ class CleaningPerObject(object):
         self.num_objects = num_objects
         self.smoothing = smoothing
         self.additional_joints = (self.num_objects + 1) * 2
-        self.number_end_effectors = self.num_objects + 2
+        self.number_end_effectors = self.num_objects + 3
     cost_weights = [1, 1]
     x_offs = np.linspace(-0.15, 0.15, 4)
     y_offs = np.linspace(-0.15, 0.15, 4)
@@ -114,14 +114,14 @@ class CleaningPerObject(object):
     def task_specific_cost(self, offset_generator, train_conditions):
         cost_components = []
         for i in train_conditions:
-            target = list(np.array(offset_generator(i)[-1]) + [-0.5, 0, 0]) if self.smoothing else [0, 0, 0]
-            for _ in range(self.number_end_effectors - 2):
+            target = list(np.array(offset_generator(i)[-1] * 2) + [-0.5, 0, 0, 0.5, 0, 0]) if self.smoothing else [0] * 6
+            for _ in range(self.number_end_effectors - 3):
                 target += offset_generator(i)[-1]
             target += [0, 0, 0]
             current = {
                 "type" : CostFK,
                 "target_end_effector" : np.array(target),
-                "wp" : np.array([1 if self.smoothing else 0] * 3 + [1] * (3 * self.number_end_effectors - 6) + [0] * 3),
+                "wp" : np.array([1 if self.smoothing else 0] * 6 + [1] * (3 * self.number_end_effectors - 9) + [0] * 3),
                 "l1" : 0.1,
                 "l2" : 10.0,
                 "alpha" : 1e-5
