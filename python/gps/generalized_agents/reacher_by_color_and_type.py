@@ -303,7 +303,7 @@ class RobotType(Enum):
 
 COLOR_ORDER = ("red", "green", "yellow", "black")
 
-def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, blockpush_locations, robot_type, enable_images, task_type, pass_environment_effectors_to_robot=False):
+def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, blockpush_locations, robot_type, enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False):
     number_links = robot_type.number_links()
     number_joints = number_links + task_type.additional_joints
     end_effector_points = 3 * task_type.number_end_effectors
@@ -420,8 +420,8 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
 
     agent_dict['algorithm']['cost'] = [{
         'type': CostSum,
-        'costs': [torque_cost_0[i]] + task_type.task_specific_cost(offset_generator, agent_dict['agent']['train_conditions'])[i],
-        'weights': task_type.cost_weights,
+        'costs': ([torque_cost_0[i]] if torque_costs else []) + task_type.task_specific_cost(offset_generator, agent_dict['agent']['train_conditions'])[i],
+        'weights': task_type.cost_weights if torque_costs else task_type.cost_weights[1:],
     } for i in agent_dict['agent']['train_conditions']]
 
     agent_dict['algorithm']['dynamics'] = {

@@ -41,6 +41,7 @@ NAME = None
 COLOR_BLOCKS_3D = None
 RANDOM_SEED = 0x123ABC
 SAMPLES = None
+TORQUE_COSTS = True
 
 CONFIG_FILE = argv[argv.index("--config") + 1]
 execfile(CONFIG_FILE)
@@ -128,6 +129,7 @@ agents = [reacher_by_color_and_type(i,
                                     robot_type,
                                     USE_IMAGES,
                                     task_type,
+                                    torque_costs=TORQUE_COSTS,
                                     pass_environment_effectors_to_robot=PASS_ENVIRONMENT_EFFECTORS_TO_ROBOT)
             for i, (task_type, robot_type) in enumerate(arguments)]
 
