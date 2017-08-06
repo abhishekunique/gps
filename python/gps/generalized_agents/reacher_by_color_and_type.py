@@ -171,7 +171,9 @@ class ColorReach(object):
             RobotType.PEGGY : './mjc_models/peggy_arm3d_reach_colors',
             RobotType.KINOVA : './mjc_models/kinova/jaco',
             RobotType.BAXTER : './mjc_models/baxter/baxter',
-            RobotType.PR2 : './mjc_models/pr2/pr2_arm'
+            RobotType.BAXTER_CYAN : './mjc_models/baxter/baxter_cyan',
+            RobotType.PR2 : './mjc_models/pr2/pr2_arm',
+            RobotType.PR2_MAGENTA : './mjc_models/pr2/pr2_arm_magenta'
         }[robot_type]
         if robot_type.is_arm() and is_3d:
             filename += "_3d"
@@ -256,11 +258,13 @@ class RobotType(Enum):
     PEGGY = 4
     KINOVA = 5
     BAXTER = 6
-    PR2 = 7
+    BAXTER_CYAN = 7
+    PR2 = 8
+    PR2_MAGENTA = 9
     def is_arm(self):
         if self in {RobotType.THREE_LINK, RobotType.THREE_LINK_SHORT_JOINT, RobotType.FOUR_LINK, RobotType.FIVE_LINK}:
             return True
-        elif self in {RobotType.PEGGY, RobotType.KINOVA, RobotType.BAXTER, RobotType.PR2}:
+        elif self in {RobotType.PEGGY, RobotType.KINOVA, RobotType.BAXTER, RobotType.BAXTER_CYAN, RobotType.PR2, RobotType.PR2_MAGENTA}:
             return False
         else:
             raise RuntimeError
@@ -275,9 +279,9 @@ class RobotType(Enum):
             return 7
         elif self == RobotType.KINOVA:
             return 9
-        elif self == RobotType.BAXTER:
+        elif self in {RobotType.BAXTER, RobotType.BAXTER_CYAN}:
             return 10
-        elif self == RobotType.PR2:
+        elif self in {RobotType.PR2, RobotType.PR2_MAGENTA}:
             return 7
         else:
             raise RuntimeError
@@ -288,16 +292,16 @@ class RobotType(Enum):
             return 16
         elif self == RobotType.KINOVA:
             return 10
-        elif self == RobotType.BAXTER:
+        elif self in {RobotType.BAXTER, RobotType.BAXTER_CYAN}:
             return 21
-        elif self == RobotType.PR2:
+        elif self in {RobotType.PR2, RobotType.PR2_MAGENTA}:
             return 11
         else:
             raise RuntimeError
     def gains(self):
-        if self.is_arm() or self in {RobotType.KINOVA, RobotType.BAXTER}:
+        if self.is_arm() or self in {RobotType.KINOVA, RobotType.BAXTER, RobotType.BAXTER_CYAN}:
             return np.ones(self.number_links())
-        elif self in {RobotType.PEGGY, RobotType.PR2}:
+        elif self in {RobotType.PEGGY, RobotType.PR2, RobotType.PR2_MAGENTA}:
             return np.array([3.09, 1.08, 0.393, 0.674, 0.111, 0.152, 0.098])
         else:
             raise RuntimeError
