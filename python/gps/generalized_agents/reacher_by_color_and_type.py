@@ -308,7 +308,7 @@ class RobotType(Enum):
 
 COLOR_ORDER = ("red", "green", "yellow", "black")
 
-def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, blockpush_locations, robot_type, enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False):
+def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, blockpush_locations, (robot_type, is_real), enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False):
     number_links = robot_type.number_links()
     number_joints = number_links + task_type.additional_joints
     end_effector_points = 3 * task_type.number_end_effectors
@@ -389,6 +389,8 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
         'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
         'offs_to_use': offset_generator
     }
+    if is_rule:
+        agent_dict['agent'] = {'type' : AgentRecorded}
     agent_dict['agent'].update(image_dims)
     agent_dict['algorithm'] = {
         'type': AlgorithmBADMM,

@@ -20,10 +20,10 @@ REACHERS = map(ColorReach, COLOR_ORDER)
 BLOCKPUSH_FIRST = [BlockPush] + REACHERS[:3]
 BLOCKPUSH_SECOND = ColorReach("red"), BlockPush, ColorReach("green"), ColorReach("yellow")
 
-ARMS = RobotType.THREE_LINK, RobotType.FOUR_LINK, RobotType.FIVE_LINK
-PEGGY_VS_ARMS = RobotType.PEGGY, RobotType.THREE_LINK, RobotType.FOUR_LINK
-PR2_VS_ARMS = RobotType.PR2, RobotType.THREE_LINK, RobotType.FOUR_LINK
-BAXTER_VS_ARMS = RobotType.BAXTER, RobotType.THREE_LINK, RobotType.FOUR_LINK
+ARMS = (RobotType.THREE_LINK, False), (RobotType.FOUR_LINK, False), (RobotType.FIVE_LINK, False)
+PEGGY_VS_ARMS = (RobotType.PEGGY, False), (RobotType.THREE_LINK, False), (RobotType.FOUR_LINK, False)
+PR2_VS_ARMS = (RobotType.PR2, False), (RobotType.THREE_LINK, False), (RobotType.FOUR_LINK, False)
+BAXTER_VS_ARMS = (RobotType.BAXTER, False), (RobotType.THREE_LINK, False), (RobotType.FOUR_LINK, False)
 
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
