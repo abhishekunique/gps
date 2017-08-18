@@ -315,7 +315,9 @@ class RobotType(Enum):
 
 COLOR_ORDER = ("red", "green", "yellow", "black")
 
-def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, blockpush_locations, (robot_type, is_real), enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False, number_samples=None):
+def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, lego_offsets, blockpush_locations, (robot_type, is_real), enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False, number_samples=None):
+    if isinstance(task_type, LegoReach):
+        offsets = lego_offsets
     number_links = robot_type.number_links()
     number_joints = number_links + task_type.additional_joints
     end_effector_points = 3 * task_type.number_end_effectors

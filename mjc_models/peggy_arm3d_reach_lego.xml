@@ -85,34 +85,25 @@
 
         <body name="legored" pos="1.3 0.0 0.0">
             <geom rgba="1 0 0 1" type="box" size="0.05 0.05 0.10" density='0.00001' contype="1" conaffinity="1"/>
-            <!--            <joint name="obj_hinge" type="hinge" pos="0.1 0.05 0.05" axis="0 1 0" range="-10.3213 10.3" damping="0.1"/>-->
-            <body name="distal_10" pos="0 0 0">
-                <site name="legored" pos="0.025 0.025 0.025" size="0.01" />
-            </body>
+            <site name="legored" pos="0.025 0.025 0.025" size="0.01" />
         </body>
 
         <body name="legogreen" pos="1.3 0.0 0.0">
             <geom rgba="0 1 0 1" type="box" size="0.05 0.05 0.10" density='0.00001' contype="1" conaffinity="1"/>
-            <!--            <joint name="obj_hinge" type="hinge" pos="0.1 0.05 0.05" axis="0 1 0" range="-10.3213 10.3" damping="0.1"/>-->
-            <body name="distal_11" pos="0 0 0">
-                <site name="legogreen" pos="0.025 0.025 0.025" size="0.01" />
-            </body>
+            <site name="legogreen" pos="0.025 0.025 0.025" size="0.01" />
         </body>
 
         <body name="legoyellow" pos="1.3 0.0 0.0">
             <geom rgba="1 1 0 1" type="box" size="0.05 0.05 0.10" density='0.00001' contype="1" conaffinity="1"/>
-            <!--            <joint name="obj_hinge" type="hinge" pos="0.1 0.05 0.05" axis="0 1 0" range="-10.3213 10.3" damping="0.1"/>-->
-            <body name="distal_12" pos="0 0 0">
-                <site name="legoyellow" pos="0.025 0.025 0.025" size="0.01" />
-            </body>
+            <site name="legoyellow" pos="0.025 0.025 0.025" size="0.01" />
         </body>
 
         <body name="legoblue" pos="1.3 0.0 0.0">
             <geom rgba="0 0 1 1" type="box" size="0.05 0.05 0.10" density='0.00001' contype="1" conaffinity="1"/>
-            <!--            <joint name="obj_hinge" type="hinge" pos="0.1 0.05 0.05" axis="0 1 0" range="-10.3213 10.3" damping="0.1"/>-->
-            <body name="distal_13" pos="0 0 0">
-                <site name="legoblue" pos="0.025 0.025 0.025" size="0.01" />
-            </body>
+            <site name="legoblue" pos="0.025 0.025 0.025" size="0.01" />
+        </body>
+
+        <body name="holdout" pos="1.3 0.0 0.0">
         </body>
     </worldbody>
 
