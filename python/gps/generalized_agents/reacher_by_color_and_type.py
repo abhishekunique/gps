@@ -6,6 +6,7 @@ import numpy as np
 import operator
 
 from gps.agent.mjc.agent_mjc import AgentMuJoCo
+from gps.agent.recorded.agent_recorded import AgentRecorded
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
@@ -190,6 +191,12 @@ class ColorReach(object):
             'alpha': 1e-5,
         }] for i in train_conditions]
 
+class LegoReach(ColorReach):
+    @staticmethod
+    def xml(is_3d, robot_type):
+        xml_file = ColorReach.xml(is_3d, robot_type)
+        return xml_file.replace("reach_colors", "reach_lego")
+
 class ColorPush(ColorReach):
     additional_joints = 8
     cost_weights = BlockPush.cost_weights
@@ -308,7 +315,7 @@ class RobotType(Enum):
 
 COLOR_ORDER = ("red", "green", "yellow", "black")
 
-def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, blockpush_locations, (robot_type, is_real), enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False):
+def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, blockpush_locations, (robot_type, is_real), enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False, number_samples=None):
     number_links = robot_type.number_links()
     number_joints = number_links + task_type.additional_joints
     end_effector_points = 3 * task_type.number_end_effectors
@@ -389,8 +396,12 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
         'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
         'offs_to_use': offset_generator
     }
-    if is_rule:
-        agent_dict['agent'] = {'type' : AgentRecorded}
+    if is_real:
+        assert isinstance(task_type, LegoReach)
+        agent_dict['agent']['type'] = AgentRecorded
+        truecolor = "blue" if task_type.color == "black" else task_type.color
+        agent_dict['agent']['real_obs_path'] = "/home/abhigupta/output/result_" + truecolor
+        agent_dict["agent"]['number_samples'] = number_samples
     agent_dict['agent'].update(image_dims)
     agent_dict['algorithm'] = {
         'type': AlgorithmBADMM,

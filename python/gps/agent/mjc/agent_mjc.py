@@ -114,7 +114,7 @@ class AgentMuJoCo(Agent):
                                            cam_pos[0], cam_pos[1], cam_pos[2],
                                            cam_pos[3], cam_pos[4], cam_pos[5])
 
-    def sample(self, policy, condition, verbose=True, save=True, noisy=True):
+    def sample(self, policy, condition, verbose=True, save=True, noisy=True, index=None):
         """
         Runs a trial and constructs a new sample containing information
         about the trial.

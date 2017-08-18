@@ -514,7 +514,8 @@ class GPSMain(object):
         else:
             self.agent[robot_number].sample(
                 pol, cond,
-                verbose=(i < self._hyperparams['verbose_trials']) or verbose
+                verbose=(i < self._hyperparams['verbose_trials']) or verbose,
+                index=i
             )
 
     def _take_iteration(self, itr, sample_lists, robot_number=0):
