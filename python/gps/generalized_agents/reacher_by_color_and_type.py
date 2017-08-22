@@ -28,10 +28,13 @@ from enum import Enum
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
     END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, IMAGE_FEAT, ACTION
 
+CAMERA_POS = [0, 5., 0., 0.3, 0., 0.3]
+
 class BlockPush(object):
     additional_joints = 2
     number_end_effectors = 3
     cost_weights = [0.5, 0.5, 4]
+    camera_pos = CAMERA_POS
     @staticmethod
     def body_indices(robot_type):
         start = robot_type.bodies_before_color_blocks()
@@ -77,6 +80,7 @@ class BlockPush(object):
         }] for i in train_conditions]
 
 class CleaningPerObject(object):
+    camera_pos = CAMERA_POS
     def __init__(self, num_objects, file_tail, smoothing, goal_z=0):
         self.file_tail = file_tail
         self.num_objects = num_objects
@@ -138,6 +142,7 @@ class ColorReach(object):
     cost_weights = [1, 1]
     additional_joints = 0
     number_end_effectors = 5
+    camera_pos = CAMERA_POS
     def __init__(self, color):
         self.color = color
     @staticmethod
@@ -192,12 +197,14 @@ class ColorReach(object):
         }] for i in train_conditions]
 
 class LegoReach(ColorReach):
+    camera_pos = [0, 5., 0., -3, 0., 0]
     @staticmethod
     def xml(is_3d, robot_type):
         xml_file = ColorReach.xml(is_3d, robot_type)
         return xml_file.replace("reach_colors", "reach_lego")
 
 class ColorPush(ColorReach):
+    camera_pos = CAMERA_POS
     additional_joints = 8
     cost_weights = BlockPush.cost_weights
     def __init__(self, color_to, color_from):
@@ -395,7 +402,7 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
         #include the camera images appropriately here
         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES] + image_data,
         'meta_include': [],
-        'camera_pos': np.array([0, 5., 0., 0.3, 0., 0.3]),
+        'camera_pos': np.array(task_type.camera_pos),
         'offs_to_use': offset_generator
     }
     if is_real:

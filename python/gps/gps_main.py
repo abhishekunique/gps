@@ -143,7 +143,7 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 pol_sample_lists = None #self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-
+            self.save_traj_distr()
         self._end()
     def read_traj_distr(self, traj_distr_dump):
         HAVE_TRAJ_DISTR = os.path.isfile(traj_distr_dump)
@@ -169,6 +169,16 @@ class GPSMain(object):
                     print ag, cond
                     newtraj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
             self.data_logger.pickle(traj_distr_dump, newtraj_distr)
+    def save_traj_distr(self):
+        traj_distr = {}
+        for ag in range(self.num_robots):
+            name = self.agent[ag]._hyperparams['filename'][0]
+            print name
+            traj_distr[name] = []
+            for cond in  self._train_idx[ag]:
+                print ag, cond
+                traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
+        self.data_logger.pickle(self._hyperparams["traj_distr_dump"], traj_distr)
     def run_badmm(self, testing, load_old_weights, itr_load=None):
         """
         Run training by iteratively sampling and taking an iteration.
@@ -300,15 +310,7 @@ class GPSMain(object):
             data_dump =[vars, self.policy_opt.var]
             with open('{0}/weights_itr{1}.pkl'.format(nn_dump_path, itr + weights_pkl_offset),'wb') as f:
                 pickle.dump(data_dump, f)
-            traj_distr = {}
-            for ag in range(self.num_robots):
-                name = self.agent[ag]._hyperparams['filename'][0]
-                print name
-                traj_distr[name] = []
-                for cond in  self._train_idx[ag]:
-                    print ag, cond
-                    traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
-            self.data_logger.pickle(TRAJ_DISTR_COLOR_REACH, traj_distr)
+            self.save_traj_distr()
 
         self._end()
 
