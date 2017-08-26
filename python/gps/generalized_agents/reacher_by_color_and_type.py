@@ -199,7 +199,7 @@ class LegoReach(ColorReach):
     camera_pos = [0, 5., 0., -3, 0., 0]
     @staticmethod
     def xml(is_3d, robot_type):
-        xml_file = ColorReach.xml(is_3d, robot_type)
+        xml_file = ColorReach("red").xml(is_3d, robot_type)
         return xml_file.replace("reach_colors", "reach_lego")
 
 class ColorPush(ColorReach):
