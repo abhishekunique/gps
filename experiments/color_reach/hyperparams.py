@@ -41,6 +41,7 @@ NAME = None
 COLOR_BLOCKS_3D = None
 RANDOM_SEED = 0x123ABC
 SAMPLES = None
+BLOCK_LOCATIONS = None
 TORQUE_COSTS = True
 
 CONFIG_FILE = argv[argv.index("--config") + 1]
@@ -93,7 +94,8 @@ taskout_print = MODE == "taskout-print"
 if COLOR_BLOCKS_3D is None:
     COLOR_BLOCKS_3D = ARMS_3D
 
-BLOCK_LOCATIONS = [np.asarray(loc) / 2 + (1 - LEGACY_BLOCK_POSITIONS) * np.array([0.1, 0, 0.2]) for loc in ([-0.3, 0., -1.65], [0.4, 0., -1.3], [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
+if BLOCK_LOCATIONS is None:
+    BLOCK_LOCATIONS = [np.asarray(loc) / 2 + (1 - LEGACY_BLOCK_POSITIONS) * np.array([0.1, 0, 0.2]) for loc in ([-0.3, 0., -1.65], [0.4, 0., -1.3], [0.45, 0., 0.45], [-0.4, 0.0, 0.7])]
 first_row_y, second_row_y = -1, -0.5
 first_row_dx, second_row_dx = 0.3, 0.5
 LEGO_BLOCK_LOCATIONS = [np.asarray(loc) for loc in ([-second_row_dx, 0., second_row_y], [0, 0., second_row_y], [second_row_dx, 0., second_row_y], [-first_row_dx, 0, first_row_y], [first_row_dx, 0, first_row_y])]

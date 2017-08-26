@@ -137,14 +137,16 @@ CleaningSingleObject = lambda smoothing, **kwargs: CleaningPerObject(1, "_single
 class ColorReach(object):
     cost_weights = [1, 1]
     additional_joints = 0
-    number_end_effectors = 5
     camera_pos = CAMERA_POS
-    def __init__(self, color):
+    def __init__(self, color, number_bodies=4):
         self.color = color
-    @staticmethod
-    def body_indices(robot_type):
+        self.number_bodies = number_bodies
+    @property
+    def number_end_effectors(self):
+        return self.number_bodies + 1
+    def body_indices(self, robot_type):
         start = robot_type.bodies_before_color_blocks()
-        return range(start + 1, start + 5)
+        return range(start + 1, start + 1 + self.number_bodies)
     @staticmethod
     def nconditions(n_offs, n_verts, _):
         return n_offs * n_verts
@@ -162,9 +164,8 @@ class ColorReach(object):
         indices = np.arange(num_offsets)
         indices[to_shuffle] = shuffled
         indices[[unchanged, cond_idx]] = indices[[cond_idx, unchanged]]
-        return [offsets[i] + [0, vertical[i], 0] for i in indices]
-    @staticmethod
-    def xml(is_3d, robot_type):
+        return [np.array(offsets[i]) + [0, vertical[i], 0] for i in indices]
+    def xml(self, is_3d, robot_type):
         filename = {
             RobotType.THREE_LINK_SHORT_JOINT : './mjc_models/arm_3link_reach_colors_shortjoint',
             RobotType.THREE_LINK : './mjc_models/arm_3link_reach_colors',
@@ -177,6 +178,8 @@ class ColorReach(object):
             RobotType.PR2 : './mjc_models/pr2/pr2_arm',
             RobotType.PR2_MAGENTA : './mjc_models/pr2/pr2_arm_magenta'
         }[robot_type]
+        if self.number_bodies != 4:
+            filename = "{filename}_bodies_{number_bodies}".format(filename=filename, number_bodies=self.number_bodies)
         if robot_type.is_arm() and is_3d:
             filename += "_3d"
         return filename + ".xml"
@@ -206,9 +209,8 @@ class ColorPush(ColorReach):
     def __init__(self, color_to, color_from):
         ColorReach.__init__(self, color_to)
         self.color_from = color_from
-    @staticmethod
-    def xml(is_3d, robot_type):
-        filename = ColorReach.xml(is_3d, robot_type)
+    def xml(self, is_3d, robot_type):
+        filename = self.xml(is_3d, robot_type)
         assert "reach" in filename
         return filename.replace("reach", "push")
     @staticmethod
@@ -316,7 +318,7 @@ class RobotType(Enum):
         else:
             raise RuntimeError
 
-COLOR_ORDER = ("red", "green", "yellow", "black")
+COLOR_ORDER = ("red", "green", "yellow", "black", "magenta", "cyan")
 
 def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, lego_offsets, blockpush_locations, (robot_type, is_real), enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False, number_samples=None, IMAGE_WIDTH=80, IMAGE_HEIGHT=64, IMAGE_CHANNELS=3):
     if isinstance(task_type, LegoReach):
