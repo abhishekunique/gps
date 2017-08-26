@@ -1,9 +1,23 @@
+
+from operator import mul
+
 import numpy as np
 from scipy.misc import imresize
 from sys import argv
 
 def reshape(image):
-    return imresize(image[32:].reshape((480, 480, 3)), (64, 64, 3))[:,:,::-1]
+    result = imresize(image[32:].reshape((480, 480, 3)), (64, 64, 3))[:,:,::-1]
+    number_joints = 7
+    end_eff_pt_start = number_joints * 2
+    end_eff_vel_start = number_joints * 2 + 9
+    end_effs = 12
+    result = np.concatenate([image[:number_joints * 2],
+                             image[end_eff_pt_start:end_eff_pt_start+3],
+                             np.zeros(end_effs),
+                             image[end_eff_vel_start:end_eff_vel_start+3],
+                             np.zeros(end_effs),
+                             result.reshape(reduce(mul, result.shape))])
+    return result
 
 _, folder = argv
 
