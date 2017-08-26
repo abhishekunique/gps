@@ -137,7 +137,8 @@ agents = [reacher_by_color_and_type(i,
                                     task_type,
                                     torque_costs=TORQUE_COSTS,
                                     pass_environment_effectors_to_robot=PASS_ENVIRONMENT_EFFECTORS_TO_ROBOT,
-                                    number_samples=SAMPLES)
+                                    number_samples=SAMPLES,
+                                    IMAGE_WIDTH=IMAGE_WIDTH, IMAGE_HEIGHT=IMAGE_HEIGHT, IMAGE_CHANNELS=IMAGE_CHANNELS)
             for i, (task_type, robot_type) in enumerate(arguments)]
 
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])

@@ -19,10 +19,6 @@ from gps.algorithm.policy.lin_gauss_init import init_pd
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
 from gps.algorithm.policy_opt.tf_model_example_multirobot import multitask_multirobot_fc
 
-IMAGE_WIDTH = 80
-IMAGE_HEIGHT = 64
-IMAGE_CHANNELS = 3
-
 from enum import Enum
 
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
@@ -322,7 +318,7 @@ class RobotType(Enum):
 
 COLOR_ORDER = ("red", "green", "yellow", "black")
 
-def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, lego_offsets, blockpush_locations, (robot_type, is_real), enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False, number_samples=None):
+def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, lego_offsets, blockpush_locations, (robot_type, is_real), enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False, number_samples=None, IMAGE_WIDTH=80, IMAGE_HEIGHT=64, IMAGE_CHANNELS=3):
     if isinstance(task_type, LegoReach):
         offsets = lego_offsets
     number_links = robot_type.number_links()
