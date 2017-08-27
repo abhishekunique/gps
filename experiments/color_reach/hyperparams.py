@@ -41,7 +41,7 @@ NAME = None
 COLOR_BLOCKS_3D = None
 RANDOM_SEED = 0x123ABC
 SAMPLES = None
-BLOCK_LOCATIONS = None
+BLOCK_LOCATIONS = BLOCKPUSH_BLOCK_LOCATIONS = None
 TORQUE_COSTS = True
 
 CONFIG_FILE = argv[argv.index("--config") + 1]
@@ -101,12 +101,12 @@ first_row_dx, second_row_dx = 0.3, 0.5
 LEGO_BLOCK_LOCATIONS = [np.asarray(loc) for loc in ([-second_row_dx, 0., second_row_y], [0, 0., second_row_y], [second_row_dx, 0., second_row_y], [-first_row_dx, 0, first_row_y], [first_row_dx, 0, first_row_y])]
 BLOCK_VERTICAL_LOCATIONS = [-0.5, 0, 0.5] if COLOR_BLOCKS_3D else [0]
 
-
-BLOCKPUSH_BLOCK_LOCATIONS = [[np.array([x, 0, z]) / 2 for x, z in both] for both in
-    [[[np.cos(theta), np.sin(theta)], [np.cos(theta) + np.cos(theta + off), np.sin(theta) + np.sin(theta + off)]]
-        for theta in [np.pi / N_BLOCK_CONDITIONS * i - np.pi/2 for i in range(N_BLOCK_CONDITIONS)]
-        for off in (-np.pi/2, np.pi/2)
-]]
+if BLOCKPUSH_BLOCK_LOCATIONS is None:
+    BLOCKPUSH_BLOCK_LOCATIONS = [[np.array([x, 0, z]) / 2 for x, z in both] for both in
+        [[[np.cos(theta), np.sin(theta)], [np.cos(theta) + np.cos(theta + off), np.sin(theta) + np.sin(theta + off)]]
+            for theta in [np.pi / N_BLOCK_CONDITIONS * i - np.pi/2 for i in range(N_BLOCK_CONDITIONS)]
+            for off in (-np.pi/2, np.pi/2)
+    ]]
 
 task_values, robot_values, arguments = [], [], []
 for robot_n, robot_type in enumerate(ROBOT_TYPES):
