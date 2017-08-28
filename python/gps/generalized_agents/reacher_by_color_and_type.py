@@ -86,11 +86,8 @@ class BlockVelocityPush(BlockPush):
         return path.replace("push", "push_vel")
     def task_specific_cost(self, offset_generator, train_conditions):
         return [[{
-            'type': CostFK,
-            'target_end_effector': np.concatenate([np.array([0,0,0]),
-                                                   offset_generator(i)[1],
-                                                   np.array([0,0,0])]),
-            'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+            'type': CostFKBlock,
+            'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,
