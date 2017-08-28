@@ -7,6 +7,7 @@ import numpy as np
 from itertools import product
 
 from gps import __file__ as gps_filepath
+gps_filepath = os.path.abspath(gps_filepath)
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
 from gps.algorithm.policy_opt.tf_model_example_multirobot import multitask_multirobot_conv_supervised
 
