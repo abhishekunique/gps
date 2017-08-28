@@ -9,6 +9,7 @@ from gps.agent.mjc.agent_mjc import AgentMuJoCo
 from gps.agent.recorded.agent_recorded import AgentRecorded
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.cost.cost_fk import CostFK
+from gps.algorithm.cost.cost_state import CostState
 from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
 from gps.algorithm.cost.cost_action import CostAction
 from gps.algorithm.cost.cost_sum import CostSum
@@ -73,6 +74,34 @@ class BlockPush(object):
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,
+        }] for i in train_conditions]
+
+class BlockVelocityPush(BlockPush):
+    def __init__(self, velocities):
+        self.velocities = velocities
+    @staticmethod
+    def xml(is_3d, robot_type):
+        path = BlockPush.xml(is_3d, robot_type)
+        assert "push" in path
+        return path.replace("push", "push_vel")
+    def task_specific_cost(self, offset_generator, train_conditions):
+        return [[{
+            'type': CostFK,
+            'target_end_effector': np.concatenate([np.array([0,0,0]),
+                                                   offset_generator(i)[1],
+                                                   np.array([0,0,0])]),
+            'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+            'l1': 0.1,
+            'l2': 10.0,
+            'alpha': 1e-5,
+        }, {
+            'type': CostState,
+            'data_types' : {
+                END_EFFECTOR_POINT_VELOCITIES: {
+                    'wp': np.concatenate([np.zeros(3), np.ones(3), np.zeros(3)]),
+                    'target_state': np.concatenate([np.zeros(3), self.velocities[i], np.zeros(3)]),
+                },
+            },
         }] for i in train_conditions]
 
 class CleaningPerObject(object):
