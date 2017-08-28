@@ -53,6 +53,7 @@ class BlockPush(object):
             RobotType.FIVE_LINK : './mjc_models/5link_gripper_push',
             RobotType.PR2 : './mjc_models/pr2/pr2_arm_blockpush',
             RobotType.PEGGY : './mjc_models/peggy_arm3d_blockpush',
+            RobotType.BAXTER : './mjc_models/baxter/baxter_push',
         }[robot_type]
         if robot_type.is_arm() and is_3d:
             filename += "_3d"
@@ -86,11 +87,8 @@ class BlockVelocityPush(BlockPush):
         return path.replace("push", "push_vel")
     def task_specific_cost(self, offset_generator, train_conditions):
         return [[{
-            'type': CostFK,
-            'target_end_effector': np.concatenate([np.array([0,0,0]),
-                                                   offset_generator(i)[1],
-                                                   np.array([0,0,0])]),
-            'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+            'type': CostFKBlock,
+            'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,

@@ -61,7 +61,7 @@ if MODE == "testing" or MODE == "taskout-print":
         SAMPLES = 10
     VERBOSE_TRIALS = False
     VIEW_TRAJECTORIES = True
-elif MODE == "check-traj":
+elif MODE == "check-traj" or MODE == "check-all-traj":
     IS_TESTING = False
     if SAMPLES is None:
         SAMPLES = 1
@@ -117,7 +117,7 @@ for robot_n, robot_type in enumerate(ROBOT_TYPES):
         arguments.append((task_type, robot_type))
 
 leave_one_out = LEAVE_ONE_OUT
-if MODE == "training-trajectories":
+if MODE == "training-trajectories" or MODE == "check-all-traj":
     task_values, robot_values, arguments = zip(*((task, robot, arg) for task, robot, arg in zip(task_values, robot_values, arguments) if not arg[1][1]))
 elif IS_TESTING:
     task_values     = [task_values[leave_one_out]]
