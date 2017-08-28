@@ -53,6 +53,7 @@ class BlockPush(object):
             RobotType.FIVE_LINK : './mjc_models/5link_gripper_push',
             RobotType.PR2 : './mjc_models/pr2/pr2_arm_blockpush',
             RobotType.PEGGY : './mjc_models/peggy_arm3d_blockpush',
+            RobotType.BAXTER : './mjc_models/baxter/baxter_push',
         }[robot_type]
         if robot_type.is_arm() and is_3d:
             filename += "_3d"
