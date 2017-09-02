@@ -76,6 +76,9 @@ class BlockPush(object):
             'l2': 10.0,
             'alpha': 1e-5,
         }] for i in train_conditions]
+    @staticmethod
+    def modify_initial_state(state):
+        return state
 
 class BlockVelocityPush(BlockPush):
     def __init__(self, velocities):
@@ -157,6 +160,9 @@ class CleaningPerObject(object):
             }
             cost_components.append([current])
         return cost_components
+    @staticmethod
+    def modify_initial_state(state):
+        return state
 
 Cleaning = lambda smoothing, **kwargs: CleaningPerObject(5, "", smoothing, **kwargs)
 CleaningSingleObject = lambda smoothing, **kwargs: CleaningPerObject(1, "_single_object", smoothing, **kwargs)
@@ -221,6 +227,9 @@ class ColorReach(object):
             'l2': 10.0,
             'alpha': 1e-5,
         }] for i in train_conditions]
+    @staticmethod
+    def modify_initial_state(state):
+        return state
 
 class LegoReach(ColorReach):
     camera_pos = [0, 5., 0., -3, 0., 0]
@@ -428,7 +437,8 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
         'obs_include': [JOINT_ANGLES, JOINT_VELOCITIES, END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES] + image_data,
         'meta_include': [],
         'camera_pos': np.array(task_type.camera_pos),
-        'offs_to_use': offset_generator
+        'offs_to_use': offset_generator,
+        'modify_initial_state' : task_type.modify_initial_state,
     }
     if is_real:
         assert isinstance(task_type, LegoReach)

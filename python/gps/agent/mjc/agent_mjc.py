@@ -153,6 +153,7 @@ class AgentMuJoCo(Agent):
                 var = self._hyperparams['noisy_body_var'][condition][i]
                 self._model[condition]['body_pos'][idx, :] += \
                         var * np.random.randn(1, 3)
+        mj_X = self._hyperparams['modify_initial_state'](mj_X)
         # Take the sample.
         for t in range(self.T):
             X_t = new_sample.get_X(t=t)
