@@ -19,9 +19,13 @@
                     <body name="distal_2" pos="0.2 0 0">
                         <joint name="distal_j_2" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.3213 2.3" damping="1.0"/>
                         <geom type="capsule" fromto="0 0 0 0.2 0 0" size="0.03" contype="1" conaffinity="1"/>
-                        <body name="distal_4" pos="0.2 0 0">
-                            <site name="tip arm" pos="0.05 0 0" size="0.005" />
-                            <geom type="capsule" fromto="0 0.05 0 0 -0.2 0" size="0.05" contype="1" conaffinity="1" />
+                        <body name="distal_3" pos="0.15 0 0">
+                            <joint name="distal_j_3" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.3213 2.3" damping="1.0"/>
+                            <geom type="capsule" fromto="0 0 0 0.15 0 0" size="0.02" contype="1" conaffinity="1"/>
+                            <body name="distal_4" pos="0.2 0 0">
+                                <site name="tip arm" pos="0.05 0 0" size="0.005" />
+                                <geom type="capsule" fromto="0 0.05 0 0 -0.2 0" size="0.05" contype="1" conaffinity="1" />
+                            </body>
                         </body>
                     </body>
                 </body>
@@ -50,5 +54,6 @@
         <motor joint="proximal_j_1" ctrlrange="-2 2" ctrllimited="true"/>
         <motor joint="distal_j_1" ctrlrange="-2 2" ctrllimited="true"/>
         <motor joint="distal_j_2" ctrlrange="-2 2" ctrllimited="true"/>
+        <motor joint="distal_j_3" ctrlrange="-2 2" ctrllimited="true"/>
     </actuator>
 </mujoco>
