@@ -1,13 +1,24 @@
 SHOW_VIEWER = False
-MODE = "check-model"
-ARMS_3D = False
+MODE = "training-trajectories"
+ARMS_3D = True
 USE_IMAGES = False
-ROBOT_TYPES = (RobotType.THREE_LINK, False),
+import os
+inner_radius = float(os.environ['INNER_RADIUS'])
+diff_radius = float(os.environ['DIFF_RADIUS'])
+robot_type = eval(os.environ['ROBOT_TYPE'])
+ROBOT_TYPES = (robot_type, False),
 VIDEO_PATH = None
 
-BLOCK_LOCATIONS = [np.array([np.cos(theta), 0, np.sin(theta)]) * 0.5 for theta in np.linspace(0, 4, 6)]
+BLOCKPUSH_ANGLES = [[theta, theta + d_theta] for theta in np.linspace(-1, 1, 6) for d_theta in [-0.4, 0, 0.4]]
 
-BLOCKPUSH_BLOCK_LOCATIONS = [[theta, theta + d_theta] for theta in [-2.5, -1.5, 1.5, 2.5] for d_theta in [-0.2, 0, 0.2]]
-BLOCKPUSH_BLOCK_LOCATIONS = [[np.array([np.cos(th), 0, np.sin(th)]) * r for th, r in zip(thetas, (0.60, 0.80))] for thetas in BLOCKPUSH_BLOCK_LOCATIONS]
+def to_cartesian(r, theta):
+    return np.array([np.cos(theta), 0, np.sin(theta)]) * r
 
-TASK_TYPES = BlockVelocityPush([target - start for start, target in BLOCKPUSH_BLOCK_LOCATIONS]),
+BLOCK_START = [to_cartesian(inner_radius, th) for th, _ in BLOCKPUSH_ANGLES]
+VELOCITIES  = [to_cartesian(diff_radius, th) for _, th in BLOCKPUSH_ANGLES]
+BLOCKPUSH_BLOCK_LOCATIONS = [[x, x + v] for x, v in zip(BLOCK_START, VELOCITIES)]
+
+
+TASK_TYPES = BlockVelocityPush(VELOCITIES),
+
+NAME = "blockpush_vel_wiffle_%s_%s_%s" % (inner_radius, diff_radius, os.environ['ROBOT_TYPE'])
