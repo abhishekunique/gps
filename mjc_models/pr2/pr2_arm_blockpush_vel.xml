@@ -37,7 +37,7 @@
   </asset>
 
   <default>
-    <joint limited="false" range="-3.14159 3.14159" damping="0.2" armature=".01"/>
+    <joint limited="true" range="-3.14159 3.14159" damping="0.2" armature=".01"/>
     <geom friction=".5 .1 .1" margin="0.002" contype="1" conaffinity="0" type="mesh"/>
   </default>
 
@@ -70,7 +70,7 @@
 
               <body name="r_forearm_roll_link" pos="0 0 0">
                 <inertial pos="0 0 0" mass="0.1" diaginertia="0.01 0.01 0.01" />
-                <joint name="r_forearm_roll_joint" type="hinge" limited="false" pos="0 0 0" axis="1 0 0" />
+                <joint name="r_forearm_roll_joint" type="hinge" limited="true" pos="0 0 0" axis="1 0 0" />
                 <geom mesh="forearm_roll"/>
 
                 <body name="r_forearm_link" pos="0 0 0">
@@ -84,19 +84,19 @@
 
                     <body name="r_wrist_roll_link" pos="0 0 0">
                       <inertial pos="0 0 0" mass="0.1" diaginertia="0.01 0.01 0.01" />
-                      <joint name="r_wrist_roll_joint" type="hinge" pos="0 0 0" limited="false" axis="1 0 0" />
+                      <joint name="r_wrist_roll_joint" type="hinge" pos="0 0 0" limited="true" axis="1 0 0" />
                       <geom mesh="wrist_roll"/>
 
                       <body name="r_gripper_palm_link" pos="0 0 0">
                         <inertial pos="0.06623 0.00053 -0.00119" quat="-0.0181842 0.706274 0.0160771 0.707523" mass="0.58007" diaginertia="0.000865637 0.000678178 0.000351471" />
                         <!-- <geom rgba="0.8 0 0 1" mesh="gripper_palm"/> -->
-                        <geom type="capsule" fromto="0 0 -0.1 0 0 -0.35" size="0.05" contype="1" conaffinity="1" density="0.0001" />
+                        <geom type="capsule" fromto="0 0 -0.1 0 0 -0.25" size="0.025" contype="1" conaffinity="1" density="0.0001" />
 
                         <body name="r_gripper_motor_accelerometer_link" pos="0 0 0">
                           <inertial pos="0 0 0" mass="0.001" diaginertia="0.001 0.001 0.001" />
                           <!-- <geom type="box" size="0.0005 0.0005 0.0005" pos="0 0 0" /> -->
                         </body>
-                        <site name="End of arm" pos="0 0 0" size="0.01" />
+                        <site name="End of arm" pos="0 0 -0.175" size="0.01" />
                       </body>
                     </body>
                   </body>
