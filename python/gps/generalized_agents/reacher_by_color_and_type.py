@@ -77,7 +77,7 @@ class BlockPush(object):
             'alpha': 1e-5,
         }] for i in train_conditions]
     @staticmethod
-    def modify_initial_state(state):
+    def modify_initial_state(state, _):
         return state
 
 class BlockVelocityPush(BlockPush):
@@ -104,6 +104,11 @@ class BlockVelocityPush(BlockPush):
                 },
             },
         }] for i in train_conditions]
+    @staticmethod
+    def modify_initial_state(state, _):
+        # state[:len(state) // 2 - 2] += np.pi/4
+        return state
+
 class BlockCatch(object):
     def __init__(self, start_positions, velocities):
         self.start_positions = start_positions
@@ -195,7 +200,7 @@ class CleaningPerObject(object):
             cost_components.append([current])
         return cost_components
     @staticmethod
-    def modify_initial_state(state):
+    def modify_initial_state(state, _):
         return state
 
 Cleaning = lambda smoothing, **kwargs: CleaningPerObject(5, "", smoothing, **kwargs)
@@ -262,7 +267,7 @@ class ColorReach(object):
             'alpha': 1e-5,
         }] for i in train_conditions]
     @staticmethod
-    def modify_initial_state(state):
+    def modify_initial_state(state, _):
         return state
 
 class LegoReach(ColorReach):
