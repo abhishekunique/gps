@@ -1,5 +1,5 @@
 SHOW_VIEWER = False
-MODE = "training-trajectories"
+MODE = "check-all-traj"
 ARMS_3D = False
 USE_IMAGES = False
 import os
@@ -8,9 +8,9 @@ diff_radius = float(os.environ['DIFF_RADIUS'])
 robot_type = eval(os.environ['ROBOT_TYPE'])
 ROBOT_TYPES = (robot_type, False),
 TASK_TYPES = [BlockPush]
-VIDEO_PATH = None
+VIDEO_PATH = None #"/home/kavi/Videos/pos%s" % inner_radius
 
-BLOCKPUSH_ANGLES = [[theta, theta + d_theta] for theta in np.linspace(-1, 1, 6) for d_theta in [-0.4, 0, 0.4]]
+BLOCKPUSH_ANGLES = [[theta, theta + d_theta] for theta in np.linspace(-2, 2, 6) for d_theta in [-0.4, 0, 0.4]]
 
 def to_cartesian(r, theta):
     return np.array([np.cos(theta), 0, np.sin(theta)]) * r
@@ -21,4 +21,4 @@ BLOCKPUSH_BLOCK_LOCATIONS = [[x, x + v] for x, v in zip(BLOCK_START, VELOCITIES)
 
 
 
-NAME = "blockpush_pos_wiffle_%s_%s_%s" % (inner_radius, diff_radius, os.environ['ROBOT_TYPE'])
+NAME = "blockpush_pos_below_%s_%s_%s" % (inner_radius, diff_radius, os.environ['ROBOT_TYPE'])
