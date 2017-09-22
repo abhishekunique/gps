@@ -104,6 +104,40 @@ class BlockVelocityPush(BlockPush):
                 },
             },
         }] for i in train_conditions]
+class BlockCatch(object):
+    def __init__(self, start_positions, velocities):
+        self.start_positions = start_positions
+        self.velocities = velocities
+        assert len(start_positions) == len(velocities)
+    additional_joints = 3
+    number_end_effectors = 2
+    cost_weights = [2, 4]
+    camera_pos = CAMERA_POS
+    @staticmethod
+    def body_indices(robot_type):
+        start = robot_type.bodies_before_color_blocks()
+        return [start + 1]
+    def nconditions(self, n_offs, n_verts, n_blocks):
+        del n_offs, n_verts
+        return len(self.start_positions)
+    def offset_generator(self, offsets, vert_offs, block_locs, condition):
+        condition = condition % len(self.start_positions)
+        return [self.start_positions[condition]]
+    @staticmethod
+    def xml(is_3d, robot_type):
+        return BlockPush.xml(is_3d, robot_type).replace("push", "catch")
+    @classmethod
+    def task_specific_cost(cls, offset_generator, train_conditions):
+        return [[{
+            'type': CostFKBlock,
+            'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
+            'l1': 0.1,
+            'l2': 10.0,
+            'alpha': 1e-5,
+        }] for i in train_conditions]
+    def modify_initial_state(self, state, condition):
+        state[-3:] = self.velocities[condition % len(self.start_positions)]
+        return state
 
 class CleaningPerObject(object):
     camera_pos = CAMERA_POS
