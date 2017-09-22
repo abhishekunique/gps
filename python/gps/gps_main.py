@@ -154,7 +154,6 @@ class GPSMain(object):
                 print name
                 if name in traj_distr:
                     for cond in  self._train_idx[ag]:
-                        print ag, cond
                         self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
                 else:
                     print name, "not in traj_distr"
@@ -166,7 +165,6 @@ class GPSMain(object):
                 print name
                 newtraj_distr[name] = []
                 for cond in  self._train_idx[ag]:
-                    print ag, cond
                     newtraj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
             self.data_logger.pickle(traj_distr_dump, newtraj_distr)
     def save_traj_distr(self):
@@ -176,7 +174,6 @@ class GPSMain(object):
             print name
             traj_distr[name] = []
             for cond in  self._train_idx[ag]:
-                print ag, cond
                 traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
         self.data_logger.pickle(self._hyperparams["traj_distr_dump"], traj_distr)
     def run_badmm(self, testing, load_old_weights, itr_load=None):
