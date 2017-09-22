@@ -1,4 +1,4 @@
-SHOW_VIEWER = False
+SHOW_VIEWER = True
 MODE = "training-trajectories"
 ARMS_3D = True
 USE_IMAGES = False
@@ -15,10 +15,10 @@ def to_cartesian(r, theta):
     return np.array([np.cos(theta), 0, np.sin(theta)]) * r
 
 BLOCK_START = [to_cartesian(inner_radius, th) for th, _ in BLOCKPUSH_ANGLES]
-VELOCITIES  = [to_cartesian(diff_radius, th) for _, th in BLOCKPUSH_ANGLES]
+VELOCITIES  = [to_cartesian(diff_radius * 5, th) for _, th in BLOCKPUSH_ANGLES]
 BLOCKPUSH_BLOCK_LOCATIONS = [[x, x + v] for x, v in zip(BLOCK_START, VELOCITIES)]
 
 
-TASK_TYPES = BlockVelocityPush(VELOCITIES),
+TASK_TYPES = BlockVelocityPush([v * 4 for v in VELOCITIES]),
 
-NAME = "blockpush_vel_wiffle_%s_%s_%s" % (inner_radius, diff_radius, os.environ['ROBOT_TYPE'])
+NAME = "blockpush_vel_wiffle_limited_fast_%s_%s_%s" % (inner_radius, diff_radius, os.environ['ROBOT_TYPE'])
