@@ -81,6 +81,7 @@ class BlockPush(object):
         return state
 
 class BlockVelocityPush(BlockPush):
+    camera_pos = [0, 15., 0., 0.3, 0., 0.3]
     def __init__(self, velocities):
         self.velocities = velocities
     @staticmethod
