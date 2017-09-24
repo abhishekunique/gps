@@ -58,7 +58,7 @@ if MODE == "testing" or MODE == "taskout-print":
     SHOW_VIEWER = True
     IS_TESTING = True
     if SAMPLES is None:
-        SAMPLES = 10
+        SAMPLES = 20
     VERBOSE_TRIALS = False
     VIEW_TRAJECTORIES = True
 elif MODE == "check-traj" or MODE == "check-all-traj":
@@ -70,7 +70,7 @@ elif MODE == "check-traj" or MODE == "check-all-traj":
 elif MODE == "training" or MODE == "training-trajectories":
     IS_TESTING = False
     if SAMPLES is None:
-        SAMPLES = 5
+        SAMPLES = 20
     VERBOSE_TRIALS = SHOW_VIEWER
     VIEW_TRAJECTORIES = False
 elif MODE == "check-model":
@@ -84,7 +84,7 @@ elif MODE == "check-model":
 elif MODE == "view-traj":
     IS_TESTING = False
     if SAMPLES is None:
-        SAMPLES = 10
+        SAMPLES = 20
     VERBOSE_TRIALS = False
     VIEW_TRAJECTORIES = True
 else:
