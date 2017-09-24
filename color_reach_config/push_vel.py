@@ -9,8 +9,6 @@ robot_type = eval(os.environ['ROBOT_TYPE'])
 ROBOT_TYPES = (robot_type, False),
 VIDEO_PATH = None # "/home/kavi/Videos/pr2vel"
 
-SAMPLES = 4
-
 BLOCKPUSH_ANGLES = [[theta, theta + d_theta] for theta in [-2.2, -1.8, -1.2, 1.2, 1.8, 2.2] for d_theta in np.linspace(-np.pi/4, np.pi/4, 3)]
 
 def to_cartesian(r, theta):
