@@ -119,7 +119,7 @@ class BlockCatch(object):
         assert len(start_positions) == len(velocities)
     additional_joints = 3
     number_end_effectors = 2
-    cost_weights = [2, 4]
+    cost_weights = [2, 4, 2]
     camera_pos = CAMERA_POS
     @staticmethod
     def body_indices(robot_type):
@@ -142,6 +142,14 @@ class BlockCatch(object):
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,
+        }, {
+            'type': CostState,
+            'data_types' : {
+                END_EFFECTOR_POINTS: {
+                    'wp': np.array([0, 1, 0] * 2),
+                    'target_state': np.array([0, 10, 0] * 2)
+                },
+            },
         }] for i in train_conditions]
     def modify_initial_state(self, state, condition):
         state[-3:] = self.velocities[condition % len(self.start_positions)]
