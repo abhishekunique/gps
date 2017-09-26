@@ -67,6 +67,7 @@ elif MODE == "check-traj" or MODE == "check-all-traj":
         SAMPLES = 1
     VERBOSE_TRIALS = True
     VIEW_TRAJECTORIES = False
+    SHOW_VIEWER = True
 elif MODE == "training" or MODE == "training-trajectories":
     IS_TESTING = False
     if SAMPLES is None:
