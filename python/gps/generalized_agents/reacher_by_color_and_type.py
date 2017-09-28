@@ -54,6 +54,7 @@ class BlockPush(object):
             RobotType.FOUR_SEVEN : './mjc_models/4link_7joint_push',
             RobotType.FIVE_LINK : './mjc_models/5link_gripper_push',
             RobotType.PR2 : './mjc_models/pr2/pr2_arm_blockpush',
+            RobotType.PR2_WIDER : './mjc_models/pr2/pr2_arm_wider_tool_blockpush',
             RobotType.PEGGY : './mjc_models/peggy_arm3d_blockpush',
             RobotType.BAXTER : './mjc_models/baxter/baxter_push',
         }[robot_type]
@@ -358,13 +359,14 @@ class RobotType(Enum):
     BAXTER = 6
     BAXTER_CYAN = 7
     PR2 = 8
+    PR2_WIDER = 8.5
     PR2_MAGENTA = 9
     FOUR_SIX = 10
     FOUR_SEVEN = 11
     def is_arm(self):
         if self in {RobotType.THREE_LINK, RobotType.THREE_LINK_SHORT_JOINT, RobotType.FOUR_LINK, RobotType.FIVE_LINK}:
             return True
-        elif self in {RobotType.PEGGY, RobotType.FOUR_SIX, RobotType.FOUR_SEVEN, RobotType.KINOVA, RobotType.BAXTER, RobotType.BAXTER_CYAN, RobotType.PR2, RobotType.PR2_MAGENTA}:
+        elif self in {RobotType.PEGGY, RobotType.FOUR_SIX, RobotType.FOUR_SEVEN, RobotType.KINOVA, RobotType.BAXTER, RobotType.BAXTER_CYAN, RobotType.PR2, RobotType.PR2_WIDER, RobotType.PR2_MAGENTA}:
             return False
         else:
             raise RuntimeError
@@ -381,7 +383,7 @@ class RobotType(Enum):
             return 9
         elif self in {RobotType.BAXTER, RobotType.BAXTER_CYAN}:
             return 10
-        elif self in {RobotType.PR2, RobotType.PR2_MAGENTA}:
+        elif self in {RobotType.PR2, RobotType.PR2_WIDER, RobotType.PR2_MAGENTA}:
             return 7
         elif self == RobotType.FOUR_SIX:
             return 6
@@ -400,7 +402,7 @@ class RobotType(Enum):
             return 10
         elif self in {RobotType.BAXTER, RobotType.BAXTER_CYAN}:
             return 21
-        elif self in {RobotType.PR2, RobotType.PR2_MAGENTA}:
+        elif self in {RobotType.PR2, RobotType.PR2_WIDER, RobotType.PR2_MAGENTA}:
             return 11
         else:
             raise RuntimeError
