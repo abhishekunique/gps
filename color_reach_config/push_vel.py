@@ -1,5 +1,5 @@
 SHOW_VIEWER = False
-MODE = "training-trajectories"
+MODE = os.environ['MODE']
 ARMS_3D = True
 USE_IMAGES = False
 import os
