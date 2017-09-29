@@ -53,6 +53,7 @@ class BlockPush(object):
             RobotType.FOUR_SIX : './mjc_models/4link_6joint_push',
             RobotType.FOUR_SEVEN : './mjc_models/4link_7joint_push',
             RobotType.FIVE_LINK : './mjc_models/5link_gripper_push',
+            RobotType.THREE_DF_BLOCK : './mjc_models/3df_push',
             RobotType.PR2 : './mjc_models/pr2/pr2_arm_blockpush',
             RobotType.PR2_WIDER : './mjc_models/pr2/pr2_arm_wider_tool_blockpush',
             RobotType.PEGGY : './mjc_models/peggy_arm3d_blockpush',
@@ -350,6 +351,7 @@ class ColorPush(ColorReach):
         return costs
 
 class RobotType(Enum):
+    THREE_DF_BLOCK = 0
     THREE_LINK = 1
     THREE_LINK_SHORT_JOINT = 2
     FOUR_LINK = 3
@@ -366,7 +368,7 @@ class RobotType(Enum):
     def is_arm(self):
         if self in {RobotType.THREE_LINK, RobotType.THREE_LINK_SHORT_JOINT, RobotType.FOUR_LINK, RobotType.FIVE_LINK}:
             return True
-        elif self in {RobotType.PEGGY, RobotType.FOUR_SIX, RobotType.FOUR_SEVEN, RobotType.KINOVA, RobotType.BAXTER, RobotType.BAXTER_CYAN, RobotType.PR2, RobotType.PR2_WIDER, RobotType.PR2_MAGENTA}:
+        elif self in {RobotType.PEGGY, RobotType.THREE_DF_BLOCK, RobotType.FOUR_SIX, RobotType.FOUR_SEVEN, RobotType.KINOVA, RobotType.BAXTER, RobotType.BAXTER_CYAN, RobotType.PR2, RobotType.PR2_WIDER, RobotType.PR2_MAGENTA}:
             return False
         else:
             raise RuntimeError
@@ -385,6 +387,8 @@ class RobotType(Enum):
             return 10
         elif self in {RobotType.PR2, RobotType.PR2_WIDER, RobotType.PR2_MAGENTA}:
             return 7
+        elif self == RobotType.THREE_DF_BLOCK:
+            return 3
         elif self == RobotType.FOUR_SIX:
             return 6
         elif self == RobotType.FOUR_SEVEN:
@@ -396,6 +400,8 @@ class RobotType(Enum):
             return self.number_links() + 2
         elif self == RobotType.FOUR_SIX or self == RobotType.FOUR_SEVEN:
             return 6
+        elif self == RobotType.THREE_DF_BLOCK:
+            return 2
         elif self == RobotType.PEGGY:
             return 16
         elif self == RobotType.KINOVA:
@@ -407,7 +413,7 @@ class RobotType(Enum):
         else:
             raise RuntimeError
     def gains(self):
-        if self.is_arm() or self in {RobotType.KINOVA, RobotType.BAXTER, RobotType.BAXTER_CYAN, RobotType.FOUR_SIX}:
+        if self.is_arm() or self in {RobotType.KINOVA, RobotType.BAXTER, RobotType.BAXTER_CYAN, RobotType.FOUR_SIX, RobotType.THREE_DF_BLOCK}:
             return np.ones(self.number_links())
         elif self == RobotType.FOUR_SEVEN:
             return np.array([1] * 6 + [1e-3])
