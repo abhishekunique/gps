@@ -3,6 +3,8 @@
 import tensorflow as tf
 from gps.algorithm.policy_opt.tf_utils import TfMap
 import numpy as np
+DROPOUT= 'dropout'
+GAUSSIAN= 'gaussian'
 
 
 def init_weights_shared(shape, name=None, stddev=None):
@@ -46,6 +48,17 @@ def init_bias(shape, name=None):
 def init_ones(shape, name=None):
     return tf.Variable(tf.ones(shape, dtype='float'), name=name)
 
+def gaussian_reg(z_mu, z_log_sigma,):
+    z_log_sigma = 0.5 * (z_log_sigma)
+    epsilon = tf.random_normal(
+        tf.stack([tf.shape(z_mu)[0], tf.shape(z_mu)[1]]))
+
+    # Sample from posterior
+    z = z_mu + tf.exp(z_log_sigma) * epsilon
+    kl_div = -0.5 * tf.reduce_sum(
+        1.0 + 2.0 * z_log_sigma - tf.square(z_mu) - tf.exp(2.0 * z_log_sigma),
+        1)
+    return z, tf.reduce_mean(kl_div), z_mu, z_log_sigma, epsilon
 
 def batched_matrix_vector_multiply(vector, matrix):
     """ computes x^T A in mini-batches. """
@@ -1360,6 +1373,7 @@ def multitask_multirobot_conv_supervised(is_testing, dim_input=[27, 27], dim_out
     #need to create taskrobot_mapping
     task_list = network_config['task_list']
     robot_list = network_config['robot_list']
+    regularizer = network_config['regularizer']
     num_robots = max(robot_list)+1
     num_tasks = max(task_list)+1
     if is_testing:
@@ -1430,6 +1444,10 @@ def multitask_multirobot_conv_supervised(is_testing, dim_input=[27, 27], dim_out
         task_weights['taskout_tn_' + str(task_number)] = init_weights((dim_hidden[2], task_out_size), name='taskout_tn_' + str(task_number))
         task_weights['taskout_b_tn_' + str(task_number)] = init_bias((task_out_size,), name='task_out_tn_' + str(task_number))
         task_weights['task_weights_tn_' + str(task_number)] = init_ones((task_out_size,), name='task_weights_' + str(task_number))
+        if regularizer == GAUSSIAN:
+            task_weights['taskout_sig_b_tn_' + str(task_number)] = init_bias((task_out_size,), name='task_out_tn_' + str(task_number))
+            task_weights['taskout_sig_tn_' + str(task_number)] = init_weights((dim_hidden[2], task_out_size), name='taskout_tn_' + str(task_number))
+            # task_weights['task_weights_tn_' + str(task_number)] = init_ones((task_out_size,), name='task_weights_' + str(task_number))
 
     tensors = {}
     tensors['keep_prob'] = keep_prob
@@ -1490,15 +1508,24 @@ def multitask_multirobot_conv_supervised(is_testing, dim_input=[27, 27], dim_out
             fp = tf.reshape(tf.concat(axis=1, values=[fp_x, fp_y]), [-1, num_fp*2])
         layer3_input = tf.concat(axis=1, values=([fp] if use_image else []) + [task_input])
         fc_layer3 = tf.nn.relu(tf.nn.dropout(tf.matmul(layer3_input, task_weights['w3_tn_'+str(task_index)]) + task_weights['b3_tn_'+str(task_index)], keep_prob))
-
-        taskout = tf.nn.relu(tf.nn.dropout(tf.matmul(fc_layer3, task_weights['taskout_tn_'+str(task_index)]) + task_weights['taskout_b_tn_'+str(task_index)], keep_prob))
+        pre_taskout = tf.matmul(fc_layer3, task_weights['taskout_tn_'+str(task_index)]) + task_weights['taskout_b_tn_'+str(task_index)]
+        if regularizer == DROPOUT:
+            taskout = tf.nn.relu(tf.nn.dropout(pre_taskout, keep_prob))
+            reg_loss = 0
+        elif regularizer == GAUSSIAN:
+            sigma_taskout = tf.matmul(fc_layer3, task_weights['taskout_sig_tn_'+str(task_index)]) + task_weights['taskout_sig_b_tn_'+str(task_index)]
+            taskout, reg_loss, mu, sig, epsilon = gaussian_reg(pre_taskout, sigma_taskout)
+            tensors['mu'] = mu
+            tensors['sig'] = sig
+            tensors['epsilon'] = epsilon
+        tensors['reg_loss' ]= reg_loss
         lastlayer_input = tf.concat(axis=1, values=[taskout, robot_input])
 
         layer4 = tf.nn.dropout(tf.nn.relu(tf.matmul(lastlayer_input, robot_weights['w4_rn_' + str(robot_index)]) + robot_weights['b4_rn_' + str(robot_index)]), keep_prob)
         layer5 = tf.nn.dropout(tf.nn.relu(tf.matmul(layer4, robot_weights['w5_rn_' + str(robot_index)]) + robot_weights['b5_rn_' + str(robot_index)]), keep_prob)
         output = tf.matmul(layer5, robot_weights['wout_rn_' + str(robot_index)]) + robot_weights['bout_rn_' + str(robot_index)]
         loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
-        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
+        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss+reg_loss]))
         tensors['ee_input'].append(ee_input)
         tensors['task_output'].append(taskout)
 
