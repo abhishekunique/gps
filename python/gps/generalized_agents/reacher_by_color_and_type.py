@@ -84,10 +84,24 @@ class BlockPush(object):
     def modify_initial_state(state, _):
         return state
 
+def to_cartesian(r, theta):
+    return np.array([np.cos(theta), 0, np.sin(theta)]) * r
+
 class BlockVelocityPush(BlockPush):
+    COLOR_ORDER = "red", "green", "yellow"
     camera_pos = [0, 15., 0., 0.3, 0., 0.3]
-    def __init__(self, velocities):
-        self.velocities = velocities
+    cost_weights = [1, 0.5, 40]
+    def __init__(self, initial_angles, velocity_delta_angles, inner_radius, diff_radius, color):
+        self.initial_angles = initial_angles
+        self.velocity_delta_angles = velocity_delta_angles
+        self.inner_radius = inner_radius
+        self.diff_radius = diff_radius
+        self.color = color
+        self.velocities = [to_cartesian(self.diff_radius * 5, th0 + th) for th0 in initial_angles for th in velocity_delta_angles]
+    @staticmethod
+    def body_indices(robot_type):
+        start = robot_type.bodies_before_color_blocks()
+        return range(start + 1, start + 1 + 2 * 4, 2)
     @staticmethod
     def xml(is_3d, robot_type):
         path = BlockPush.xml(is_3d, robot_type)
@@ -113,6 +127,19 @@ class BlockVelocityPush(BlockPush):
     def modify_initial_state(state, _):
         # state[:len(state) // 2 - 2] += np.pi/4
         return state
+    def offset_generator(self, offsets, vert_offs, block_locs, condition):
+        nvels, ninitials = len(self.velocity_delta_angles), len(self.initial_angles)
+        condition = condition % (nvels * ninitials)
+        vel_index = condition % nvels
+        ini_index = condition // nvels
+        x = to_cartesian(self.inner_radius, self.initial_angles[ini_index])
+        vs = [to_cartesian(self.diff_radius * 5, self.initial_angles[ini_index] + v_theta) for v_theta in self.velocity_delta_angles]
+        indices = range(3)
+        while True:
+            np.random.shuffle(indices)
+            if indices[COLOR_ORDER.index(self.color)] == vel_index:
+                break
+        return [x] + [x + vs[i] for i in indices]
 
 class BlockCatch(object):
     def __init__(self, start_positions, velocities):

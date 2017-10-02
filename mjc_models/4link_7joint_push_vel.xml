@@ -10,26 +10,26 @@
 
   <worldbody>
       <body name="palm" pos="0 0 0">
-          <geom type="capsule" fromto="0 -0.1 0 0 0.1 0" size="0.12"/>
+          <geom type="capsule" fromto="0 -0.0625 0 0 0.0625 0" size="0.075"/>
 
           <body name="proximal_1" pos="0 0 0">
               <joint name="y1" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.5236 2.3963" damping="1.0" />
               <joint name="z1" type="hinge" pos="0 0 0" axis="0 0 1" range="-2.5236 2.3963" damping="1.0" />
-              <geom type="capsule"  fromto="0 0 0 0.4 0 0" size="0.1" contype="1" conaffinity="1"/>
-              <body name="distal_1" pos="0.4 0 0">
+              <geom type="capsule"  fromto="0 0 0 0.25 0 0" size="0.0625" contype="1" conaffinity="1"/>
+              <body name="distal_1" pos="0.25 0 0">
                   <joint name="y2" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.3213 2.3" damping="1.0"/>
-                  <geom type="capsule"  fromto="0 0 0 0.4 0 0" size="0.08" contype="1" conaffinity="1"/>
-                  <body name="distal_2" pos="0.4 0 0">
+                  <geom type="capsule"  fromto="0 0 0 0.25 0 0" size="0.05" contype="1" conaffinity="1"/>
+                  <body name="distal_2" pos="0.25 0 0">
                       <joint name="y3" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.3213 2.3" damping="1.0"/>
                       <joint name="z3" type="hinge" pos="0 0 0" axis="0 0 1" range="-2.3213 2.3" damping="1.0"/>
-                      <geom type="capsule" fromto="0 0 0 0.4 0 0" size="0.06" contype="1" conaffinity="1"/>
-                      <body name="distal_3" pos="0.4 0 0">
+                      <geom type="capsule" fromto="0 0 0 0.25 0 0" size="0.0375" contype="1" conaffinity="1"/>
+                      <body name="distal_3" pos="0.25 0 0">
                           <joint name="y4" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.3213 2.3" damping="1.0"/>
-                          <geom type="capsule" fromto="0 0 0 0.4 0 0" size="0.04" contype="1" conaffinity="1"/>
-                          <body name="distal_4" pos="0.4 0 0">
+                          <geom type="capsule" fromto="0 0 0 0.25 0 0" size="0.025" contype="1" conaffinity="1"/>
+                          <body name="distal_4" pos="0.25 0 0">
                               <joint name="y5" type="hinge" pos="0 0 0" axis="0 0 1" range="-2.3213 2.3" damping="1.0"/>
-                              <geom type="capsule" fromto="0 0 0 0 -0.30 0" size="0.035" contype="1" conaffinity="1" density="0.0001" />
-                              <site name="tip arm" pos="0 -0.30 0" size="0.01" />
+                              <geom type="capsule" fromto="0 0 0 0 0 -0.15" size="0.025" contype="1" conaffinity="1" density="0.0001" />
+                              <site name="End of arm" pos="0 0 -0.175" size="0.01" />
                           </body>
                       </body>
                   </body>
@@ -50,6 +50,20 @@
         <geom rgba="1. 0. 0. 1" type="box" size="0.05 0.05 0.05" density='0.00001' contype="0" conaffinity="0"/>
         <body name="distal_11" pos="0 0 0">
             <site name="goal_pos" pos="0.05 0.05 0.05" size="0.01" />
+        </body>
+    </body>
+
+    <body name="distractor_1" pos="0 0 0">
+        <geom rgba="1. 1. 0. 1" type="box" size="0.05 0.05 0.05" density='0.00001' contype="0" conaffinity="0"/>
+        <body name="distal_12" pos="0 0 0">
+            <!-- <site name="goal_pos" pos="0.05 0.05 0.05" size="0.01" /> -->
+        </body>
+    </body>
+
+    <body name="distractor_2" pos="0 0 0">
+        <geom rgba="0. 1. 0. 1" type="box" size="0.05 0.05 0.05" density='0.00001' contype="0" conaffinity="0"/>
+        <body name="distal_13" pos="0 0 0">
+            <!-- <site name="goal_pos" pos="0.05 0.05 0.05" size="0.01" /> -->
         </body>
     </body>
   </worldbody>
