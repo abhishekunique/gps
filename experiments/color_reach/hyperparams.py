@@ -166,6 +166,7 @@ common = {
             'task_list': task_values,
             'robot_list': robot_values,
             'agent_params':[a['network_params'] for a in agents],
+            'regularizer': 'gaussian',
         },
         #'val_agents': [1],
         'iterations': NEURAL_NET_ITERATIONS,
