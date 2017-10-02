@@ -30,7 +30,7 @@ CAMERA_POS = [0, 5., 0., 0.3, 0., 0.3]
 class BlockPush(object):
     additional_joints = 2
     number_end_effectors = 3
-    cost_weights = [0.5, 0.5, 4]
+    cost_weights = [1, 10, 5]
     camera_pos = CAMERA_POS
     @staticmethod
     def body_indices(robot_type):
