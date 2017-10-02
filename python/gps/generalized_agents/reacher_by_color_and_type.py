@@ -31,7 +31,7 @@ class BlockPush(object):
     additional_joints = 2
     number_end_effectors = 3
     cost_weights = [1, 10, 5]
-    camera_pos = CAMERA_POS
+    camera_pos = [0, 8., 0., 0.3, 0., 0.3]
     @staticmethod
     def body_indices(robot_type):
         start = robot_type.bodies_before_color_blocks()
