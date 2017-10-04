@@ -127,14 +127,22 @@ class BlockVelocityPush(BlockPush):
     def modify_initial_state(state, _):
         # state[:len(state) // 2 - 2] += np.pi/4
         return state
+    @property
+    def nvels(self):
+        return len(self.velocity_delta_angles)
+    @property
+    def ninitials(self):
+        return len(self.initial_angles)
+    def vel_index(self, condition):
+        return condition % self.nvels
+    def ini_index(self, condition):
+        return (condition // self.nvels) % self.ninitials
     def offset_generator(self, offsets, vert_offs, block_locs, condition):
-        nvels, ninitials = len(self.velocity_delta_angles), len(self.initial_angles)
-        condition = condition % (nvels * ninitials)
-        vel_index = condition % nvels
-        ini_index = condition // nvels
+        vel_index = self.vel_index(condition)
+        ini_index = self.ini_index(condition)
         x = to_cartesian(self.inner_radius, self.initial_angles[ini_index])
         vs = [to_cartesian(self.diff_radius * 5, self.initial_angles[ini_index] + v_theta) for v_theta in self.velocity_delta_angles]
-        indices = range(3)
+        indices = range(self.nvels)
         while True:
             np.random.shuffle(indices)
             if indices[COLOR_ORDER.index(self.color)] == vel_index:
