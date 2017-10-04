@@ -44,7 +44,7 @@
   <worldbody>
     <light directional="true" cutoff="4" exponent="20" diffuse="1 1 1" specular="0 0 0" pos=".5 0.75 1.5" dir="-.5 -0.75 -1.5"/>
 
-    <body name="r_shoulder_pan_link" pos="0 0.2 0" zaxis="0 1 0">
+    <body name="r_shoulder_pan_link" pos="0 0.4 0" zaxis="0 1 0">
       <inertial pos="-0.001201 0.024513 -0.098231" quat="0.927482 -0.0876561 0.0740595 -0.355821" mass="25.7993" diaginertia="0.934201 0.837701 0.242033" />
       <joint name="r_shoulder_pan_joint" type="hinge" pos="0 0 0" axis="0 0 1" />
       <geom rgba="0 0 0.8 1" mesh="shoulder_pan"/>

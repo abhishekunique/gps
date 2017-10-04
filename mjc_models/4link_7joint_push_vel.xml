@@ -9,7 +9,7 @@
   </default>
 
   <worldbody>
-      <body name="palm" pos="0 0 0">
+      <body name="palm" pos="0 0.2 0">
           <geom type="capsule" fromto="0 -0.0625 0 0 0.0625 0" size="0.075"/>
 
           <body name="proximal_1" pos="0 0 0">
