@@ -29,21 +29,48 @@ CAMERA_POS = [0, 5., 0., 0.3, 0., 0.3]
 
 class BlockPush(object):
     additional_joints = 2
-    number_end_effectors = 3
+    number_end_effectors = 2
     cost_weights = [1, 10, 5]
     camera_pos = CAMERA_POS
+    def __init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius):
+        self.color = color
+        self.initial_angles = initial_angles
+        self.diff_angles = diff_angles
+        self.inner_radius = inner_radius
+        self.diff_radius = diff_radius
     @staticmethod
     def body_indices(robot_type):
         start = robot_type.bodies_before_color_blocks()
-        return [start + 1, start + 3]
+        return [start + 1] + range(start + 3, start + 6)
     @staticmethod
     def nconditions(n_offs, n_verts, n_blocks):
         del n_offs, n_verts
         return n_blocks
-    @classmethod
-    def offset_generator(cls, offsets, vert_offs, block_locs, condition):
-        condition = condition % cls.nconditions(len(offsets), len(vert_offs), len(block_locs))
-        return block_locs[condition]
+    @staticmethod
+    def modify_initial_state(state, _):
+        # state[:len(state) // 2 - 2] += np.pi/4
+        return state
+    @property
+    def nvels(self):
+        return len(self.diff_angles)
+    @property
+    def ninitials(self):
+        return len(self.initial_angles)
+    def vel_index(self, condition):
+        return condition % self.nvels
+    def ini_index(self, condition):
+        return (condition // self.nvels) % self.ninitials
+    def offset_generator(self, offsets, vert_offs, block_locs, condition):
+        vel_index = self.vel_index(condition)
+        ini_index = self.ini_index(condition)
+        x = to_cartesian(self.inner_radius, self.initial_angles[ini_index])
+        vs = [to_cartesian(self.diff_radius, self.initial_angles[ini_index] + v_theta) for v_theta in self.diff_angles]
+        indices = range(self.nvels)
+        while True:
+            np.random.shuffle(indices)
+            if indices[COLOR_ORDER.index(self.color)] == vel_index:
+                break
+        return [x] + [x + vs[i] for i in indices]
     @staticmethod
     def xml(is_3d, robot_type):
         filename = {
@@ -62,20 +89,18 @@ class BlockPush(object):
         if robot_type.is_arm() and is_3d:
             filename += "_3d"
         return filename + ".xml"
-    @classmethod
-    def task_specific_cost(cls, offset_generator, train_conditions):
+    def task_specific_cost(self, offset_generator, train_conditions):
         return [[{
             'type': CostFK,
             'target_end_effector': np.concatenate([np.array([0,0,0]),
-                                                   offset_generator(i)[1],
-                                                   np.array([0,0,0])]),
-            'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+                                                   offset_generator(i)[1]]),
+            'wp': np.array([0, 0, 0, 1, 1, 1]),
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,
         }, {
             'type': CostFKBlock,
-            'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
+            'wp':  np.concatenate([np.zeros(3), np.ones(3)]),
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,
@@ -90,18 +115,10 @@ def to_cartesian(r, theta):
 class BlockVelocityPush(BlockPush):
     COLOR_ORDER = "red", "green", "yellow"
     camera_pos = [0, 15., 0., 0.3, 0., 0.3]
-    cost_weights = [1, 0.5, 40]
-    def __init__(self, initial_angles, velocity_delta_angles, inner_radius, diff_radius, color):
-        self.initial_angles = initial_angles
-        self.velocity_delta_angles = velocity_delta_angles
-        self.inner_radius = inner_radius
-        self.diff_radius = diff_radius
-        self.color = color
-        self.velocities = [to_cartesian(self.diff_radius * 5, th0 + th) for th0 in initial_angles for th in velocity_delta_angles]
-    @staticmethod
-    def body_indices(robot_type):
-        start = robot_type.bodies_before_color_blocks()
-        return range(start + 1, start + 1 + 2 * 4, 2)
+    cost_weights = [1, 2, 40]
+    def __init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius):
+        BlockPush.__init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius * 5)
+        self.velocities = [to_cartesian(self.diff_radius * 5, th0 + th) for th0 in initial_angles for th in diff_angles]
     @staticmethod
     def xml(is_3d, robot_type):
         path = BlockPush.xml(is_3d, robot_type)
@@ -118,36 +135,11 @@ class BlockVelocityPush(BlockPush):
             'type': CostState,
             'data_types' : {
                 END_EFFECTOR_POINT_VELOCITIES: {
-                    'wp': np.concatenate([np.zeros(3), np.ones(3), np.zeros(3)]),
-                    'target_state': np.concatenate([np.zeros(3), self.velocities[i], np.zeros(3)]),
+                    'wp': np.concatenate([np.zeros(3), np.ones(3)]),
+                    'target_state': np.concatenate([np.zeros(3), self.velocities[i]]),
                 },
             },
         }] for i in train_conditions]
-    @staticmethod
-    def modify_initial_state(state, _):
-        # state[:len(state) // 2 - 2] += np.pi/4
-        return state
-    @property
-    def nvels(self):
-        return len(self.velocity_delta_angles)
-    @property
-    def ninitials(self):
-        return len(self.initial_angles)
-    def vel_index(self, condition):
-        return condition % self.nvels
-    def ini_index(self, condition):
-        return (condition // self.nvels) % self.ninitials
-    def offset_generator(self, offsets, vert_offs, block_locs, condition):
-        vel_index = self.vel_index(condition)
-        ini_index = self.ini_index(condition)
-        x = to_cartesian(self.inner_radius, self.initial_angles[ini_index])
-        vs = [to_cartesian(self.diff_radius * 5, self.initial_angles[ini_index] + v_theta) for v_theta in self.velocity_delta_angles]
-        indices = range(self.nvels)
-        while True:
-            np.random.shuffle(indices)
-            if indices[COLOR_ORDER.index(self.color)] == vel_index:
-                break
-        return [x] + [x + vs[i] for i in indices]
 
 class BlockCatch(object):
     def __init__(self, start_positions, velocities):
