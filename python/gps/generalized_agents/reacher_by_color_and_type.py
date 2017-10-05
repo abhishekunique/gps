@@ -318,66 +318,6 @@ class LegoReach(ColorReach):
         xml_file = ColorReach("red").xml(is_3d, robot_type)
         return xml_file.replace("reach_colors", "reach_lego")
 
-class ColorPush(ColorReach):
-    camera_pos = CAMERA_POS
-    additional_joints = 8
-    cost_weights = BlockPush.cost_weights
-    def __init__(self, color_to, color_from):
-        ColorReach.__init__(self, color_to)
-        self.color_from = color_from
-    def xml(self, is_3d, robot_type):
-        filename = self.xml(is_3d, robot_type)
-        assert "reach" in filename
-        return filename.replace("reach", "push")
-    @staticmethod
-    def nconditions(n_offs, vert_offs, blockpush_offs):
-        del vert_offs, blockpush_offs
-        return 2 + (n_offs - 2) * 2
-    def offset_generator(self, offsets, vert_offs, blockpush_offs, condition):
-        condition += 1
-        condition %= self.nconditions(len(offsets), len(vert_offs), len(blockpush_offs))
-        if condition == 0:
-            fro, to = len(offsets) - 1, len(offsets) - 2
-        elif condition == 1:
-            fro, to = 0, 1
-        else:
-            fro, direction = condition // 2, condition % 2
-            to = fro + (1 if direction else -1)
-        movable_block = COLOR_ORDER.index(self.color_from)
-        target_block = COLOR_ORDER.index(self.color)
-        results = [None] * len(offsets)
-        results[movable_block] = offsets[fro]
-        results[target_block] = offsets[to]
-        unused_result_idx = [idx for idx in range(len(offsets)) if idx not in {movable_block, target_block}]
-        np.random.shuffle(unused_result_idx)
-        for off_idx, res_idx in zip([idx for idx in range(len(offsets)) if idx not in {fro, to}], unused_result_idx):
-            results[res_idx] = offsets[off_idx]
-        return results
-    def task_specific_cost(self, offset_generator, train_conditions):
-        movable_block = COLOR_ORDER.index(self.color_from)
-        target_block = COLOR_ORDER.index(self.color)
-        costs = []
-        for i in train_conditions:
-            final_locations = offset_generator(i)
-            final_locations[movable_block] = final_locations[target_block]
-            costs.append([
-                {
-                    'type': CostFK,
-                    'target_end_effector': np.concatenate([[0, 0, 0]] + final_locations),
-                    'wp': np.array([0] * 3 + [1] * (len(final_locations) * 3)),
-                    'l1': 0.1,
-                    'l2': 10.0,
-                    'alpha': 1e-5,
-                }, {
-                    'type': lambda hyper: CostFKBlock(hyper, first_effector=0, second_effector=movable_block),
-                    'wp': np.array([1] * 3 + [0] * (len(final_locations) * 3)),
-                    'l1': 0.1,
-                    'l2': 10.0,
-                    'alpha': 1e-5,
-                }
-            ])
-        return costs
-
 class RobotType(Enum):
     THREE_DF_BLOCK = 0
     THREE_LINK = 1
