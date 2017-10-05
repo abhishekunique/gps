@@ -10,7 +10,7 @@ stem = os.environ['STEM'] if 'STEM' in os.environ else ""
 ROBOT_TYPES = (robot_type, False),
 VIDEO_PATH = None # "/home/kavi/Videos/pr2vel"
 
-TASK_TYPES = BlockVelocityPush([-2.2, -1.8, -1.2, 1.2, 1.8, 2.2], np.linspace(-np.pi/4, np.pi/4, 3), inner_radius, diff_radius, "red"),
+TASK_TYPES = BlockVelocityPush("red", [-2.2, -1.8, -1.2, 1.2, 1.8, 2.2], np.linspace(-np.pi/4, np.pi/4, 3), inner_radius, diff_radius),
 
 NAME = "push_vel_small%s_%s_%s_%s" % (stem, inner_radius, diff_radius, os.environ['ROBOT_TYPE'])
 

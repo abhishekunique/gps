@@ -32,12 +32,13 @@ class BlockPush(object):
     number_end_effectors = 2
     cost_weights = [1, 10, 5]
     camera_pos = CAMERA_POS
-    def __init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius):
+    def __init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius, z_location):
         self.color = color
         self.initial_angles = initial_angles
         self.diff_angles = diff_angles
         self.inner_radius = inner_radius
         self.diff_radius = diff_radius
+        self.z_location = z_location
     @staticmethod
     def body_indices(robot_type):
         start = robot_type.bodies_before_color_blocks()
@@ -63,7 +64,7 @@ class BlockPush(object):
     def offset_generator(self, offsets, vert_offs, block_locs, condition):
         vel_index = self.vel_index(condition)
         ini_index = self.ini_index(condition)
-        x = to_cartesian(self.inner_radius, self.initial_angles[ini_index])
+        x = to_cartesian(self.inner_radius, self.initial_angles[ini_index], self.z_location)
         vs = [to_cartesian(self.diff_radius, self.initial_angles[ini_index] + v_theta) for v_theta in self.diff_angles]
         indices = range(self.nvels)
         while True:
@@ -117,7 +118,7 @@ class BlockVelocityPush(BlockPush):
     camera_pos = [0, 15., 0., 0.3, 0., 0.3]
     cost_weights = [1, 2, 40]
     def __init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius):
-        BlockPush.__init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius * 5)
+        BlockPush.__init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius * 5, z_location=0)
         self.velocities = [to_cartesian(self.diff_radius * 5, th0 + th) for th0 in initial_angles for th in diff_angles]
     @staticmethod
     def xml(is_3d, robot_type):
