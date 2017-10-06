@@ -112,8 +112,8 @@ class BlockPush(object):
     def modify_initial_state(state, _):
         return state
 
-def to_cartesian(r, theta):
-    return np.array([np.cos(theta), 0, np.sin(theta)]) * r
+def to_cartesian(r, theta, z_location=0):
+    return np.array([np.cos(theta), z_location, np.sin(theta)]) * r
 
 class BlockVelocityPush(BlockPush):
     COLOR_ORDER = "red", "green", "yellow"
