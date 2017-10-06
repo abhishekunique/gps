@@ -27,9 +27,11 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
 
 CAMERA_POS = [0, 5., 0., 0.3, 0., 0.3]
 
+RYG = "red", "yellow", "green"
+
 class BlockPush(object):
     additional_joints = 2
-    number_end_effectors = 2
+    number_end_effectors = 5
     cost_weights = [1, 10, 5]
     camera_pos = CAMERA_POS
     def __init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius, z_location):
@@ -43,10 +45,9 @@ class BlockPush(object):
     def body_indices(robot_type):
         start = robot_type.bodies_before_color_blocks()
         return [start + 1] + range(start + 3, start + 6)
-    @staticmethod
-    def nconditions(n_offs, n_verts, n_blocks):
+    def nconditions(self, n_offs, n_verts, n_blocks):
         del n_offs, n_verts
-        return n_blocks
+        return self.ninitials * self.nvels
     @staticmethod
     def modify_initial_state(state, _):
         # state[:len(state) // 2 - 2] += np.pi/4
@@ -69,7 +70,7 @@ class BlockPush(object):
         indices = range(self.nvels)
         while True:
             np.random.shuffle(indices)
-            if indices[COLOR_ORDER.index(self.color)] == vel_index:
+            if indices[RYG.index(self.color)] == vel_index:
                 break
         return [x] + [x + vs[i] for i in indices]
     @staticmethod
@@ -94,14 +95,15 @@ class BlockPush(object):
         return [[{
             'type': CostFK,
             'target_end_effector': np.concatenate([np.array([0,0,0]),
-                                                   offset_generator(i)[1]]),
-            'wp': np.array([0, 0, 0, 1, 1, 1]),
+                                                   offset_generator(i)[1 + RYG.index(self.color)],
+                                                   np.zeros(9)]),
+            'wp': np.array([0] * 3 + [1] * 3 + [0] * 9),
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,
         }, {
             'type': CostFKBlock,
-            'wp':  np.concatenate([np.zeros(3), np.ones(3)]),
+            'wp': np.array([0] * 3 + [1] * 3 + [0] * 9),
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,
@@ -136,8 +138,8 @@ class BlockVelocityPush(BlockPush):
             'type': CostState,
             'data_types' : {
                 END_EFFECTOR_POINT_VELOCITIES: {
-                    'wp': np.concatenate([np.zeros(3), np.ones(3)]),
-                    'target_state': np.concatenate([np.zeros(3), self.velocities[i]]),
+                    'wp': np.concatenate([np.zeros(3), np.ones(3), np.zeros(9)]),
+                    'target_state': np.concatenate([np.zeros(3), self.velocities[i], np.zeros(9)]),
                 },
             },
         }] for i in train_conditions]
