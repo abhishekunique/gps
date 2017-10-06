@@ -3,15 +3,15 @@ MODE = os.environ['MODE']
 ARMS_3D = False
 USE_IMAGES = False
 import os
-inner_radius = float(os.environ['INNER_RADIUS'])
-diff_radius = float(os.environ['DIFF_RADIUS'])
-z_location = float(os.environ['Z_LOCATION'])
-robot_type = eval(os.environ['ROBOT_TYPE'])
+inner_radius = 0.75
+diff_radius = 0.3
+z_location = -0.2
 stem = os.environ['STEM'] if 'STEM' in os.environ else ""
-ROBOT_TYPES = (robot_type, False),
-TASK_TYPES = [BlockPush("red", np.linspace(-2, 2, 6), [-0.4, 0, 0.4], inner_radius, diff_radius, -z_location)]
+
+ROBOT_TYPES = [(robot_type, False) for robot_type in [RobotType.PR2, RobotType.PEGGY, RobotType.THREE_DF_BLOCK, RobotType.FOUR_SEVEN]]
+TASK_TYPES = [BlockPush(color, np.linspace(-2, 2, 6), [-0.4, 0, 0.4], inner_radius, diff_radius, z_location) for color in "red", "yellow", "green"]
 VIDEO_PATH = None #"/home/kavi/Videos/pos%s" % inner_radius
 
-NAME = "push_pos_a%s_%s_%s_%s_%s" % (stem, inner_radius, diff_radius, z_location, os.environ['ROBOT_TYPE'])
+NAME = "push_pos%s" % stem
 
 # VIDEO_PATH =  "/home/kavi/Videos/%s" % NAME
