@@ -97,14 +97,17 @@
 
         <body name="goal" pos="0 0 0">
             <geom rgba="1 0 0 1" type="box" size="0.02 0.02 0.02" density='0.00001' contype="0" conaffinity="0"/>
+            <site name="goal pos1" pos="0 0 0" size="0.01" />
         </body>
 
         <body name="distractor_1" pos="0 0 0">
             <geom rgba="1 1 0 1" type="box" size="0.02 0.02 0.02" density='0.00001' contype="0" conaffinity="0"/>
+            <site name="goal pos2" pos="0 0 0" size="0.01" />
         </body>
 
         <body name="distractor_2" pos="0 0 0">
             <geom rgba="0 1 0 1" type="box" size="0.02 0.02 0.02" density='0.00001' contype="0" conaffinity="0"/>
+            <site name="goal pos3" pos="0 0 0" size="0.01" />
         </body>
     </worldbody>
 
