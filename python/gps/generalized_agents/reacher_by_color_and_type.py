@@ -144,6 +144,57 @@ class BlockVelocityPush(BlockPush):
             },
         }] for i in train_conditions]
 
+class ColorReachRYG(object):
+    additional_joints = 0
+    number_end_effectors = 4
+    cost_weights = [1, 10]
+    camera_pos = CAMERA_POS
+    def __init__(self, color, initial_angles, inner_radius):
+        self.color = color
+        self.initial_angles = initial_angles
+        self.inner_radius = inner_radius
+    @staticmethod
+    def body_indices(robot_type):
+        start = robot_type.bodies_before_color_blocks()
+        return range(start + 1, start + 4)
+    def nconditions(self, n_offs, n_verts, n_blocks):
+        return len(self.initial_angles)
+    @staticmethod
+    def modify_initial_state(state, _):
+        return state
+    def offset_generator(self, offsets, vert_offs, block_locs, condition):
+        angles = list(self.initial_angles)
+        result = [None] * 3
+        target_angle = self.initial_angles[condition % self.nconditions(None, None, None)]
+        result[RYG.index(self.color)] = target_angle
+        angles.remove(target_angle)
+        for i in range(len(result)):
+            if result[i] is None:
+                result[i] = np.random.choice(angles)
+                angles.remove(result[i])
+        return [to_cartesian(self.inner_radius, th) for th in result]
+    @staticmethod
+    def xml(is_3d, robot_type):
+        filename = {
+            RobotType.FOUR_SEVEN : './mjc_models/4link_7joint_ryg_reach',
+            RobotType.THREE_DF_BLOCK : './mjc_models/3df_ryg_reach',
+            RobotType.PR2 : './mjc_models/pr2/pr2_arm_ryg_reach',
+            RobotType.PEGGY : './mjc_models/peggy_arm3d_ryg_reach',
+        }[robot_type]
+        return filename + ".xml"
+    def task_specific_cost(self, offset_generator, train_conditions):
+        return [[{
+            'type': CostFK,
+            'target_end_effector': np.concatenate([offset_generator(i)[RYG.index(self.color)], np.zeros(9)]),
+            'wp': np.array([1] * 3 + [0] * 9),
+            'l1': 0.1,
+            'l2': 10.0,
+            'alpha': 1e-5,
+        }] for i in train_conditions]
+    @staticmethod
+    def modify_initial_state(state, _):
+        return state
+
 class BlockCatch(object):
     def __init__(self, start_positions, velocities):
         self.start_positions = start_positions
