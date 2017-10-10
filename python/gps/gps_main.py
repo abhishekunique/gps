@@ -191,7 +191,7 @@ class GPSMain(object):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
         self.policy_opt.validation_samples = self.data_logger.unpickle('4peg_val.pkl')
-
+        #testing=True
         if testing:
             _, size = [x.value for x in self.policy_opt.policy[0].obs_tensor.get_shape()]
             self.policy_opt.policy[0].scale = np.eye(size)
@@ -269,8 +269,8 @@ class GPSMain(object):
                     for cond_1 in self._train_idx[robot_number]
                 ]
             time3 = time.clock()
-            if self.agent[robot_number].nan_flag:
-                IPython.embed()
+            # if self.agent[robot_number].nan_flag:
+            #     IPython.embed()
 
             for robot_number in range(self.num_robots):
                 # self.policy_opt.prepare_solver(itr_robot_status, self.)
@@ -293,8 +293,8 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 print "pol samples", robot_number, datetime.time(datetime.now())
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
-                if self.agent[robot_number].nan_flag:
-                    IPython.embed()
+                # if self.agent[robot_number].nan_flag:
+                #     IPython.embed()
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
             time6 = time.clock()
             # if self.save_shared:
@@ -308,7 +308,8 @@ class GPSMain(object):
             with open('{0}/weights_itr{1}.pkl'.format(nn_dump_path, itr + weights_pkl_offset),'wb') as f:
                 pickle.dump(data_dump, f)
             self.save_traj_distr()
-
+            if itr %1== 20 and itr >1:
+                import IPython; IPython.embed()
         self._end()
 
     def collect_samples(self, itr, traj_sample_lists, robot_number):
