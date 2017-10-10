@@ -2,17 +2,19 @@ SHOW_VIEWER = False
 MODE = os.environ['MODE']
 ARMS_3D = True
 USE_IMAGES = False
-import os
-inner_radius = float(os.environ['INNER_RADIUS'])
-diff_radius = float(os.environ['DIFF_RADIUS'])
-robot_type = eval(os.environ['ROBOT_TYPE'])
+
+INNER_RADIUS = 0.9
+DIFF_RADIUS = 0.3
+INITIAL_ANGLES = [-2.2, -1.8, -1.2, 1.2, 1.8, 2.2]
+DIFF_ANGLES = np.linspace(-np.pi/4, np.pi/4, 3)
+
 stem = os.environ['STEM'] if 'STEM' in os.environ else ""
-ROBOT_TYPES = (robot_type, False),
 VIDEO_PATH = None # "/home/kavi/Videos/pr2vel"
 
-TASK_TYPES = BlockVelocityPush([-2.2, -1.8, -1.2, 1.2, 1.8, 2.2], np.linspace(-np.pi/4, np.pi/4, 3), inner_radius, diff_radius, "red"),
+ROBOT_TYPES = [(robot_type, False) for robot_type in [RobotType.PR2, RobotType.PEGGY, RobotType.THREE_DF_BLOCK, RobotType.FOUR_SEVEN]]
+TASK_TYPES = [BlockVelocityPush(color, INITIAL_ANGLES, DIFF_ANGLES, INNER_RADIUS, DIFF_RADIUS) for color in "red", "yellow", "green"]
 
-NAME = "push_vel_small%s_%s_%s_%s" % (stem, inner_radius, diff_radius, os.environ['ROBOT_TYPE'])
+NAME = "push_vel_small%s" % stem
 
 if MODE == "check-all-traj":
     VIDEO_PATH = "/home/kavi/Videos/0930-%s" % NAME

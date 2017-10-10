@@ -10,51 +10,50 @@
     </default>
 
     <worldbody>
-        <body name="r_shoulder_pan_link" pos="-0.1 0.2 0.1" zaxis="0 100 0">
-            <geom name="e1" type="sphere" rgba="0.6 0.6 0.6 1" pos="-0.06 0.05 0.2" size="0.05" />
-            <geom name="e2" type="sphere" rgba="0.6 0.6 0.6 1" pos=" 0.06 0.05 0.2" size="0.05" />
-            <geom name="e1p" type="sphere" rgba="0.1 0.1 0.1 1" pos="-0.06 0.09 0.2" size="0.03" />
-            <geom name="e2p" type="sphere" rgba="0.1 0.1 0.1 1" pos=" 0.06 0.09 0.2" size="0.03" />
-            <geom name="sp" type="capsule" fromto="0 0 -0.4 0 0 0.2" size="0.1" />
+        <body name="r_shoulder_pan_link" pos="-0.25 0.2 0" zaxis="0 100 0">
+            <geom name="e1" type="sphere" rgba="0.528 0.528 0.528 1" pos="-0.0528 0.044 0.176" size="0.044" />
+            <geom name="e2" type="sphere" rgba="0.528 0.528 0.528 1" pos=" 0.0528 0.044 0.176" size="0.044" />
+            <geom name="e1p" type="sphere" rgba="0.088 0.088 0.088 0.88" pos="-0.0528 0.0792 0.176" size="0.0264" />
+            <geom name="e2p" type="sphere" rgba="0.088 0.088 0.088 0.88" pos=" 0.0528 0.0792 0.176" size="0.0264" />
+            <geom name="sp" type="capsule" fromto="0 0 -0.352 0 0 0.176" size="0.088" />
             <joint name="r_shoulder_pan_joint" type="hinge" pos="0 0 0" axis="0 0 1" range="-2.2854 1.714602" damping="10.0" />
 
-            <body name="r_shoulder_lift_link" pos="0.1 0 0">
-                <geom name="sl" type="capsule" fromto="0 -0.1 0 0 0.1 0" size="0.1" />
+            <body name="r_shoulder_lift_link" pos="0.088 0 0">
+                <geom name="sl" type="capsule" fromto="0 -0.088 0 0 0.088 0" size="0.088" />
                 <joint name="r_shoulder_lift_joint" type="hinge" pos="0 0 0" axis="0 1 0" range="-0.5236 1.3963" damping="10.0" />
 
                 <body name="r_upper_arm_roll_link" pos="0 0 0">
-                    <geom name="uar" type="capsule" fromto="-0.1 0 0 0.1 0 0" size="0.02" />
+                    <geom name="uar" type="capsule" fromto="-0.088 0 0 0.088 0 0" size="0.0176" />
                     <joint name="r_upper_arm_roll_joint" type="hinge" pos="0 0 0" axis="1 0 0" range="-3.9 0.8" damping="0.1" />
 
                     <body name="r_upper_arm_link" pos="0 0 0">
-                        <geom name="ua" type="capsule" fromto="0 0 0 0.4 0 0" size="0.06" />
+                        <geom name="ua" type="capsule" fromto="0 0 0 0.40 0 0" size="0.0528" />
 
-                        <body name="r_elbow_flex_link" pos="0.4 0 0">
-                            <geom name="ef" type="capsule" fromto="0 -0.02 0 0.0 0.02 0" size="0.06" />
+                        <body name="r_elbow_flex_link" pos="0.40 0 0">
+                            <geom name="ef" type="capsule" fromto="0 -0.0176 0 0.0 0.0176 0" size="0.0528" />
                             <joint name="r_elbow_flex_joint" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.3213 0" damping="1.0" />
 
                             <body name="r_forearm_roll_link" pos="0 0 0">
-                                <geom name="fr" type="capsule" fromto="-0.1 0 0 0.1 0 0" size="0.02" />
+                                <geom name="fr" type="capsule" fromto="-0.088 0 0 0.088 0 0" size="0.0176" />
                                 <joint name="r_forearm_roll_joint" type="hinge" limited="false" pos="0 0 0" axis="1 0 0" damping=".1" />
 
                                 <body name="r_forearm_link" pos="0 0 0">
-                                    <geom name="fa" type="capsule" fromto="0 0 0 0.321 0 0" size="0.05" />
+                                    <geom name="fa" type="capsule" fromto="0 0 0 0.4 0 0" size="0.044" />
 
-                                    <body name="r_wrist_flex_link" pos="0.321 0 0">
-                                        <geom name="wf" type="capsule" fromto="0 -0.02 0 0 0.02 0" size="0.01" />
+                                    <body name="r_wrist_flex_link" pos="0.4 0 0">
+                                        <geom name="wf" type="capsule" fromto="0 -0.0176 0 0 0.0176 0" size="0.0088" />
                                         <joint name="r_wrist_flex_joint" type="hinge" pos="0 0 0" axis="0 1 0" range="-2.094 0" damping=".1" />
 
                                         <body name="r_wrist_roll_link" pos="0 0 0">
-                                            <geom name="wr" type="capsule" fromto="-0.02 0 0 0.02 0 0" size="0.01" />
+                                            <geom name="wr" type="capsule" fromto="-0.0176 0 0 0.0176 0 0" size="0.0088" />
                                             <joint name="r_wrist_roll_joint" type="hinge" pos="0 0 0" limited="false" axis="1 0 0" damping="0.1" />
 
                                             <body name="r_gripper_palm_link" pos="0 0 0">
-                                                <geom name="pl" type="capsule" fromto="0.05 0 -0.02 0.05 0 0.02" size="0.05" />
-
-                                                <site name="leg_bottom" pos="0 0 0" size="0.01" />
+                                                <geom name="pl" type="capsule" fromto="0.044 0 -0.0176 0.044 0 0.0176" size="0.044" />
+                                                <site name="leg_bottom" pos="0 0 0" size="0.0088" />
                                                 <geom type="box" pos="0.1 0.08 0" size=" 0.01 0.15 0.15" contype="1" conaffinity="1" density="0.0001" />
                                                 <!-- <geom type="box" pos="0 0 -0.25" size=" 0.01 0.15 0.15" contype="1" conaffinity="1" density="0.0001" /> -->
-                                                <body name="r_gripper_tool_frame" pos="0.18 0 0">
+                                                <body name="r_gripper_tool_frame" pos="0.1584 0 0">
 
                                                     <body name="ball" pos="0 0 0">
                                                     </body>
@@ -97,10 +96,18 @@
         </body>
 
         <body name="goal" pos="0 0 0">
-            <geom rgba="1. 0. 0. 1" type="box" size="0.05 0.05 0.05" density='0.00001' contype="0" conaffinity="0"/>
-            <body name="distal_11" pos="0 0 0">
-                <site name="goal_pos" pos="0.05 0.05 0.05" size="0.01" />
-            </body>
+            <geom rgba="1 0 0 1" type="box" size="0.02 0.02 0.02" density='0.00001' contype="0" conaffinity="0"/>
+            <site name="goal pos1" pos="0 0 0" size="0.01" />
+        </body>
+
+        <body name="distractor_1" pos="0 0 0">
+            <geom rgba="1 1 0 1" type="box" size="0.02 0.02 0.02" density='0.00001' contype="0" conaffinity="0"/>
+            <site name="goal pos2" pos="0 0 0" size="0.01" />
+        </body>
+
+        <body name="distractor_2" pos="0 0 0">
+            <geom rgba="0 1 0 1" type="box" size="0.02 0.02 0.02" density='0.00001' contype="0" conaffinity="0"/>
+            <site name="goal pos3" pos="0 0 0" size="0.01" />
         </body>
     </worldbody>
 

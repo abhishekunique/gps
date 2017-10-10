@@ -27,23 +27,52 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
 
 CAMERA_POS = [0, 5., 0., 0.3, 0., 0.3]
 
+RYG = "red", "yellow", "green"
+
 class BlockPush(object):
     additional_joints = 2
-    number_end_effectors = 3
+    number_end_effectors = 5
     cost_weights = [1, 10, 5]
     camera_pos = [0, 8., 0., 0.3, 0., 0.3]
+    def __init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius, z_location):
+        self.color = color
+        self.initial_angles = initial_angles
+        self.diff_angles = diff_angles
+        self.inner_radius = inner_radius
+        self.diff_radius = diff_radius
+        self.z_location = z_location
     @staticmethod
     def body_indices(robot_type):
         start = robot_type.bodies_before_color_blocks()
-        return [start + 1, start + 3]
-    @staticmethod
-    def nconditions(n_offs, n_verts, n_blocks):
+        return [start + 1] + range(start + 3, start + 6)
+    def nconditions(self, n_offs, n_verts, n_blocks):
         del n_offs, n_verts
-        return n_blocks
-    @classmethod
-    def offset_generator(cls, offsets, vert_offs, block_locs, condition):
-        condition = condition % cls.nconditions(len(offsets), len(vert_offs), len(block_locs))
-        return block_locs[condition]
+        return self.ninitials * self.nvels
+    @staticmethod
+    def modify_initial_state(state, _):
+        # state[:len(state) // 2 - 2] += np.pi/4
+        return state
+    @property
+    def nvels(self):
+        return len(self.diff_angles)
+    @property
+    def ninitials(self):
+        return len(self.initial_angles)
+    def vel_index(self, condition):
+        return condition % self.nvels
+    def ini_index(self, condition):
+        return (condition // self.nvels) % self.ninitials
+    def offset_generator(self, offsets, vert_offs, block_locs, condition):
+        vel_index = self.vel_index(condition)
+        ini_index = self.ini_index(condition)
+        x = to_cartesian(self.inner_radius, self.initial_angles[ini_index], self.z_location)
+        vs = [to_cartesian(self.diff_radius, self.initial_angles[ini_index] + v_theta) for v_theta in self.diff_angles]
+        indices = range(self.nvels)
+        while True:
+            np.random.shuffle(indices)
+            if indices[RYG.index(self.color)] == vel_index:
+                break
+        return [x] + [x + vs[i] for i in indices]
     @staticmethod
     def xml(is_3d, robot_type):
         filename = {
@@ -62,20 +91,19 @@ class BlockPush(object):
         if robot_type.is_arm() and is_3d:
             filename += "_3d"
         return filename + ".xml"
-    @classmethod
-    def task_specific_cost(cls, offset_generator, train_conditions):
+    def task_specific_cost(self, offset_generator, train_conditions):
         return [[{
             'type': CostFK,
             'target_end_effector': np.concatenate([np.array([0,0,0]),
-                                                   offset_generator(i)[1],
-                                                   np.array([0,0,0])]),
-            'wp': np.array([0, 0, 0, 1, 1, 1,0,0,0]),
+                                                   offset_generator(i)[1 + RYG.index(self.color)],
+                                                   np.zeros(9)]),
+            'wp': np.array([0] * 3 + [1] * 3 + [0] * 9),
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,
         }, {
             'type': CostFKBlock,
-            'wp': np.array([1, 1, 1, 0, 0, 0, 0, 0, 0]),
+            'wp': np.array([0] * 3 + [1] * 3 + [0] * 9),
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,
@@ -84,24 +112,16 @@ class BlockPush(object):
     def modify_initial_state(state, _):
         return state
 
-def to_cartesian(r, theta):
-    return np.array([np.cos(theta), 0, np.sin(theta)]) * r
+def to_cartesian(r, theta, z_location=0):
+    return np.array([np.cos(theta), z_location, np.sin(theta)]) * r
 
 class BlockVelocityPush(BlockPush):
     COLOR_ORDER = "red", "green", "yellow"
     camera_pos = [0, 15., 0., 0.3, 0., 0.3]
-    cost_weights = [1, 0.5, 40]
-    def __init__(self, initial_angles, velocity_delta_angles, inner_radius, diff_radius, color):
-        self.initial_angles = initial_angles
-        self.velocity_delta_angles = velocity_delta_angles
-        self.inner_radius = inner_radius
-        self.diff_radius = diff_radius
-        self.color = color
-        self.velocities = [to_cartesian(self.diff_radius * 5, th0 + th) for th0 in initial_angles for th in velocity_delta_angles]
-    @staticmethod
-    def body_indices(robot_type):
-        start = robot_type.bodies_before_color_blocks()
-        return range(start + 1, start + 1 + 2 * 4, 2)
+    cost_weights = [1, 2, 40]
+    def __init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius):
+        BlockPush.__init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius * 5, z_location=0)
+        self.velocities = [to_cartesian(self.diff_radius * 5, th0 + th) for th0 in initial_angles for th in diff_angles]
     @staticmethod
     def xml(is_3d, robot_type):
         path = BlockPush.xml(is_3d, robot_type)
@@ -118,28 +138,62 @@ class BlockVelocityPush(BlockPush):
             'type': CostState,
             'data_types' : {
                 END_EFFECTOR_POINT_VELOCITIES: {
-                    'wp': np.concatenate([np.zeros(3), np.ones(3), np.zeros(3)]),
-                    'target_state': np.concatenate([np.zeros(3), self.velocities[i], np.zeros(3)]),
+                    'wp': np.concatenate([np.zeros(3), np.ones(3), np.zeros(9)]),
+                    'target_state': np.concatenate([np.zeros(3), self.velocities[i], np.zeros(9)]),
                 },
             },
         }] for i in train_conditions]
+
+class ColorReachRYG(object):
+    additional_joints = 0
+    number_end_effectors = 4
+    cost_weights = [1, 10]
+    camera_pos = CAMERA_POS
+    def __init__(self, color, initial_angles, inner_radius):
+        self.color = color
+        self.initial_angles = initial_angles
+        self.inner_radius = inner_radius
+    @staticmethod
+    def body_indices(robot_type):
+        start = robot_type.bodies_before_color_blocks()
+        return range(start + 1, start + 4)
+    def nconditions(self, n_offs, n_verts, n_blocks):
+        return len(self.initial_angles)
     @staticmethod
     def modify_initial_state(state, _):
-        # state[:len(state) // 2 - 2] += np.pi/4
         return state
     def offset_generator(self, offsets, vert_offs, block_locs, condition):
-        nvels, ninitials = len(self.velocity_delta_angles), len(self.initial_angles)
-        condition = condition % (nvels * ninitials)
-        vel_index = condition % nvels
-        ini_index = condition // nvels
-        x = to_cartesian(self.inner_radius, self.initial_angles[ini_index])
-        vs = [to_cartesian(self.diff_radius * 5, self.initial_angles[ini_index] + v_theta) for v_theta in self.velocity_delta_angles]
-        indices = range(3)
-        while True:
-            np.random.shuffle(indices)
-            if indices[COLOR_ORDER.index(self.color)] == vel_index:
-                break
-        return [x] + [x + vs[i] for i in indices]
+        angles = list(self.initial_angles)
+        result = [None] * 3
+        target_angle = self.initial_angles[condition % self.nconditions(None, None, None)]
+        result[RYG.index(self.color)] = target_angle
+        angles.remove(target_angle)
+        for i in range(len(result)):
+            if result[i] is None:
+                result[i] = np.random.choice(angles)
+                angles.remove(result[i])
+        return [to_cartesian(self.inner_radius, th) for th in result]
+    @staticmethod
+    def xml(is_3d, robot_type):
+        filename = {
+            RobotType.FOUR_SEVEN : './mjc_models/4link_7joint_ryg_reach',
+            RobotType.THREE_DF_BLOCK : './mjc_models/3df_ryg_reach',
+            RobotType.PR2 : './mjc_models/pr2/pr2_arm_ryg_reach',
+            RobotType.PEGGY : './mjc_models/peggy_arm3d_ryg_reach',
+        }[robot_type]
+        return filename + ".xml"
+    def task_specific_cost(self, offset_generator, train_conditions):
+        return [[{
+            'type': CostFK,
+            'target_end_effector': np.concatenate([offset_generator(i)[RYG.index(self.color)], np.zeros(9)]),
+            'wp': np.array([1] * 3 + [0] * 9),
+            'l1': 0.1,
+            'l2': 10.0,
+            'alpha': 1e-5,
+        }] for i in train_conditions]
+    @staticmethod
+    def modify_initial_state(state, _):
+        return state
 
 class BlockCatch(object):
     def __init__(self, start_positions, velocities):
@@ -316,66 +370,6 @@ class LegoReach(ColorReach):
     def xml(is_3d, robot_type):
         xml_file = ColorReach("red").xml(is_3d, robot_type)
         return xml_file.replace("reach_colors", "reach_lego")
-
-class ColorPush(ColorReach):
-    camera_pos = CAMERA_POS
-    additional_joints = 8
-    cost_weights = BlockPush.cost_weights
-    def __init__(self, color_to, color_from):
-        ColorReach.__init__(self, color_to)
-        self.color_from = color_from
-    def xml(self, is_3d, robot_type):
-        filename = self.xml(is_3d, robot_type)
-        assert "reach" in filename
-        return filename.replace("reach", "push")
-    @staticmethod
-    def nconditions(n_offs, vert_offs, blockpush_offs):
-        del vert_offs, blockpush_offs
-        return 2 + (n_offs - 2) * 2
-    def offset_generator(self, offsets, vert_offs, blockpush_offs, condition):
-        condition += 1
-        condition %= self.nconditions(len(offsets), len(vert_offs), len(blockpush_offs))
-        if condition == 0:
-            fro, to = len(offsets) - 1, len(offsets) - 2
-        elif condition == 1:
-            fro, to = 0, 1
-        else:
-            fro, direction = condition // 2, condition % 2
-            to = fro + (1 if direction else -1)
-        movable_block = COLOR_ORDER.index(self.color_from)
-        target_block = COLOR_ORDER.index(self.color)
-        results = [None] * len(offsets)
-        results[movable_block] = offsets[fro]
-        results[target_block] = offsets[to]
-        unused_result_idx = [idx for idx in range(len(offsets)) if idx not in {movable_block, target_block}]
-        np.random.shuffle(unused_result_idx)
-        for off_idx, res_idx in zip([idx for idx in range(len(offsets)) if idx not in {fro, to}], unused_result_idx):
-            results[res_idx] = offsets[off_idx]
-        return results
-    def task_specific_cost(self, offset_generator, train_conditions):
-        movable_block = COLOR_ORDER.index(self.color_from)
-        target_block = COLOR_ORDER.index(self.color)
-        costs = []
-        for i in train_conditions:
-            final_locations = offset_generator(i)
-            final_locations[movable_block] = final_locations[target_block]
-            costs.append([
-                {
-                    'type': CostFK,
-                    'target_end_effector': np.concatenate([[0, 0, 0]] + final_locations),
-                    'wp': np.array([0] * 3 + [1] * (len(final_locations) * 3)),
-                    'l1': 0.1,
-                    'l2': 10.0,
-                    'alpha': 1e-5,
-                }, {
-                    'type': lambda hyper: CostFKBlock(hyper, first_effector=0, second_effector=movable_block),
-                    'wp': np.array([1] * 3 + [0] * (len(final_locations) * 3)),
-                    'l1': 0.1,
-                    'l2': 10.0,
-                    'alpha': 1e-5,
-                }
-            ])
-        return costs
 
 class RobotType(Enum):
     THREE_DF_BLOCK = 0
