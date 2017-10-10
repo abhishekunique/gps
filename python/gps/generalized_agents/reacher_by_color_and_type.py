@@ -148,7 +148,7 @@ class ColorReachRYG(object):
     additional_joints = 0
     number_end_effectors = 4
     cost_weights = [1, 10]
-    camera_pos = CAMERA_POS
+    camera_pos = [0, 3.5, 0., 0, 0., 0]
     def __init__(self, color, initial_angles, inner_radius):
         self.color = color
         self.initial_angles = initial_angles
