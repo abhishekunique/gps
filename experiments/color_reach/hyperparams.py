@@ -44,6 +44,7 @@ RANDOM_SEED = 0x123ABC
 SAMPLES = None
 BLOCK_LOCATIONS = BLOCKPUSH_BLOCK_LOCATIONS = None
 TORQUE_COSTS = True
+SIM_TRAJ_OUTPUT_PATH = None
 
 CONFIG_FILE = argv[argv.index("--config") + 1]
 execfile(CONFIG_FILE)
@@ -188,6 +189,7 @@ for a in agent:
     })
 for a in agents:
     a['agent']['write_video'] = VIDEO_PATH
+    a['agent']['sim_traj_output'] = SIM_TRAJ_OUTPUT_PATH
 algorithm = [a['algorithm'] for a in agents]
 
 config = {
