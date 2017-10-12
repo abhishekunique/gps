@@ -33,7 +33,7 @@ class BlockPush(object):
     additional_joints = 2
     number_end_effectors = 5
     cost_weights = [1, 10, 5]
-    camera_pos = CAMERA_POS
+    camera_pos = [0, 8., 0., 0.3, 0., 0.3]
     def __init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius, z_location):
         self.color = color
         self.initial_angles = initial_angles
@@ -148,7 +148,7 @@ class ColorReachRYG(object):
     additional_joints = 0
     number_end_effectors = 4
     cost_weights = [1, 10]
-    camera_pos = CAMERA_POS
+    camera_pos = [0, 3.5, 0., 0, 0., 0]
     def __init__(self, color, initial_angles, inner_radius):
         self.color = color
         self.initial_angles = initial_angles
