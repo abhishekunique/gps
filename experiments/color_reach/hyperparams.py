@@ -121,19 +121,24 @@ for robot_n, robot_type in enumerate(ROBOT_TYPES):
         arguments.append((task_type, robot_type))
 
 leave_one_out = LEAVE_ONE_OUT
-grid1_training = [6,7,8,12,13,14,15,16,17,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]
-grid1_testing = [0,1,2,3,4,5,9,10,11,18,19,20]
+GRID  =  os.environ['GRID']  if 'GRID' in os.environ else 0
+if GRID == 0:
+    grid_training = range(len(arguments))
+    grid_testing = range(len(arguments))
+elif GRID == 1:
+    grid_training = [6,7,8,12,13,14,15,16,17,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]
+    grid_testing = [0,1,2,3,4,5,9,10,11,18,19,20]
 
 if MODE == "training-trajectories" or MODE == "check-all-traj":
     task_values, robot_values, arguments = zip(*((task, robot, arg) for task, robot, arg in zip(task_values, robot_values, arguments) if not arg[1][1]))
 elif IS_TESTING:
-    task_values     = [task_values[i] for i in grid1_testing]
-    robot_values    = [robot_values[i] for i in grid1_testing]
-    arguments       = [arguments[i] for i in grid1_testing]
+    task_values     = [task_values[i] for i in grid_testing]
+    robot_values    = [robot_values[i] for i in grid_testing]
+    arguments       = [arguments[i] for i in grid_testing]
 else:
-    task_values     = [task_values[i] for i in grid1_training]
-    robot_values    = [robot_values[i] for i in grid1_training]
-    arguments       = [arguments[i] for i in grid1_training]
+    task_values     = [task_values[i] for i in grid_training]
+    robot_values    = [robot_values[i] for i in grid_training]
+    arguments       = [arguments[i] for i in grid_training]
 
 agents = [reacher_by_color_and_type(i,
                                     len(arguments),
