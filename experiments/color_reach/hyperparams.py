@@ -26,6 +26,8 @@ PEGGY_VS_ARMS = (RobotType.PEGGY, False), (RobotType.THREE_LINK, False), (RobotT
 PR2_VS_ARMS = (RobotType.PR2, False), (RobotType.THREE_LINK, False), (RobotType.FOUR_LINK, False)
 BAXTER_VS_ARMS = (RobotType.BAXTER, False), (RobotType.THREE_LINK, False), (RobotType.FOUR_LINK, False)
 
+
+
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
@@ -72,7 +74,7 @@ elif MODE == "training" or MODE == "training-trajectories":
     IS_TESTING = False
     if SAMPLES is None:
         SAMPLES = 20
-    VERBOSE_TRIALS = SHOW_VIEWER
+    VERBOSE_TRIALS = 1#SHOW_VIEWER
     VIEW_TRAJECTORIES = False
 elif MODE == "check-model":
     LEAVE_ONE_OUT = 1
@@ -118,16 +120,19 @@ for robot_n, robot_type in enumerate(ROBOT_TYPES):
         arguments.append((task_type, robot_type))
 
 leave_one_out = LEAVE_ONE_OUT
+grid1_training = [6,7,8,12,13,14,15,16,17,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]
+grid1_testing = [0,1,2,3,4,5,9,10,11,18,19,20]
+
 if MODE == "training-trajectories" or MODE == "check-all-traj":
     task_values, robot_values, arguments = zip(*((task, robot, arg) for task, robot, arg in zip(task_values, robot_values, arguments) if not arg[1][1]))
 elif IS_TESTING:
-    task_values     = [task_values[leave_one_out]]
-    robot_values    = [robot_values[leave_one_out]]
-    arguments       = [arguments[leave_one_out]]
+    task_values     = [task_values[i] for i in grid1_testing]
+    robot_values    = [robot_values[i] for i in grid1_testing]
+    arguments       = [arguments[i] for i in grid1_testing]
 else:
-    task_values     = task_values[:leave_one_out]+task_values[leave_one_out+1:]
-    robot_values    = robot_values[:leave_one_out]+robot_values[leave_one_out+1:]
-    arguments       = arguments[:leave_one_out]+arguments[leave_one_out+1:]
+    task_values     = [task_values[i] for i in grid1_training]
+    robot_values    = [robot_values[i] for i in grid1_training]
+    arguments       = [arguments[i] for i in grid1_training]
 
 agents = [reacher_by_color_and_type(i,
                                     len(arguments),
@@ -166,7 +171,7 @@ common = {
             'task_list': task_values,
             'robot_list': robot_values,
             'agent_params':[a['network_params'] for a in agents],
-            'regularizer': 'gaussian',
+            'regularizer': 'dropout',
         },
         #'val_agents': [1],
         'iterations': NEURAL_NET_ITERATIONS,
@@ -198,7 +203,7 @@ config = {
     'nn_dump_path' : "dump/nn_weights_%s" % NAME,
     'traj_distr_dump' : "dump/traj_distr_%s.pkl" % NAME,
     'num_samples': SAMPLES,
-    'verbose_trials': SAMPLES * VERBOSE_TRIALS,
+    'verbose_trials':  VERBOSE_TRIALS,
     'verbose_policy_trials': int(IS_TESTING),
     'save_wts': True,
     'common': common,
