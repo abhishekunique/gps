@@ -122,15 +122,23 @@ for robot_n, robot_type in enumerate(ROBOT_TYPES):
 
 leave_one_out = LEAVE_ONE_OUT
 GRID  =  os.environ['GRID']  if 'GRID' in os.environ else 0
-print GRID
+print "!!!GRID!!!", GRID
 if GRID == '0':
     grid_training = range(len(arguments))
     grid_testing = range(len(arguments))
 elif GRID == '1':
     grid_training = [6,7,8,12,13,14,15,16,17,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]
     grid_testing = [0,1,2,3,4,5,9,10,11,18,19,20]
-print grid_training #grid_training
-if MODE == "training-trajectories" or MODE == "check-all-traj":
+elif GRID=='color_reach':
+    grid_training = [16,17,24,26,33,34,35]
+    grid_testing = [8,15,25]
+elif GRID=='peggy_push_vel':
+    grid_training = [12]
+    grid_testing= [12]
+
+###mport IPython; IPython.embed()
+
+if False: #MODE == "training-trajectories" or MODE == "check-all-traj":
     task_values, robot_values, arguments = zip(*((task, robot, arg) for task, robot, arg in zip(task_values, robot_values, arguments) if not arg[1][1]))
 elif IS_TESTING:
     task_values     = [task_values[i] for i in grid_testing]
@@ -160,6 +168,7 @@ agents = [reacher_by_color_and_type(i,
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/color_reach/'
 INIT_POLICY_DIR = '/home/abhigupta/gps/'
+REG = os.environ['REG']
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),
@@ -178,7 +187,7 @@ common = {
             'task_list': task_values,
             'robot_list': robot_values,
             'agent_params':[a['network_params'] for a in agents],
-            'regularizer': 'dropout',
+            'regularizer': REG
         },
         #'val_agents': [1],
         'iterations': NEURAL_NET_ITERATIONS,
@@ -208,8 +217,8 @@ config = {
     'is_testing' : IS_TESTING,
     'load_old_weights' : LOAD_OLD_WEIGHTS,
     'view_trajectories' : VIEW_TRAJECTORIES,
-    'nn_dump_path' : "dump/nn_weights_%s" % NAME,
-    'traj_distr_dump' : "dump/traj_distr_%s.pkl" % NAME,
+    'nn_dump_path' : "dump/nn_weights_%s" % NAME+'__'+GRID+'__'+REG,
+    'traj_distr_dump' : "dump/traj_distr_%s.pkl" % NAME +'__'+GRID+'__'+REG,
     'num_samples': SAMPLES,
     'verbose_trials':  VERBOSE_TRIALS,
     'verbose_policy_trials': int(IS_TESTING),
