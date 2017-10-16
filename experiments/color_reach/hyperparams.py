@@ -135,6 +135,9 @@ elif GRID=='color_reach':
 elif GRID=='peggy_push_vel':
     grid_training = [12]
     grid_testing= [12]
+elif GRID=='pr2_push_vel':
+    grid_training = [3,4,5]
+    grid_testing= [3,4,5]
 
 ###mport IPython; IPython.embed()
 
@@ -217,8 +220,8 @@ config = {
     'is_testing' : IS_TESTING,
     'load_old_weights' : LOAD_OLD_WEIGHTS,
     'view_trajectories' : VIEW_TRAJECTORIES,
-    'nn_dump_path' : "dump/nn_weights_%s" % NAME+'__'+GRID+'__'+REG,
-    'traj_distr_dump' : "dump/traj_distr_%s.pkl" % NAME +'__'+GRID+'__'+REG,
+    'nn_dump_path' : "dump/nn_weights_%s" % (NAME+'__'+GRID+'__'+REG),
+    'traj_distr_dump' : "dump/traj_distr_%s.pkl" % (NAME +'__'+GRID+'__'+REG),
     'num_samples': SAMPLES,
     'verbose_trials':  VERBOSE_TRIALS,
     'verbose_policy_trials': int(IS_TESTING),
