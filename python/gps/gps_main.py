@@ -391,12 +391,12 @@ class GPSMain(object):
                     # Update dual variables.
                     for m in self._train_idx[robot_number]:
                         self.algorithm[robot_number]._policy_dual_step(m, step=step)
-            for robot_number in range(self.num_robots):
-                print "update traj", robot_number
-                self.algorithm[robot_number]._update_trajectories()
+            # for robot_number in range(self.num_robots):
+            #     print "update traj", robot_number
+            #     self.algorithm[robot_number]._update_trajectories()
 
         for robot_number in range(self.num_robots):
-            self.algorithm[robot_number]._advance_iteration_variables()
+            # self.algorithm[robot_number]._advance_iteration_variables()
             if self.gui:
                 self.gui[robot_number].stop_display_calculating()
 
