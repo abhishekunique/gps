@@ -8,10 +8,18 @@ diff_radius = 0.3
 z_location = -0.2
 stem = os.environ['STEM'] if 'STEM' in os.environ else ""
 
-ROBOT_TYPES = [(robot_type, False) for robot_type in [RobotType.PR2, RobotType.PEGGY, RobotType.THREE_DF_BLOCK, RobotType.FOUR_SEVEN]]
+ROBOT_TYPES = [(robot_type, False) for robot_type in [eval(os.environ['ROBOT_TYPE'])]]
 TASK_TYPES = [BlockPush(color, np.linspace(-2, 2, 6), [-0.4, 0, 0.4], inner_radius, diff_radius, z_location) for color in "red", "yellow", "green"]
 VIDEO_PATH = None #"/home/kavi/Videos/pos%s" % inner_radius
 
-NAME = "push_pos%s" % stem
+str_seed = ""
 
-# VIDEO_PATH =  "/home/kavi/Videos/%s" % NAME
+if 'RANDOM_SEED' in os.environ:
+    RANDOM_SEED = int(os.environ['RANDOM_SEED'])
+    str_seed = "seed=" + os.environ['RANDOM_SEED']
+
+
+NAME = "push_pos%s%s%s" % (stem, ROBOT_TYPES, str_seed)
+
+if 'NAME' in os.environ:
+    NAME = os.environ['NAME']
