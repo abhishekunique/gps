@@ -5,6 +5,9 @@ import numpy as np
 
 import mjcpy
 import random
+from pickle import dump
+import os
+
 from datetime import datetime
 
 from gps.agent.agent import Agent
@@ -175,6 +178,12 @@ class AgentMuJoCo(Agent):
         new_sample.set(ACTION, U)
         if save:
             self._samples[condition].append(new_sample)
+        if self._hyperparams["sim_traj_output"] is not None:
+            path = self._hyperparams["sim_traj_output"]
+            if not os.path.exists(path):
+                os.makedirs(path)
+            with open("{path}/{condition}_{index}".format(path=path, condition=condition, index=index), "wb") as f:
+                dump([new_sample.get_obs(), new_sample.get_U()], f)
         return new_sample
 
     def sample_for_tensors(self, policy, condition, tensors, verbose=True, save=True):

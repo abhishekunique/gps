@@ -8,6 +8,7 @@ import operator
 from gps.agent.mjc.agent_mjc import AgentMuJoCo
 from gps.agent.recorded.agent_recorded import AgentRecorded
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
+from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_state import CostState
 from gps.algorithm.cost.cost_fk_blocktouch import CostFKBlock
@@ -33,7 +34,7 @@ class BlockPush(object):
     additional_joints = 2
     number_end_effectors = 5
     cost_weights = [1, 10, 5]
-    camera_pos = CAMERA_POS
+    camera_pos = [0, 8., 0., 0.3, 0., 0.3]
     def __init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius, z_location):
         self.color = color
         self.initial_angles = initial_angles
@@ -148,7 +149,7 @@ class ColorReachRYG(object):
     additional_joints = 0
     number_end_effectors = 4
     cost_weights = [1, 10]
-    camera_pos = CAMERA_POS
+    camera_pos = [0, 3.5, 0., 0, 0., 0]
     def __init__(self, color, initial_angles, inner_radius):
         self.color = color
         self.initial_angles = initial_angles
@@ -424,7 +425,7 @@ class RobotType(Enum):
         elif self == RobotType.THREE_DF_BLOCK:
             return 2
         elif self == RobotType.PEGGY:
-            return 16
+            return 16 -4
         elif self == RobotType.KINOVA:
             return 10
         elif self in {RobotType.BAXTER, RobotType.BAXTER_CYAN}:
@@ -445,7 +446,8 @@ class RobotType(Enum):
 
 COLOR_ORDER = ("red", "green", "yellow", "black", "magenta", "cyan")
 
-def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, lego_offsets, blockpush_locations, (robot_type, is_real), enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False, number_samples=None, IMAGE_WIDTH=80, IMAGE_HEIGHT=64, IMAGE_CHANNELS=3):
+def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, lego_offsets, blockpush_locations, (robot_type, is_real), enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False, number_samples=None, IMAGE_WIDTH=80, IMAGE_HEIGHT=64, IMAGE_CHANNELS=3, ALG='badmm'):
+    print "robot", robot_type, "tasK", task_type
     if isinstance(task_type, LegoReach):
         offsets = lego_offsets
     number_links = robot_type.number_links()
@@ -536,24 +538,45 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
         agent_dict['agent']['real_obs_path'] = os.path.expanduser("~/output/result_" + truecolor)
         agent_dict["agent"]['number_samples'] = number_samples
     agent_dict['agent'].update(image_dims)
-    agent_dict['algorithm'] = {
-        'type': AlgorithmBADMM,
-        'conditions': agent_dict['agent']['conditions'],
-        'train_conditions': agent_dict['agent']['train_conditions'],
-        'test_conditions': agent_dict['agent']['test_conditions'],
-        'num_robots': num_robots,
-        'iterations': 25,
-        'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
-        'policy_dual_rate': 0.2,
-        'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
-        'fixed_lg_step': 3,
-        'kl_step': 5.0,
-        'min_step_mult': 0.01,
-        'max_step_mult': 1.0,
-        'sample_decrease_var': 0.05,
-        'sample_increase_var': 0.1,
-        'init_pol_wt': 0.005,
-    }
+    if ALG=='badmm':
+        agent_dict['algorithm'] = {
+            'type': AlgorithmBADMM,
+            'conditions': agent_dict['agent']['conditions'],
+            'train_conditions': agent_dict['agent']['train_conditions'],
+            'test_conditions': agent_dict['agent']['test_conditions'],
+            'num_robots': num_robots,
+            'iterations': 25,
+            'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
+            'policy_dual_rate': 0.2,
+            'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
+            'fixed_lg_step': 3,
+            'kl_step': 5.0,
+            'min_step_mult': 0.01,
+            'max_step_mult': 1.0,
+            'sample_decrease_var': 0.05,
+            'sample_increase_var': 0.1,
+            'init_pol_wt': 0.005,
+        }
+    else:
+        agent_dict['algorithm'] ={
+            'type': AlgorithmTrajOpt,
+            'conditions': agent_dict['agent']['conditions'],
+            'train_conditions': agent_dict['agent']['train_conditions'],
+            'test_conditions': agent_dict['agent']['test_conditions'],
+            'num_robots': num_robots,
+            'iterations': 25,
+            'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
+            'policy_dual_rate': 0.2,
+            'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
+            'fixed_lg_step': 3,
+            'kl_step': 5.0,
+            'min_step_mult': 0.01,
+            'max_step_mult': 1.0,
+            'sample_decrease_var': 0.05,
+            'sample_increase_var': 0.1,
+            'init_pol_wt': 0.005,
+        }
+
     agent_dict['algorithm']['init_traj_distr'] = {
         'type': init_pd,
         'init_var': 10.0, # TODO can be useful to use (50 in blockpush)

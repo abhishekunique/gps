@@ -26,6 +26,8 @@ PEGGY_VS_ARMS = (RobotType.PEGGY, False), (RobotType.THREE_LINK, False), (RobotT
 PR2_VS_ARMS = (RobotType.PR2, False), (RobotType.THREE_LINK, False), (RobotType.FOUR_LINK, False)
 BAXTER_VS_ARMS = (RobotType.BAXTER, False), (RobotType.THREE_LINK, False), (RobotType.FOUR_LINK, False)
 
+
+
 IMAGE_WIDTH = 80
 IMAGE_HEIGHT = 64
 IMAGE_CHANNELS = 3
@@ -44,6 +46,7 @@ RANDOM_SEED = 0x123ABC
 SAMPLES = None
 BLOCK_LOCATIONS = BLOCKPUSH_BLOCK_LOCATIONS = None
 TORQUE_COSTS = True
+SIM_TRAJ_OUTPUT_PATH = None
 
 CONFIG_FILE = argv[argv.index("--config") + 1]
 execfile(CONFIG_FILE)
@@ -72,7 +75,7 @@ elif MODE == "training" or MODE == "training-trajectories":
     IS_TESTING = False
     if SAMPLES is None:
         SAMPLES = 20
-    VERBOSE_TRIALS = SHOW_VIEWER
+    VERBOSE_TRIALS = 1#SHOW_VIEWER
     VIEW_TRAJECTORIES = False
 elif MODE == "check-model":
     LEAVE_ONE_OUT = 1
@@ -118,16 +121,36 @@ for robot_n, robot_type in enumerate(ROBOT_TYPES):
         arguments.append((task_type, robot_type))
 
 leave_one_out = LEAVE_ONE_OUT
-if MODE == "training-trajectories" or MODE == "check-all-traj":
+GRID  =  os.environ['GRID']  if 'GRID' in os.environ else 0
+print "!!!GRID!!!", GRID
+if GRID == '0':
+    grid_training = range(len(arguments))
+    grid_testing = range(len(arguments))
+elif GRID == '1':
+    grid_training = [6,7,8,12,13,14,15,16,17,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]
+    grid_testing = [0,1,2,3,4,5,9,10,11,18,19,20]
+elif GRID=='color_reach':
+    grid_training = [16,17,24,26,33,34,35]
+    grid_testing = [8,15,25]
+elif GRID=='peggy_push_vel':
+    grid_training = [12]
+    grid_testing= [12]
+elif GRID=='pr2_push_vel':
+    grid_training = [3,4,5]
+    grid_testing= [3,4,5]
+
+###mport IPython; IPython.embed()
+
+if False: #MODE == "training-trajectories" or MODE == "check-all-traj":
     task_values, robot_values, arguments = zip(*((task, robot, arg) for task, robot, arg in zip(task_values, robot_values, arguments) if not arg[1][1]))
 elif IS_TESTING:
-    task_values     = [task_values[leave_one_out]]
-    robot_values    = [robot_values[leave_one_out]]
-    arguments       = [arguments[leave_one_out]]
+    task_values     = [task_values[i] for i in grid_testing]
+    robot_values    = [robot_values[i] for i in grid_testing]
+    arguments       = [arguments[i] for i in grid_testing]
 else:
-    task_values     = task_values[:leave_one_out]+task_values[leave_one_out+1:]
-    robot_values    = robot_values[:leave_one_out]+robot_values[leave_one_out+1:]
-    arguments       = arguments[:leave_one_out]+arguments[leave_one_out+1:]
+    task_values     = [task_values[i] for i in grid_training]
+    robot_values    = [robot_values[i] for i in grid_training]
+    arguments       = [arguments[i] for i in grid_training]
 
 agents = [reacher_by_color_and_type(i,
                                     len(arguments),
@@ -148,6 +171,7 @@ agents = [reacher_by_color_and_type(i,
 BASE_DIR = '/'.join(str.split(gps_filepath, '/')[:-2])
 EXP_DIR = BASE_DIR + '/../experiments/color_reach/'
 INIT_POLICY_DIR = '/home/abhigupta/gps/'
+REG = os.environ['REG']
 common = {
     'experiment_name': 'my_experiment' + '_' + \
             datetime.strftime(datetime.now(), '%m-%d-%y_%H-%M'),
@@ -166,7 +190,7 @@ common = {
             'task_list': task_values,
             'robot_list': robot_values,
             'agent_params':[a['network_params'] for a in agents],
-            'regularizer': 'gaussian',
+            'regularizer': REG
         },
         #'val_agents': [1],
         'iterations': NEURAL_NET_ITERATIONS,
@@ -188,6 +212,7 @@ for a in agent:
     })
 for a in agents:
     a['agent']['write_video'] = VIDEO_PATH
+    a['agent']['sim_traj_output'] = SIM_TRAJ_OUTPUT_PATH
 algorithm = [a['algorithm'] for a in agents]
 
 config = {
@@ -195,10 +220,10 @@ config = {
     'is_testing' : IS_TESTING,
     'load_old_weights' : LOAD_OLD_WEIGHTS,
     'view_trajectories' : VIEW_TRAJECTORIES,
-    'nn_dump_path' : "dump/nn_weights_%s" % NAME,
-    'traj_distr_dump' : "dump/traj_distr_%s.pkl" % NAME,
+    'nn_dump_path' : "dump/nn_weights_%s" % (NAME+'__'+GRID+'__'+REG),
+    'traj_distr_dump' : "dump/traj_distr_%s.pkl" % (NAME +'__'+GRID+'__'+REG),
     'num_samples': SAMPLES,
-    'verbose_trials': SAMPLES * VERBOSE_TRIALS,
+    'verbose_trials':  VERBOSE_TRIALS,
     'verbose_policy_trials': int(IS_TESTING),
     'save_wts': True,
     'common': common,
