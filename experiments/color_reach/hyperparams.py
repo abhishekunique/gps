@@ -138,6 +138,8 @@ elif GRID=='peggy_push_vel':
 elif GRID=='pr2_push_vel':
     grid_training = [3,4,5]
     grid_testing= [3,4,5]
+else:
+    raise RuntimeError
 
 ###mport IPython; IPython.embed()
 
