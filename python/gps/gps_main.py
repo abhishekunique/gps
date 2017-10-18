@@ -136,6 +136,7 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
+            self.dump_traj_sample_lists(traj_sample_lists)
 
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
@@ -268,6 +269,7 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
+            self.dump_traj_sample_lists(traj_sample_lists)
             time3 = time.clock()
             # if self.agent[robot_number].nan_flag:
             #     IPython.embed()
@@ -311,6 +313,28 @@ class GPSMain(object):
             if itr %1== 20 and itr >1:
                 import IPython; IPython.embed()
         self._end()
+
+    def dump_traj_sample_lists(self, traj_sample_lists):
+        for robot_number in traj_sample_lists:
+            for condition, new_sample in enumerate(traj_sample_lists[robot_number]):
+                successes = []
+                for obs in new_sample.get_obs():
+                    task_type, (robot_type, _) = self._hyperparams["agent_types"][robot_number]
+                    without_joints = robot_type.remove_joints_from_front(obs)
+                    end_effector_points = without_joints[:,:task_type.number_end_effectors * 3]
+                    end_effector_point_vels = without_joints[:,task_type.number_end_effectors * 3 : task_type.number_end_effectors * 6]
+                    successes += [task_type.is_success(condition, end_effector_points, end_effector_point_vels)]
+                print(robot_number, condition, np.mean(successes))
+                if self._hyperparams["sim_traj_output"] is not None:
+                    path = self._hyperparams["sim_traj_output"]
+                    if not os.path.exists(path):
+                        os.makedirs(path)
+                    with open("{path}/{robot_number}_{condition}_{index}.pkl".format(
+                                    path=path,
+                                    robot_number=robot_number,
+                                    condition=condition,
+                                index=index), "wb") as f:
+                        dump([new_sample.get_obs(), new_sample.get_U()], f)
 
     def collect_samples(self, itr, traj_sample_lists, robot_number):
         for cond in self._train_id [robot_number]:
