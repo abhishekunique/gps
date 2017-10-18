@@ -320,7 +320,7 @@ class GPSMain(object):
                 successes = []
                 for obs in new_sample.get_obs():
                     task_type, (robot_type, _) = self._hyperparams["agent_types"][robot_number]
-                    without_joints = robot_type.remove_joints_from_front(obs)
+                    without_joints = robot_type.remove_joints_from_front(obs, task_type)
                     end_effector_points = without_joints[:,:task_type.number_end_effectors * 3]
                     end_effector_point_vels = without_joints[:,task_type.number_end_effectors * 3 : task_type.number_end_effectors * 6]
                     successes += [task_type.is_success(condition, end_effector_points, end_effector_point_vels)]
