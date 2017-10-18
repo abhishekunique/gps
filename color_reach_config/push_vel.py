@@ -11,10 +11,21 @@ DIFF_ANGLES = np.linspace(-np.pi/4, np.pi/4, 3)
 stem = os.environ['STEM'] if 'STEM' in os.environ else ""
 VIDEO_PATH = None # "/home/kavi/Videos/pr2vel"
 
-ROBOT_TYPES = [(robot_type, False) for robot_type in [RobotType.PR2, RobotType.PEGGY, RobotType.THREE_DF_BLOCK, RobotType.FOUR_SEVEN]]
+ROBOT_TYPES = [(robot_type, False) for robot_type in [eval(os.environ['ROBOT_TYPE'])]]
 TASK_TYPES = [BlockVelocityPush(color, INITIAL_ANGLES, DIFF_ANGLES, INNER_RADIUS, DIFF_RADIUS) for color in "red", "yellow", "green"]
 
-NAME = "push_vel_small%s" % stem
+str_seed = ""
+
+if 'RANDOM_SEED' in os.environ:
+    RANDOM_SEED = int(os.environ['RANDOM_SEED'])
+    str_seed = "seed=" + os.environ['RANDOM_SEED']
+
+
+NAME = "push_vel_small%s%s%s" % (stem, ROBOT_TYPES, str_seed)
+
+print "*" * 20
+print NAME
+print "*" * 20
 
 if MODE == "check-all-traj":
-    VIDEO_PATH = "/home/kavi/Videos/0930-%s" % NAME
+    VIDEO_PATH = "/home/kavi/Videos/1015-vel-%s" % os.environ['ROBOT_TYPE']

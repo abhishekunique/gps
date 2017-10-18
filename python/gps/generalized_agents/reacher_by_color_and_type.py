@@ -535,7 +535,7 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
         assert isinstance(task_type, LegoReach)
         agent_dict['agent']['type'] = AgentRecorded
         truecolor = "blue" if task_type.color == "black" else task_type.color
-        agent_dict['agent']['real_obs_path'] = "/home/abhigupta/output/result_" + truecolor
+        agent_dict['agent']['real_obs_path'] = os.path.expanduser("~/output/result_" + truecolor)
         agent_dict["agent"]['number_samples'] = number_samples
     agent_dict['agent'].update(image_dims)
     if ALG=='badmm':

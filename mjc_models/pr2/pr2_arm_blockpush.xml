@@ -80,24 +80,24 @@
 
                   <body name="r_wrist_flex_link" pos="0.321 0 0">
                     <inertial pos="-0.00157 0 -0.00075" quat="0.695976 0.696411 -0.12356 0.123942" mass="0.61402" diaginertia="0.000652771 0.000643391 0.000198244" />
-                    <joint name="r_wrist_flex_joint" type="hinge" pos="0 0 0" axis="0 1 0" />
+                    <joint name="r_wrist_flex_joint" type="hinge" pos="0 0 0" axis="0 1 0" damping="1" />
                     <geom rgba="0.7 0.7 0.7 1" mesh="wrist_flex"/>
 
                     <body name="r_wrist_roll_link" pos="0 0 0">
                       <inertial pos="0 0 0" mass="0.1" diaginertia="0.01 0.01 0.01" />
-                      <joint name="r_wrist_roll_joint" type="hinge" pos="0 0 0" limited="true" axis="1 0 0" />
+                      <joint name="r_wrist_roll_joint" type="hinge" pos="0 0 0" limited="true" axis="1 0 0" damping="1"/>
                       <geom mesh="wrist_roll"/>
 
                       <body name="r_gripper_palm_link" pos="0 0 0">
                         <inertial pos="0.06623 0.00053 -0.00119" quat="-0.0181842 0.706274 0.0160771 0.707523" mass="0.58007" diaginertia="0.000865637 0.000678178 0.000351471" />
                         <!-- <geom rgba="0.8 0 0 1" mesh="gripper_palm"/> -->
-                        <geom type="box" pos="0 0 -0.225" size=" 0.01 0.04 0.20" contype="1" conaffinity="1" density="0.0001" />
+                        <geom type="box" pos="0 0 -0.225" size=" 0.01 0.15 0.15" contype="1" conaffinity="1" density="0.0001" />
 
                         <body name="r_gripper_motor_accelerometer_link" pos="0 0 0">
                           <inertial pos="0 0 0" mass="0.001" diaginertia="0.001 0.001 0.001" />
                           <!-- <geom type="box" size="0.0005 0.0005 0.0005" pos="0 0 0" /> -->
                         </body>
-                        <site name="End of arm" pos="0 0 -0.35" size="0.01" />
+                        <site name="End of arm" pos="0 0 -0.10" size="0.01" />
                       </body>
                     </body>
                   </body>
