@@ -20,5 +20,12 @@ if 'RANDOM_SEED' in os.environ:
     RANDOM_SEED = int(os.environ['RANDOM_SEED'])
     str_seed = "seed=" + os.environ['RANDOM_SEED']
 
+
+NAME = "push_vel_small%s%s%s" % (stem, ROBOT_TYPES, str_seed)
+
+print "*" * 20
+print NAME
+print "*" * 20
+
 if MODE == "check-all-traj":
     VIDEO_PATH = "/home/kavi/Videos/1015-vel-%s" % os.environ['ROBOT_TYPE']
