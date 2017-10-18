@@ -10,9 +10,9 @@
 
     <worldbody>
         <body name="robot" pos="0 0.0 0.0">
-            <geom type="sphere" rgba="0 1 0 1" pos="0 0 0" size="0.075" contype="1" conaffinity="1" density="20" />
+            <geom type="sphere" rgba="0 1 0 1" pos="0 0 0" size="0.15" contype="1" conaffinity="1" density="20" />
             <joint name="robotx" type="slide" pos="0.05 0.05 0.05" axis="1 0 0" range="-10.3213 10.3" damping="0.005"/>
-            <joint name="roboty" type="slide" pos="0.05 0.05 0.05" axis="0 1 0" range="-0.01 0.01" damping="0.005"/>
+            <joint name="roboty" type="slide" pos="0.05 0.05 0.05" axis="0 1 0" range="-10.3213 10.3" damping="0.005"/>
             <joint name="robotz" type="slide" pos="0.1 0.05 0.05" axis="0 0 1" range="-10.3213 10.3" damping="0.005"/>
             <body name="site" pos="0 0 0">
                 <site name="end_eff" pos="0.025 0.025 0.025" size="0.01" />
