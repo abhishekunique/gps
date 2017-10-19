@@ -92,6 +92,7 @@ MUJOCO_LOG.TXT
 *.pkl
 *.csv
 *.pkl__*
+dump
 
 # Experiment files
 experiments/**/data_files/

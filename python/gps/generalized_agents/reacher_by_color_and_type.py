@@ -29,6 +29,7 @@ from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
 CAMERA_POS = [0, 5., 0., 0.3, 0., 0.3]
 
 RYG = "red", "yellow", "green"
+SUCCESS_AVERAGING_TIMESTEPS = 10
 
 class BlockPush(object):
     additional_joints = 2
@@ -112,6 +113,19 @@ class BlockPush(object):
     @staticmethod
     def modify_initial_state(state, _):
         return state
+    def is_success(self, condition, end_eff_pos, end_eff_vel):
+        vel_index = self.vel_index(condition)
+        ini_index = self.ini_index(condition)
+        x = to_cartesian(self.inner_radius, self.initial_angles[ini_index], self.z_location)
+        block_locs = [x + to_cartesian(self.diff_radius, self.initial_angles[ini_index] + v_theta) for v_theta in self.diff_angles]
+        end_eff = np.mean(end_eff_pos[-SUCCESS_AVERAGING_TIMESTEPS:,3:6], axis=0)
+        distances = [np.linalg.norm(us - end_eff) for us in block_locs]
+        current_block = np.argmin(distances)
+        if current_block != vel_index:
+            return False
+        return distances[current_block] < 0.15
+    def display(self):
+        return "Push to " + self.color
 
 def to_cartesian(r, theta, z_location=0):
     return np.array([np.cos(theta), z_location, np.sin(theta)]) * r
@@ -145,6 +159,17 @@ class BlockVelocityPush(BlockPush):
                 },
             },
         }] for i in train_conditions]
+    def is_success(self, condition, end_eff_pos, end_eff_vel):
+        dth, th0 = [(th, th0) for th0 in self.initial_angles for th in self.diff_angles][condition % self.nconditions(None, None, None)]
+        target_vel_angle = dth + th0
+        real_vel = np.mean(end_eff_vel[-SUCCESS_AVERAGING_TIMESTEPS:,3:6], axis=0) * [1, 0, 1]
+        real_vel_unit = real_vel / np.linalg.norm(real_vel)
+        target_vel_unit = to_cartesian(1, target_vel_angle)
+        closest = min(self.diff_angles, key=lambda dth: np.linalg.norm(to_cartesian(1, th0 + dth) - real_vel_unit))
+        distance = np.linalg.norm(real_vel_unit - target_vel_unit)
+        return np.linalg.norm(real_vel) > 0.5 and distance <= np.sqrt(1/2) and closest == dth
+    def display(self):
+        return "Strike to " + self.color
 
 class ColorReachRYG(object):
     additional_joints = 0
@@ -199,9 +224,11 @@ class ColorReachRYG(object):
     def modify_initial_state(state, _):
         return state
     def is_success(self, condition, end_eff_pos, end_eff_vel):
-        diff = (end_eff_pos[:,:3] - to_cartesian(self.inner_radius, self.target_angle(condition)))
-        distances_by_time = np.linalg.norm(diff, axis=1)
-        return np.mean(distances_by_time[-20:]) < 0.5
+        end_eff = np.mean(end_eff_pos[-SUCCESS_AVERAGING_TIMESTEPS:,:3], axis=0)
+        diff = np.linalg.norm(end_eff - to_cartesian(self.inner_radius, self.target_angle(condition)))
+        return diff < 0.5
+    def display(self):
+        return "Reach to " + self.color
 
 class BlockCatch(object):
     def __init__(self, start_positions, velocities):
@@ -450,8 +477,8 @@ class RobotType(Enum):
             return np.array([3.09, 1.08, 0.393, 0.674, 0.111, 0.152, 0.098])
         else:
             raise RuntimeError
-    def remove_joints_from_front(self, state):
-        return state[:,self.number_links() * 2:]
+    def remove_joints_from_front(self, state, task_type):
+        return state[:,2 * (self.number_links() + task_type.additional_joints):]
 
 COLOR_ORDER = ("red", "green", "yellow", "black", "magenta", "cyan")
 

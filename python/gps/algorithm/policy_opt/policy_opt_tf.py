@@ -529,10 +529,11 @@ class PolicyOptTf(PolicyOpt):
                     all_val_losses.append(average_loss)
                     average_loss = 0
                     avg_val_loss = 0
-                    # if len(all_val_losses) > 2:
-                    #     if all_val_losses[-1] > all_val_losses[-2] and all_val_losses[-2] > all_val_losses[-3]:
-                    #         print "Val loss is increasing, stop iters"
-                    #         continue_iters = False
+                    if len(all_val_losses) > 10:
+                        last_few = all_val_losses[-10:]
+                        if last_few == sorted(last_few):
+                            print "Val loss is increasing, stop iters"
+                            continue_iters = False
                 # avg_taskloss = 0
 
         for robot_number in range(self.num_robots):

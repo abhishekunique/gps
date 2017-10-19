@@ -265,8 +265,11 @@ class GPSMain(object):
             self.algorithm[0].reinitialize_net(3, sl3)
 
         if testing:
-            for robot_number in range(self.num_robots):
-                self._take_policy_samples(robot_number=robot_number)
+            samps = {
+                robot_number : self._take_policy_samples(robot_number=robot_number)
+                for robot_number in range(self.num_robots)
+            }
+            self.dump_traj_sample_lists(samps)
             self._end()
             return
         self.check_itr = 8
@@ -334,19 +337,18 @@ class GPSMain(object):
         self._end()
 
     def dump_traj_sample_lists(self, traj_sample_lists):
-        all_success = {}
+        success_dict = {}
         for robot_number in traj_sample_lists:
-            all_success[robot_number] = []
+            task_type, (robot_type, _) = self._hyperparams["agent_types"][robot_number]
+            success_dict[task_type, robot_type] = []
             for condition, new_sample in enumerate(traj_sample_lists[robot_number]):
                 successes = []
                 for obs in new_sample.get_obs():
-                    task_type, (robot_type, _) = self._hyperparams["agent_types"][robot_number]
-                    without_joints = robot_type.remove_joints_from_front(obs)
+                    without_joints = robot_type.remove_joints_from_front(obs, task_type)
                     end_effector_points = without_joints[:,:task_type.number_end_effectors * 3]
                     end_effector_point_vels = without_joints[:,task_type.number_end_effectors * 3 : task_type.number_end_effectors * 6]
                     successes += [task_type.is_success(condition, end_effector_points, end_effector_point_vels)]
-                print(robot_number, condition, np.mean(successes))
-                all_success[robot_number].append(np.mean(successes))
+                success_dict[task_type, robot_type].append(np.mean(successes))
                 if self._hyperparams["sim_traj_output"] is not None:
                     path = self._hyperparams["sim_traj_output"]
                     if not os.path.exists(path):
@@ -356,8 +358,12 @@ class GPSMain(object):
                                     robot_number=robot_number,
                                     condition=condition,
                                 index=index), "wb") as f:
-                        dump([new_sample.get_obs(), new_sample.get_U()], f)
-        return all_success
+                        pickle.dump([new_sample.get_obs(), new_sample.get_U()], f)
+        with open(self._hyperparams["successes_dump"], "wb") as f:
+            pickle.dump(success_dict, f)
+        if self._hyperparams["done_after_success_measurement"]:
+            sys.exit(0)
+        return success_dict
 
     def collect_samples(self, itr, traj_sample_lists, robot_number):
         for cond in self._train_id [robot_number]:
@@ -591,7 +597,7 @@ class GPSMain(object):
             # AlgorithmTrajOpt
             return None
         verbose = self._hyperparams['verbose_policy_trials']
-        N = verbose
+        N = self._hyperparams['policy_trials']
         if self.gui:
             self.gui[robot_number].set_status_text('Taking policy samples.')
         pol_samples = [[None for _ in range(N)] for _ in range(self._conditions[robot_number])]
@@ -602,7 +608,8 @@ class GPSMain(object):
             for i in range(N):
                 pol_samples[cond][i] = self.agent[robot_number].sample(
                     self.algorithm[robot_number].policy_opt.policy[robot_number], cond,
-                    verbose=True, save=False)
+                    verbose=i < verbose, save=False)
+
         return [SampleList(samples) for samples in pol_samples]
 
     def _log_data(self, itr, traj_sample_lists, pol_sample_lists=None, robot_number=0):

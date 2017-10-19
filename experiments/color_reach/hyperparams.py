@@ -37,6 +37,8 @@ LEGACY_BLOCK_POSITIONS = False
 LOAD_OLD_WEIGHTS = True
 NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 100
+DONE_AFTER_SUCCESSES = False
+TASKOUT_SIZE = 12
 
 LEAVE_ONE_OUT = 0
 N_BLOCK_CONDITIONS = 6
@@ -47,6 +49,7 @@ SAMPLES = None
 BLOCK_LOCATIONS = BLOCKPUSH_BLOCK_LOCATIONS = None
 TORQUE_COSTS = True
 SIM_TRAJ_OUTPUT_PATH = None
+POLICY_TRIALS = None
 
 CONFIG_FILE = argv[argv.index("--config") + 1]
 execfile(CONFIG_FILE)
@@ -93,6 +96,9 @@ elif MODE == "view-traj":
     VIEW_TRAJECTORIES = True
 else:
     raise RuntimeError
+
+if POLICY_TRIALS is None:
+    POLICY_TRIALS = int(IS_TESTING)
 
 taskout_print = MODE == "taskout-print"
 
@@ -202,7 +208,7 @@ common = {
     'num_robots':len(agents),
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': lambda *args, **kwargs: multitask_multirobot_conv_supervised(*args, use_image=USE_IMAGES, is_testing=IS_TESTING, **kwargs),
+        'network_model': lambda *args, **kwargs: multitask_multirobot_conv_supervised(*args, task_out_size=TASKOUT_SIZE, use_image=USE_IMAGES, is_testing=IS_TESTING, **kwargs),
         'network_params': {
             'task_list': task_values,
             'robot_list': robot_values,
@@ -238,9 +244,12 @@ config = {
     'view_trajectories' : VIEW_TRAJECTORIES,
     'nn_dump_path' : "dump/nn_weights_%s" % (NAME+'__'+GRID+'__'+REG),
     'traj_distr_dump' : "dump/traj_distr_%s.pkl" % (NAME +'__'+GRID+'__'+REG),
+    'successes_dump' : "dump/successes_%s" % (NAME +'__'+GRID+'__'+REG),
+    'done_after_success_measurement' : DONE_AFTER_SUCCESSES,
     'num_samples': SAMPLES,
     'verbose_trials':  VERBOSE_TRIALS,
-    'verbose_policy_trials': int(IS_TESTING)*3,
+    'policy_trials': POLICY_TRIALS,
+    'verbose_policy_trials': int(IS_TESTING) * 3,
     'save_wts': True,
     'common': common,
     'agent': agent,

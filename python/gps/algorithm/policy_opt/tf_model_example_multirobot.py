@@ -1358,7 +1358,7 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
 
 
 
-def multitask_multirobot_conv_supervised(is_testing, dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None, use_image=True):
+def multitask_multirobot_conv_supervised(is_testing, task_out_size, dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None, use_image=True):
     """
     Args:
         dim_input: Dimensionality of input.
@@ -1390,7 +1390,6 @@ def multitask_multirobot_conv_supervised(is_testing, dim_input=[27, 27], dim_out
     robot_weights = {}
     task_weights = {}
     dim_diff = 20
-    task_out_size = 80
     keep_prob = tf.placeholder(tf.float32)
     dim_robot_specific_list = [None for r in range(num_robots)]
     dim_task_specific_list = [None for t in range(num_tasks)]
