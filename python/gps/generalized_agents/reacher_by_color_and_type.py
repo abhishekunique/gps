@@ -124,6 +124,8 @@ class BlockPush(object):
         if current_block != vel_index:
             return False
         return distances[current_block] < 0.15
+    def display(self):
+        return "Push to " + self.color
 
 def to_cartesian(r, theta, z_location=0):
     return np.array([np.cos(theta), z_location, np.sin(theta)]) * r
@@ -165,6 +167,8 @@ class BlockVelocityPush(BlockPush):
         closest = min(self.diff_angles, key=lambda dth: np.linalg.norm(to_cartesian(1, th0 + dth) - real_vel_unit))
         distance = np.linalg.norm(real_vel_unit - target_vel_unit)
         return np.linalg.norm(real_vel) > 0.5 and distance <= np.sqrt(1/2) and closest == dth
+    def display(self):
+        return "Strike to " + self.color
 
 class ColorReachRYG(object):
     additional_joints = 0
@@ -222,6 +226,8 @@ class ColorReachRYG(object):
         end_eff = np.mean(end_eff_pos[-SUCCESS_AVERAGING_TIMESTEPS:,:3], axis=0)
         diff = np.linalg.norm(end_eff - to_cartesian(self.inner_radius, self.target_angle(condition)))
         return diff < 0.5
+    def display(self):
+        return "Reach to " + self.color
 
 class BlockCatch(object):
     def __init__(self, start_positions, velocities):
