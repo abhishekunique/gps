@@ -136,7 +136,7 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
-            #self.dump_traj_sample_lists(traj_sample_lists)
+            self.dump_traj_sample_lists(traj_sample_lists)
 
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
