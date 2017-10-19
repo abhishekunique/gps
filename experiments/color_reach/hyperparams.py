@@ -151,6 +151,8 @@ elif GRID=='noreach':
 elif GRID =='pr2_reach':
     grid_training=[6,7,8]
     grid_testing=[6,7,8]
+else:
+    raise RuntimeError
 
 ###mport IPython; IPython.embed()
 
@@ -225,7 +227,6 @@ for a in agent:
     })
 for a in agents:
     a['agent']['write_video'] = VIDEO_PATH
-    a['agent']['sim_traj_output'] = SIM_TRAJ_OUTPUT_PATH
 algorithm = [a['algorithm'] for a in agents]
 
 config = {
@@ -246,6 +247,8 @@ config = {
     'conditions': common['conditions'],
     'train_conditions': common['train_conditions'],
     'test_conditions': common['test_conditions'],
+    'sim_traj_output': SIM_TRAJ_OUTPUT_PATH,
+    'agent_types': arguments,
     'inner_iterations': 4,
     'robot_iters': [range(25), range(0,25,2)],
     'to_log': [END_EFFECTOR_POINTS, JOINT_ANGLES, ACTION],

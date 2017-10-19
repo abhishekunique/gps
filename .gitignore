@@ -1,6 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+.ipynb_checkpoints
 
 # C extensions
 *.so
@@ -90,6 +91,7 @@ MUJOCO_LOG.TXT
 # Data files
 *.pkl
 *.csv
+*.pkl__*
 
 # Experiment files
 experiments/**/data_files/

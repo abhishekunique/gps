@@ -163,10 +163,12 @@ class ColorReachRYG(object):
     @staticmethod
     def modify_initial_state(state, _):
         return state
+    def target_angle(self, condition):
+        return self.initial_angles[condition % self.nconditions(None, None, None)]
     def offset_generator(self, offsets, vert_offs, block_locs, condition):
         angles = list(self.initial_angles)
         result = [None] * 3
-        target_angle = self.initial_angles[condition % self.nconditions(None, None, None)]
+        target_angle = self.target_angle(condition)
         result[RYG.index(self.color)] = target_angle
         angles.remove(target_angle)
         for i in range(len(result)):
@@ -195,6 +197,10 @@ class ColorReachRYG(object):
     @staticmethod
     def modify_initial_state(state, _):
         return state
+    def is_success(self, condition, end_eff_pos, end_eff_vel):
+        diff = (end_eff_pos[:,:3] - to_cartesian(self.inner_radius, self.target_angle(condition)))
+        distances_by_time = np.linalg.norm(diff, axis=1)
+        return np.mean(distances_by_time[-20:]) < 0.5
 
 class BlockCatch(object):
     def __init__(self, start_positions, velocities):
@@ -443,6 +449,8 @@ class RobotType(Enum):
             return np.array([3.09, 1.08, 0.393, 0.674, 0.111, 0.152, 0.098])
         else:
             raise RuntimeError
+    def remove_joints_from_front(self, state):
+        return state[:,self.number_links() * 2:]
 
 COLOR_ORDER = ("red", "green", "yellow", "black", "magenta", "cyan")
 
@@ -539,7 +547,7 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
         assert isinstance(task_type, LegoReach)
         agent_dict['agent']['type'] = AgentRecorded
         truecolor = "blue" if task_type.color == "black" else task_type.color
-        agent_dict['agent']['real_obs_path'] = "/home/abhigupta/output/result_" + truecolor
+        agent_dict['agent']['real_obs_path'] = os.path.expanduser("~/output/result_" + truecolor)
         agent_dict["agent"]['number_samples'] = number_samples
     agent_dict['agent'].update(image_dims)
     if ALG=='badmm':
