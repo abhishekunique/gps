@@ -135,6 +135,7 @@ class BlockVelocityPush(BlockPush):
             'l1': 0.1,
             'l2': 10.0,
             'alpha': 1e-5,
+            'ramp' : 5,
         }, {
             'type': CostState,
             'data_types' : {

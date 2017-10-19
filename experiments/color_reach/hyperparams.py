@@ -145,6 +145,8 @@ elif GRID=='pr2_push_vel':
 elif GRID=='spherepush':
     grid_training = [18]#, 19, 20]
     grid_testing = [18]
+elif GRID=='spherestrike':
+    grid_training = [21]#, 19, 20]
 elif GRID=='noreach':
     grid_training = [0,1,2,3,4,5,9,10,11,12,13, 18,23,30,31,32]
     grid_testing = [14,19,20,21,22,27,28,29]

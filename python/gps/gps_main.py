@@ -121,8 +121,8 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-        self.read_traj_distr('final-dump-new.pkl') #'final-dump-new.pkl')
-        #self.read_traj_distr(self._hyperparams["traj_distr_dump"])
+        #self.read_traj_distr('all-12-new.pkl') #'final-dump-new.pkl')
+        self.read_traj_distr(self._hyperparams["traj_distr_dump"])
         print("starting")
         for itr in range(itr_start, self._hyperparams['iterations']):
             print(itr)
@@ -136,7 +136,7 @@ class GPSMain(object):
                     self.agent[robot_number].get_samples(cond_1, -self._hyperparams['num_samples'])
                     for cond_1 in self._train_idx[robot_number]
                 ]
-            self.dump_traj_sample_lists(traj_sample_lists)
+            #self.dump_traj_sample_lists(traj_sample_lists)
 
             for robot_number in range(self.num_robots):
                 self._take_iteration(itr, traj_sample_lists[robot_number], robot_number=robot_number)
@@ -289,7 +289,7 @@ class GPSMain(object):
             self.dump_traj_sample_lists(traj_sample_lists)
             time3 = time.clock()
             # if self.agent[robot_number].nan_flag:
-            #     IPython.embed()
+            IPython.embed()
 
             for robot_number in range(self.num_robots):
                 # self.policy_opt.prepare_solver(itr_robot_status, self.)
@@ -309,9 +309,11 @@ class GPSMain(object):
             time4 = time.clock()
             self._take_iteration_shared()
             time5 = time.clock()
+            pol_samples = []
             for robot_number in range(self.num_robots):
                 print "pol samples", robot_number, datetime.time(datetime.now())
                 pol_sample_lists = self._take_policy_samples(robot_number=robot_number)
+                pol_samples.append(pol_sample_lists)
                 # if self.agent[robot_number].nan_flag:
                 #     IPython.embed()
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
@@ -332,7 +334,9 @@ class GPSMain(object):
         self._end()
 
     def dump_traj_sample_lists(self, traj_sample_lists):
+        all_success = {}
         for robot_number in traj_sample_lists:
+            all_success[robot_number] = []
             for condition, new_sample in enumerate(traj_sample_lists[robot_number]):
                 successes = []
                 for obs in new_sample.get_obs():
@@ -342,6 +346,7 @@ class GPSMain(object):
                     end_effector_point_vels = without_joints[:,task_type.number_end_effectors * 3 : task_type.number_end_effectors * 6]
                     successes += [task_type.is_success(condition, end_effector_points, end_effector_point_vels)]
                 print(robot_number, condition, np.mean(successes))
+                all_success[robot_number].append(np.mean(successes))
                 if self._hyperparams["sim_traj_output"] is not None:
                     path = self._hyperparams["sim_traj_output"]
                     if not os.path.exists(path):
@@ -352,6 +357,7 @@ class GPSMain(object):
                                     condition=condition,
                                 index=index), "wb") as f:
                         dump([new_sample.get_obs(), new_sample.get_U()], f)
+        return all_success
 
     def collect_samples(self, itr, traj_sample_lists, robot_number):
         for cond in self._train_id [robot_number]:
