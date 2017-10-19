@@ -12,8 +12,6 @@ ROBOT_TYPES = [(robot_type, False) for robot_type in [RobotType.PR2, RobotType.P
 TASK_TYPES = [BlockPush(color, np.linspace(-2, 2, 6), [-0.4, 0, 0.4], inner_radius, diff_radius, z_location) for color in "red", "yellow", "green"]
 VIDEO_PATH = None #"/home/kavi/Videos/pos%s" % inner_radius
 
-NAME = "all_envs_%s" % stem
-
 #####
 INNER_RADIUS = 0.9
 DIFF_RADIUS = 0.3
@@ -31,10 +29,4 @@ ANGLES = [-2.2, -1.8, -1.2, 1.2, 1.8, 2.2]
 TASK_TYPES += [ColorReachRYG(color, ANGLES, INNER_RADIUS) for color in "red", "yellow", "green"]
 VIDEO_PATH = None #"/home/kavi/Videos/pos%s" % inner_radius
 
-NAME = "color_reach_ryg%s" % stem
-
-if MODE == "check-all-traj":
-    VIDEO_PATH =  "/home/kavi/Videos/%s" % NAME
-
-if MODE == "check-all-traj":
-    VIDEO_PATH = "/home/kavi/Videos/0930-%s" % NAME
+NAME = "all_envs%s" % stem
