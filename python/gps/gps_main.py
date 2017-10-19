@@ -315,16 +315,18 @@ class GPSMain(object):
         self._end()
 
     def dump_traj_sample_lists(self, traj_sample_lists):
+        success_dict = {}
         for robot_number in traj_sample_lists:
+            task_type, (robot_type, _) = self._hyperparams["agent_types"][robot_number]
+            success_dict[task_type, robot_type] = []
             for condition, new_sample in enumerate(traj_sample_lists[robot_number]):
                 successes = []
                 for obs in new_sample.get_obs():
-                    task_type, (robot_type, _) = self._hyperparams["agent_types"][robot_number]
                     without_joints = robot_type.remove_joints_from_front(obs, task_type)
                     end_effector_points = without_joints[:,:task_type.number_end_effectors * 3]
                     end_effector_point_vels = without_joints[:,task_type.number_end_effectors * 3 : task_type.number_end_effectors * 6]
                     successes += [task_type.is_success(condition, end_effector_points, end_effector_point_vels)]
-                print(robot_number, condition, np.mean(successes))
+                success_dict[task_type, robot_type].append(np.mean(successes))
                 if self._hyperparams["sim_traj_output"] is not None:
                     path = self._hyperparams["sim_traj_output"]
                     if not os.path.exists(path):
@@ -334,7 +336,11 @@ class GPSMain(object):
                                     robot_number=robot_number,
                                     condition=condition,
                                 index=index), "wb") as f:
-                        dump([new_sample.get_obs(), new_sample.get_U()], f)
+                        pickle.dump([new_sample.get_obs(), new_sample.get_U()], f)
+        with open(self._hyperparams["successes_dump"], "wb") as f:
+            pickle.dump(success_dict, f)
+        if self._hyperparams["done_after_success_measurement"]:
+            sys.exit(0)
 
     def collect_samples(self, itr, traj_sample_lists, robot_number):
         for cond in self._train_id [robot_number]:

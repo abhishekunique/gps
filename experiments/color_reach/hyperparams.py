@@ -37,6 +37,7 @@ LEGACY_BLOCK_POSITIONS = False
 LOAD_OLD_WEIGHTS = True
 NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 100
+DONE_AFTER_SUCCESSES = False
 
 LEAVE_ONE_OUT = 0
 N_BLOCK_CONDITIONS = 6
@@ -223,6 +224,8 @@ config = {
     'view_trajectories' : VIEW_TRAJECTORIES,
     'nn_dump_path' : "dump/nn_weights_%s" % (NAME+'__'+GRID+'__'+REG),
     'traj_distr_dump' : "dump/traj_distr_%s.pkl" % (NAME +'__'+GRID+'__'+REG),
+    'successes_dump' : "dump/successes_%s" % (NAME +'__'+GRID+'__'+REG),
+    'done_after_success_measurement' : DONE_AFTER_SUCCESSES,
     'num_samples': SAMPLES,
     'verbose_trials':  VERBOSE_TRIALS,
     'verbose_policy_trials': int(IS_TESTING),
