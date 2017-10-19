@@ -1,0 +1,11 @@
+#!/bin/zsh
+
+source ~/.zshrc
+
+for robot_type in 1 2 3 4; do
+    for task_type in 0 3 6 1 4 7 2 5 8; do
+        cp ~/Downloads/all-12-envs.pkl dump/traj_distr_nonmodular_${robot_type}_${task_type}__0__dropout.pkl
+        envgps 1-11 nonmodular.py MODE=training REG=dropout GRID=0 ROBOT_INDEX=${robot_type} TASK_INDEX=${task_type} EVALUATE=False
+        envgps 1-11 nonmodular.py MODE=testing REG=dropout GRID=0 ROBOT_INDEX=${robot_type} TASK_INDEX=${task_type} EVALUATE=True
+    done
+done
