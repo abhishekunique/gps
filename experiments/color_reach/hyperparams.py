@@ -49,6 +49,7 @@ SAMPLES = None
 BLOCK_LOCATIONS = BLOCKPUSH_BLOCK_LOCATIONS = None
 TORQUE_COSTS = True
 SIM_TRAJ_OUTPUT_PATH = None
+POLICY_TRIALS = None
 
 CONFIG_FILE = argv[argv.index("--config") + 1]
 execfile(CONFIG_FILE)
@@ -95,6 +96,9 @@ elif MODE == "view-traj":
     VIEW_TRAJECTORIES = True
 else:
     raise RuntimeError
+
+if POLICY_TRIALS is None:
+    POLICY_TRIALS = int(IS_TESTING)
 
 taskout_print = MODE == "taskout-print"
 
@@ -229,6 +233,7 @@ config = {
     'done_after_success_measurement' : DONE_AFTER_SUCCESSES,
     'num_samples': SAMPLES,
     'verbose_trials':  VERBOSE_TRIALS,
+    'policy_trials': POLICY_TRIALS,
     'verbose_policy_trials': int(IS_TESTING),
     'save_wts': True,
     'common': common,

@@ -249,7 +249,11 @@ class GPSMain(object):
             self.algorithm[0].reinitialize_net(3, sl3)
 
         if testing:
-            self._take_policy_samples(robot_number=robot_number)
+            samps = {
+                robot_number : self._take_policy_samples(robot_number=robot_number)
+                for robot_number in range(self.num_robots)
+            }
+            self.dump_traj_sample_lists(samps)
             self._end()
             return
         self.check_itr = 8
@@ -574,7 +578,7 @@ class GPSMain(object):
             # AlgorithmTrajOpt
             return None
         verbose = self._hyperparams['verbose_policy_trials']
-        N = verbose
+        N = self._hyperparams['policy_trials']
         if self.gui:
             self.gui[robot_number].set_status_text('Taking policy samples.')
         pol_samples = [[None for _ in range(N)] for _ in range(self._conditions[robot_number])]
@@ -585,7 +589,8 @@ class GPSMain(object):
             for i in range(N):
                 pol_samples[cond][i] = self.agent[robot_number].sample(
                     self.algorithm[robot_number].policy_opt.policy[robot_number], cond,
-                    verbose=True, save=False)
+                    verbose=i < verbose, save=False)
+
         return [SampleList(samples) for samples in pol_samples]
 
     def _log_data(self, itr, traj_sample_lists, pol_sample_lists=None, robot_number=0):
