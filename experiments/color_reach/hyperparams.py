@@ -38,6 +38,7 @@ LOAD_OLD_WEIGHTS = True
 NEURAL_NET_ITERATIONS = 20000
 ITERATIONS = 100
 DONE_AFTER_SUCCESSES = False
+TASKOUT_SIZE = 12
 
 LEAVE_ONE_OUT = 0
 N_BLOCK_CONDITIONS = 6
@@ -188,7 +189,7 @@ common = {
     'num_robots':len(agents),
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': lambda *args, **kwargs: multitask_multirobot_conv_supervised(*args, use_image=USE_IMAGES, is_testing=IS_TESTING, **kwargs),
+        'network_model': lambda *args, **kwargs: multitask_multirobot_conv_supervised(*args, task_out_size=TASKOUT_SIZE, use_image=USE_IMAGES, is_testing=IS_TESTING, **kwargs),
         'network_params': {
             'task_list': task_values,
             'robot_list': robot_values,
