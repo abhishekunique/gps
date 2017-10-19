@@ -121,8 +121,8 @@ class GPSMain(object):
         for robot_number in range(self.num_robots):
             itr_start = self._initialize(itr_load, robot_number=robot_number)
 
-        self.read_traj_distr(self._hyperparams["traj_distr_dump"])
-
+        self.read_traj_distr('final-dump-new.pkl') #'final-dump-new.pkl')
+        #self.read_traj_distr(self._hyperparams["traj_distr_dump"])
         print("starting")
         for itr in range(itr_start, self._hyperparams['iterations']):
             print(itr)
@@ -144,16 +144,18 @@ class GPSMain(object):
             for robot_number in range(self.num_robots):
                 pol_sample_lists = None #self._take_policy_samples(robot_number=robot_number)
                 self._log_data(itr, traj_sample_lists[robot_number], pol_sample_lists, robot_number=robot_number)
-            self.save_traj_distr()
+                self.save_traj_distr()
         self._end()
     def read_traj_distr(self, traj_distr_dump):
         HAVE_TRAJ_DISTR = os.path.isfile(traj_distr_dump)
+        print
         if HAVE_TRAJ_DISTR:
+            print "Reading from", traj_distr_dump
             traj_distr = self.data_logger.unpickle(traj_distr_dump)
             for ag in range(self.num_robots):
                 name =self.agent[ag]._hyperparams['filename'][0]
-                print name
                 if name in traj_distr:
+                    print "found", name
                     for cond in  self._train_idx[ag]:
                         self.algorithm[ag].cur[cond].traj_distr = traj_distr[name][cond]
                 else:
@@ -163,7 +165,7 @@ class GPSMain(object):
             newtraj_distr = {}
             for ag in range(self.num_robots):
                 name = self.agent[ag]._hyperparams['filename'][0]
-                print name
+                #print name
                 newtraj_distr[name] = []
                 for cond in  self._train_idx[ag]:
                     newtraj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
@@ -177,6 +179,16 @@ class GPSMain(object):
             for cond in  self._train_idx[ag]:
                 traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
         self.data_logger.pickle(self._hyperparams["traj_distr_dump"], traj_distr)
+    # def save_traj_sample(self, samples):
+    #     traj_distr = {}
+    #     for ag in range(self.num_robots):
+    #         name = self.agent[ag]._hyperparams['filename'][0]
+    #         print name
+    #         traj_distr[name] = []
+    #         for cond in  self._train_idx[ag]:
+    #             traj_distr[name].append(self.algorithm[ag].cur[cond].traj_distr)
+    #     self.data_logger.pickle(self._hyperparams["traj_sample_dump"], traj_distr)
+
     def run_badmm(self, testing, load_old_weights, itr_load=None):
         """
         Run training by iteratively sampling and taking an iteration.
@@ -194,12 +206,13 @@ class GPSMain(object):
         self.policy_opt.validation_samples = self.data_logger.unpickle('4peg_val.pkl')
         #testing=True
         if testing:
-            _, size = [x.value for x in self.policy_opt.policy[0].obs_tensor.get_shape()]
-            self.policy_opt.policy[0].scale = np.eye(size)
-            self.policy_opt.policy[0].bias = np.zeros((size,))
-            # FIXME READ IN THE VARIANCE FOR BLOCKPUSH, etc.
-            # # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
-            self.policy_opt.policy[0].x_idx = range(size)
+            for i in range(len(self.policy_opt.policy)):
+                _, size = [x.value for x in self.policy_opt.policy[i].obs_tensor.get_shape()]
+                self.policy_opt.policy[i].scale = np.eye(size)
+                self.policy_opt.policy[i].bias = np.zeros((size,))
+                # FIXME READ IN THE VARIANCE FOR BLOCKPUSH, etc.
+                # # self.policy_opt.var = [np.load('/home/coline/Downloads/pol_var_1.npy')[-2]]
+                self.policy_opt.policy[i].x_idx = range(size)
             # for r in range(11):
             #     size = [36, 36, 36, 36, 36, 36, 36, 36, 38, 38, 38][r]
             #     self.policy_opt.policy[r].scale = np.eye(size)
@@ -208,16 +221,19 @@ class GPSMain(object):
             #     self.policy_opt.policy[r].x_idx = range(size)
         # pool = Pool()
         nn_dump_path = self._hyperparams["nn_dump_path"]
-        TRAJ_DISTR_COLOR_REACH = self._hyperparams["traj_distr_dump"]
+        TRAJ_DISTR_COLOR_REACH = 'all-12-new.pkl' #
+        #TRAJ_DISTR_COLOR_REACH = self._hyperparams["traj_distr_dump"]
         if not os.path.exists(nn_dump_path):
             os.makedirs(nn_dump_path)
 
         weights_pkl_offset = 0
-
+        #import IPython; IPython.embed()
         nn_dumps = [int(re.sub("\D", "", x)) for x in os.listdir(nn_dump_path)]
         if testing or load_old_weights and nn_dumps:
             highest_nn_dump_iteration = max(nn_dumps)
             weights_pkl_offset = highest_nn_dump_iteration + 1
+            print
+            print "Loading weights", '{0}/weights_itr{1}.pkl'.format(nn_dump_path, highest_nn_dump_iteration)
             val_vars, pol_var = pickle.load(open('{0}/weights_itr{1}.pkl'.format(nn_dump_path, highest_nn_dump_iteration), 'rb'))
             self.policy_opt.var = pol_var#[pol_var[-2]]
             for k,v in self.policy_opt.av.items():
@@ -229,7 +245,7 @@ class GPSMain(object):
             self.read_traj_distr(TRAJ_DISTR_COLOR_REACH)
 
 
-        if False: # TODO use for blockpush, etc.
+        if False: #testing: # TODO use for blockpush, etc.
             for cond in range(4):
                 samples = [self.agent[0].sample(self.algorithm[0].policy_opt.policy[0], cond,
                                                 verbose=True, save=False) for j in range(5)]
@@ -287,10 +303,10 @@ class GPSMain(object):
                     print("update traj")
                     self.algorithm[robot_number]._update_trajectories()
                     self.algorithm[robot_number]._advance_iteration_variables()
-                if itr == 15:
-                    raw_input("Press enter to continue: ")
+                    if itr == 15:
+                        raw_input("Press enter to continue: ")
                 for robot_number in range(self.num_robots):
-                    self._take_sample(itr, 0, i, robot_number=robot_number, verbose=True)
+                    self._take_sample(itr, 0, i, robot_number=robot_number, verbose=True),mm
                     self._take_sample(itr, 3, i, robot_number=robot_number, verbose=True)
                 continue
             time4 = time.clock()
@@ -313,8 +329,8 @@ class GPSMain(object):
             data_dump =[vars, self.policy_opt.var]
             with open('{0}/weights_itr{1}.pkl'.format(nn_dump_path, itr + weights_pkl_offset),'wb') as f:
                 pickle.dump(data_dump, f)
-            self.save_traj_distr()
-            if itr %1== 20 and itr >1:
+            #self.save_traj_distr()
+            if itr %20 ==0:# and itr >1:
                 import IPython; IPython.embed()
         self._end()
 

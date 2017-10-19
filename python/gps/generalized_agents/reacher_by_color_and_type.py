@@ -34,7 +34,7 @@ SUCCESS_AVERAGING_TIMESTEPS = 10
 class BlockPush(object):
     additional_joints = 2
     number_end_effectors = 5
-    cost_weights = [1, 10, 5]
+    cost_weights = [1, 10, 2]
     camera_pos = [0, 8., 0., 0.3, 0., 0.3]
     def __init__(self, color, initial_angles, diff_angles, inner_radius, diff_radius, z_location):
         self.color = color
@@ -481,8 +481,12 @@ class RobotType(Enum):
 
 COLOR_ORDER = ("red", "green", "yellow", "black", "magenta", "cyan")
 
-def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, lego_offsets, blockpush_locations, (robot_type, is_real), enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False, number_samples=None, IMAGE_WIDTH=80, IMAGE_HEIGHT=64, IMAGE_CHANNELS=3, ALG='badmm'):
+def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_offs, lego_offsets, blockpush_locations, (robot_type, is_real), enable_images, task_type, torque_costs, pass_environment_effectors_to_robot=False, number_samples=None, IMAGE_WIDTH=80, IMAGE_HEIGHT=64, IMAGE_CHANNELS=3):
     print "robot", robot_type, "tasK", task_type
+    import os
+    if 'ALG' in os.environ:
+        ALG = os.environ['ALG']
+    else: ALG = 'badmm'
     if isinstance(task_type, LegoReach):
         offsets = lego_offsets
     number_links = robot_type.number_links()

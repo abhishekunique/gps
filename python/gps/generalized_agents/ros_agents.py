@@ -7,6 +7,7 @@ import operator
 
 from gps.agent.ros.agent_ros import AgentROS
 from gps.agent.recorded.agent_recorded import AgentRecorded
+from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
 from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_state import CostState
@@ -201,7 +202,7 @@ def ros_agent(robot_number, num_robots, is_3d, offsets, vert_offs, lego_offsets,
     x0s = []
     ee_tgts = []
     reset_conditions = []
-    nconditions = task_type.nconditions(len(offsets), len(vert_offs), len(blockpush_locations))
+    nconditions = 2#task_type.nconditions(len(offsets), len(vert_offs), len(blockpush_locations))
     print "conds", nconditions
     common = {
         'target_filename': task_type.target(robot_type),
@@ -289,24 +290,64 @@ def ros_agent(robot_number, num_robots, is_3d, offsets, vert_offs, lego_offsets,
         agent_dict['agent']['real_obs_path'] = "/home/abhigupta/output/result_" + truecolor
         agent_dict["agent"]['number_samples'] = number_samples
     agent_dict['agent'].update(image_dims)
-    agent_dict['algorithm'] = {
-        'type': AlgorithmBADMM,
-        'conditions': agent_dict['agent']['conditions'],
-        'train_conditions': agent_dict['agent']['train_conditions'],
-        'test_conditions': agent_dict['agent']['test_conditions'],
-        'num_robots': num_robots,
-        'iterations': 25,
-        'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
-        'policy_dual_rate': 0.2,
-        'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
-        'fixed_lg_step': 3,
-        'kl_step': 5.0,
-        'min_step_mult': 0.01,
-        'max_step_mult': 1.0,
-        'sample_decrease_var': 0.05,
-        'sample_increase_var': 0.1,
-        'init_pol_wt': 0.005,
-    }
+    if True: #False: ###ALG=='badmm':
+        agent_dict['algorithm'] = {
+            'type': AlgorithmBADMM,
+            'conditions': agent_dict['agent']['conditions'],
+            'train_conditions': agent_dict['agent']['train_conditions'],
+            'test_conditions': agent_dict['agent']['test_conditions'],
+            'num_robots': num_robots,
+            'iterations': 25,
+            'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
+            'policy_dual_rate': 0.2,
+            'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
+            'fixed_lg_step': 3,
+            'kl_step': 5.0,
+            'min_step_mult': 0.01,
+            'max_step_mult': 1.0,
+            'sample_decrease_var': 0.05,
+            'sample_increase_var': 0.1,
+            'init_pol_wt': 0.005,
+        }
+    else:
+        agent_dict['algorithm'] ={
+            'type': AlgorithmTrajOpt,
+            'conditions': agent_dict['agent']['conditions'],
+            'train_conditions': agent_dict['agent']['train_conditions'],
+            'test_conditions': agent_dict['agent']['test_conditions'],
+            'num_robots': num_robots,
+            'iterations': 25,
+            'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
+            'policy_dual_rate': 0.2,
+            'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
+            'fixed_lg_step': 3,
+            'kl_step': 5.0,
+            'min_step_mult': 0.01,
+            'max_step_mult': 1.0,
+            'sample_decrease_var': 0.05,
+            'sample_increase_var': 0.1,
+            'init_pol_wt': 0.005,
+        }
+
+
+    # agent_dict['algorithm'] = {
+    #     'type': AlgorithmBADMM,
+    #     'conditions': agent_dict['agent']['conditions'],
+    #     'train_conditions': agent_dict['agent']['train_conditions'],
+    #     'test_conditions': agent_dict['agent']['test_conditions'],
+    #     'num_robots': num_robots,
+    #     'iterations': 25,
+    #     'lg_step_schedule': np.array([1e-4, 1e-3, 1e-2, 1e-2]),
+    #     'policy_dual_rate': 0.2,
+    #     'ent_reg_schedule': np.array([1e-3, 1e-3, 1e-2, 1e-1]),
+    #     'fixed_lg_step': 3,
+    #     'kl_step': 5.0,
+    #     'min_step_mult': 0.01,
+    #     'max_step_mult': 1.0,
+    #     'sample_decrease_var': 0.05,
+    #     'sample_increase_var': 0.1,
+    #     'init_pol_wt': 0.005,
+    # }
     agent_dict['algorithm']['init_traj_distr'] = {
         'type': init_pd,
         'init_var': 10.0, # TODO can be useful to use (50 in blockpush)

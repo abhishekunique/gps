@@ -1374,12 +1374,12 @@ def multitask_multirobot_conv_supervised(is_testing, task_out_size, dim_input=[2
     task_list = network_config['task_list']
     robot_list = network_config['robot_list']
     regularizer = network_config['regularizer']
-    num_robots = max(robot_list)+1
-    num_tasks = max(task_list)+1
-    if is_testing:
+    num_robots = max(robot_list)+1 #- min(robot_list)
+    num_tasks = max(task_list)+1 #- min(task_list)
+    if True:#is_testing:
         tasks = task_list
         robots = robot_list
-        assert len(tasks) == 1 and len(robots) == 1
+        ###assert len(tasks) == 1 and len(robots) == 1
     else:
        tasks= range(num_tasks)
        robots=range(num_robots)
@@ -1438,6 +1438,8 @@ def multitask_multirobot_conv_supervised(is_testing, task_out_size, dim_input=[2
             task_weights['b1_tn_' + str(task_number)] = init_bias([num_filters[0]], name='b1_tn_' + str(task_number)) #init_bias((dim_hidden[0],), name='b1_tn_' + str(task_number))
             task_weights['w2_tn_' + str(task_number)] = get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='w2_tn_' + str(task_number)) #init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
             task_weights['b2_tn_' + str(task_number)] = init_bias([num_filters[1]], name='b2_tn_' + str(task_number)) #init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
+        #import IPython; IPython.embed()
+        #print "task", task_number
         task_weights['w3_tn_' + str(task_number)] = init_weights(((2*num_filters[1] if use_image else 0) + dim_task_input, dim_hidden[1]), name='w3_tn_' + str(task_number))
         task_weights['b3_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b3_tn_' + str(task_number))
         task_weights['taskout_tn_' + str(task_number)] = init_weights((dim_hidden[2], task_out_size), name='taskout_tn_' + str(task_number))
