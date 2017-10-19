@@ -127,17 +127,30 @@ if GRID == '0':
     grid_training = range(len(arguments))
     grid_testing = range(len(arguments))
 elif GRID == '1':
-    grid_training = [6,7,8,12,13,14,15,16,17,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]
-    grid_testing = [0,1,2,3,4,5,9,10,11,18,19,20]
+    grid_training = [3,4,5,12,13,14,15,16,17,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35]
+    grid_testing =  [0,1,2,9,10,11,18,19,20]
 elif GRID=='color_reach':
-    grid_training = [16,17,24,26,33,34,35]
+    grid_training = [6,7,16,17,24,26,33,34,35]
     grid_testing = [8,15,25]
+    # grid_testing =  [8,15,25]
 elif GRID=='peggy_push_vel':
-    grid_training = [12]
-    grid_testing= [12]
+    grid_training = [9]
+    grid_testing= [9]
+elif GRID=='peggy_push':
+    grid_training = [9]
+    grid_testing= [9]
 elif GRID=='pr2_push_vel':
     grid_training = [3,4,5]
     grid_testing= [3,4,5]
+elif GRID=='spherepush':
+    grid_training = [18]#, 19, 20]
+    grid_testing = [18]
+elif GRID=='noreach':
+    grid_training = [0,1,2,3,4,5,9,10,11,12,13, 18,23,30,31,32]
+    grid_testing = [14,19,20,21,22,27,28,29]
+elif GRID =='pr2_reach':
+    grid_training=[6,7,8]
+    grid_testing=[6,7,8]
 
 ###mport IPython; IPython.embed()
 
@@ -224,7 +237,7 @@ config = {
     'traj_distr_dump' : "dump/traj_distr_%s.pkl" % (NAME +'__'+GRID+'__'+REG),
     'num_samples': SAMPLES,
     'verbose_trials':  VERBOSE_TRIALS,
-    'verbose_policy_trials': int(IS_TESTING),
+    'verbose_policy_trials': int(IS_TESTING)*3,
     'save_wts': True,
     'common': common,
     'agent': agent,

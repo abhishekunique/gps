@@ -271,7 +271,7 @@ class PolicyOptTf(PolicyOpt):
         N, T = obs.shape[:2]
 
         # Normalize obs.
-        if self.policy[robot_number].scale != None:
+        if self.policy[robot_number].scale is not None:
             for n in range(N):
                 obs[n, :, self.x_idx[robot_number]] = (obs[n, :, self.x_idx[robot_number]].T.dot(self.policy[robot_number].scale)
                                          + self.policy[robot_number].bias).T
@@ -495,7 +495,7 @@ class PolicyOptTf(PolicyOpt):
             feed_dict = {}
             robot_dict = {}
             if continue_iters:
-                robot_dict[self.ls['keep_prob']] = 0.8
+                robot_dict[self.ls['keep_prob']] = 0.99
                 for robot_number in range(self.num_robots):
                     start_idx = int(i * self.batch_size %
                                     (batches_per_epoch_reshaped[robot_number] * self.batch_size))
@@ -512,13 +512,14 @@ class PolicyOptTf(PolicyOpt):
                         #feed_dict[self.ls['ee_input'][robot_number]] = ee_reshaped[robot_number][idx_i]
                     robot_dict.update(feed_dict)
                     #robot_dict[self.ls['task_output'][robot_number]] = ee_reshaped[robot_number][idx_i]
-
+                #import IPython; IPython.embed()
                 #task_loss = self.task_solver(feed_dict, self.sess, device_string=self.device_string)
                 train_loss = self.robot_solver(robot_dict, self.sess, device_string=self.device_string)
                 #val_loss = self.sess.run(self.val_loss, val_dict)
                 #avg_val_loss += val_loss
                 average_loss += train_loss
                 # avg_taskloss += task_loss
+                #import IPython; IPython.embed()
                 if (i + 1) % 500 == 0:
                     LOGGER.debug('tensorflow iteration %d, average loss %f',
                                  i, average_loss / 500)
@@ -528,11 +529,12 @@ class PolicyOptTf(PolicyOpt):
                     all_val_losses.append(average_loss)
                     average_loss = 0
                     avg_val_loss = 0
-                    if len(all_val_losses) > 2:
-                        if all_val_losses[-1] > all_val_losses[-2] and all_val_losses[-2] > all_val_losses[-3]:
-                            print "Val loss is increasing, stop iters"
-                            continue_iters = False
+                    # if len(all_val_losses) > 2:
+                    #     if all_val_losses[-1] > all_val_losses[-2] and all_val_losses[-2] > all_val_losses[-3]:
+                    #         print "Val loss is increasing, stop iters"
+                    #         continue_iters = False
                 # avg_taskloss = 0
+
         for robot_number in range(self.num_robots):
             # Keep track of tensorflow iterations for loading solver states.
             self.tf_iter[robot_number] += self._hyperparams['iterations']

@@ -31,7 +31,7 @@ ANGLES = [-2.2, -1.8, -1.2, 1.2, 1.8, 2.2]
 TASK_TYPES += [ColorReachRYG(color, ANGLES, INNER_RADIUS) for color in "red", "yellow", "green"]
 VIDEO_PATH = None #"/home/kavi/Videos/pos%s" % inner_radius
 
-NAME = "color_reach_ryg%s" % stem
+NAME = "allenvs%s" % stem
 
 if MODE == "check-all-traj":
     VIDEO_PATH =  "/home/kavi/Videos/%s" % NAME
