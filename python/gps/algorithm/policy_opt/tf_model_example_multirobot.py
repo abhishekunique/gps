@@ -76,7 +76,7 @@ def euclidean_loss_layer(a, b, precision, batch_size):
 
     uPu = tf.reduce_sum(uP*(a-b))  # this last dot product is then summed, so we just the sum all at once.
     return uPu/scale_factor
-
+    #return tf.nn.l2_loss(a-b)
 
 def get_input_layer(dim_input, dim_output, robot_number, num_robots=None):
     """produce the placeholder inputs that are used to run ops forward and backwards.
@@ -492,170 +492,6 @@ def get_mlp_layers_shared(mlp_input, number_layers, dimension_hidden, robot_numb
     return cur_top, weights, biases, layers
 
 
-def example_tf_network_multi(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
-    """
-    An example a network in theano that has both state and image inputs.
-
-    Args:
-        dim_input: Dimensionality of input.
-        dim_output: Dimensionality of the output.
-        batch_size: Batch size.
-        network_config: dictionary of network structure parameters
-    Returns:
-        a dictionary containing inputs, outputs, and the loss function representing scalar loss.
-    """
-    # List of indices for state (vector) data and image (tensor) data in observation.
-    print 'making multi-input/output-network'
-
-
-    num_robots = len(dim_input)
-    nnets = []
-    # with tf.variable_scope("shared_wts"):
-    for robot_number, robot_params in enumerate(network_config['agent_params']):
-        n_layers = 4
-        layer_size = 60
-        dim_hidden = (n_layers - 1)*[layer_size]
-        dim_hidden.append(dim_output[robot_number])
-
-        nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
-
-        state_input = nn_input
-
-        fc_output, weights_FC, biases_FC, layers = get_mlp_layers(state_input, n_layers, dim_hidden, robot_number=robot_number)
-
-        loss = euclidean_loss_layer(a=action, b=fc_output, precision=precision, batch_size=batch_size)
-        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [fc_output], [loss]))
-
-    return nnets, None, None, weights_FC + biases_FC, layers
-
-def model_fc_shared(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
-    """
-    An example a network in theano that has both state and image inputs.
-
-    Args:
-        dim_input: Dimensionality of input.
-        dim_output: Dimensionality of the output.
-        batch_size: Batch size.
-        network_config: dictionary of network structure parameters
-    Returns:
-        a dictionary containing inputs, outputs, and the loss function representing scalar loss.
-    """
-    # List of indices for state (vector) data and image (tensor) data in observation.
-    print 'making multi-input/output-network'
-
-
-    num_robots = len(dim_input)
-    nnets = []
-    all_vars = []
-    feature_layers = []
-    individual_weights = []
-    n_layers = 6
-    layer_size = 100
-    dim_hidden = (n_layers - 1)*[layer_size]
-
-    with tf.variable_scope("shared_wts"):
-        shared_weights = {
-            # 'w0' : init_weights((dim_input[0], dim_hidden[0]), name='w0'),
-            'w1' : init_weights((dim_hidden[0], dim_hidden[1]), name='w1'),
-            'w2' : init_weights((dim_hidden[1], dim_hidden[2]), name='w2'),
-            'w3' : init_weights((dim_hidden[2], dim_hidden[3]), name='w3'),
-            'w4' : init_weights((dim_hidden[3], dim_hidden[4]), name='w4'),
-            # 'w5' : init_weights((dim_hidden[4], dim_hidden[5]), name='w5'),
-            'b1' : init_bias((dim_hidden[1],), name='b1'),
-            'b2' : init_bias((dim_hidden[2],), name='b2'),
-            'b3' : init_bias((dim_hidden[2],), name='b3'),
-            'b4' : init_bias((dim_hidden[2],), name='b4'),
-            # 'b5' : init_bias((dim_hidden[2],), name='b5'),
-        }
-
-        for robot_number, robot_params in enumerate(network_config):
-            nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
-
-            w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
-            b_input = init_bias((dim_hidden[0],), name='b_input'+str(robot_number))
-            mlp_input = tf.nn.relu(tf.matmul(nn_input, w_input) + b_input)
-            print dim_hidden[1:]
-            print n_layers-2
-            # fc_output, weights_FC, biases_FC, layers = get_mlp_layers_shared(mlp_input, n_layers-2, dim_hidden[1:], robot_number=robot_number)
-            layer1 = tf.nn.relu(tf.matmul(mlp_input, shared_weights['w1']) + shared_weights['b1'])
-            layer2 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2']) + shared_weights['b2'])
-            layer3 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2']) + shared_weights['b3'])
-            layer4 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2']) + shared_weights['b4'])
-            # layer5 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2']) + shared_weights['b5'])
-
-            w_output = init_weights((dim_hidden[-1], dim_output[robot_number]), name='w_output'+str(robot_number))
-            b_output = init_bias((dim_output[robot_number],), name = 'b_output'+str(robot_number))
-            output = tf.matmul(layer4, w_output) + b_output
-            loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
-
-            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
-            fc_vars = None
-
-    return nnets, None, None, all_vars, [],
-
-
-def model_fc_shared_diff(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
-    """
-    An example a network in theano that has both state and image inputs.
-
-    Args:
-        dim_input: Dimensionality of input.
-        dim_output: Dimensionality of the output.
-        batch_size: Batch size.
-        network_config: dictionary of network structure parameters
-    Returns:
-        a dictionary containing inputs, outputs, and the loss function representing scalar loss.
-    """
-    # List of indices for state (vector) data and image (tensor) data in observation.
-    print 'making multi-input/output-network'
-
-
-    num_robots = len(dim_input)
-    nnets = []
-    all_vars = []
-    n_layers = 4
-    layer_size = 60
-    dim_diff = 20
-    dim_hidden = (n_layers - 1)*[layer_size]
-    index_shared = [11, 12, 13, 17, 18, 19]
-    index_indiv = [0,1,2,3,4,5,6,7,8,9,10,14,15,16]
-    with tf.variable_scope("shared_wts"):
-        shared_weights = {
-            'w0' : init_weights((len(index_shared), dim_hidden[0]), name='w0'),
-            'w1' : init_weights((dim_hidden[0], dim_hidden[1]), name='w1'),
-            'w2' : init_weights((dim_hidden[1], dim_hidden[2]), name='w2'),
-            # 'w_diff' : init_weights((len(index_indiv), dim_diff), name='w_diff'),
-            'w3' : init_weights((dim_hidden[2] + dim_diff, dim_output[0]), name='w3'),
-            'b0' : init_bias((dim_hidden[0],), name='b0'),
-            'b1' : init_bias((dim_hidden[1],), name='b1'),
-            'b2' : init_bias((dim_hidden[2],), name='b2'),
-            # 'b_diff' : init_bias((dim_diff,), name='b_diff'),
-            'b3' : init_bias((dim_output[0],), name='b3'),
-        }
-
-        for robot_number, robot_params in enumerate(network_config):
-            nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
-            shared_input = tf.concat(axis=1, values=[nn_input[:, 11:14], nn_input[:, 17:]])
-            indiv_input = tf.concat(axis=1, values=[nn_input[:, 0:11], nn_input[:, 14:17]])
-            # w_input = init_weights((dim_input[robot_number],dim_hidden[0]), name='w_input' + str(robot_number))
-            # b_input = init_bias((dim_hidden[0],), name='b_input'+str(robot_number))
-
-            # w_diff = init_weights((len(index_indiv), dim_diff), name='w_diff'+str(robot_number))
-            # b_diff = init_bias((dim_diff,), name = 'b_diff'+str(robot_number))
-
-            layer0 = tf.nn.relu(tf.matmul(shared_input, shared_weights['w0']) + shared_weights['b0'])
-            layer1 = tf.nn.relu(tf.matmul(layer0, shared_weights['w1']) + shared_weights['b1'])
-            layer2 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2']) + shared_weights['b2'])
-            layer_diff = tf.nn.relu(tf.matmul(indiv_input, w_diff) + b_diff)
-            fc_input = tf.concat(axis=1, values=[layer2, layer_diff])
-            output = tf.matmul(fc_input, shared_weights['w3']) + shared_weights['b3']
-
-            loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
-
-            nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
-            fc_vars = None
-
-    return nnets, None, None, all_vars, [],
 
 def example_tf_network_multi_contrastive(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
     """
@@ -699,537 +535,6 @@ def example_tf_network_multi_contrastive(dim_input=[27, 27], dim_output=[7, 7], 
     return nnets, None, None, weights_FC + biases_FC, contrastive
 
 
-def multitask_multirobot_fc_hardcoded(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
-    """
-    Args:
-        dim_input: Dimensionality of input.
-        dim_output: Dimensionality of the output.
-        batch_size: Batch size.
-        network_config: dictionary of network structure parameters
-    Returns:
-        a list of dictionaries containing inputs, outputs, and the loss function representing scalar loss.
-    """
-    # List of indices for state (vector) data and image (tensor) data in observation.
-    print 'making multi-input/output-network'
-    #need to create taskrobot_mapping
-    taskrobot_mapping = np.asarray([[0, 1], [ 2,3], [4, None]])
-    num_robots = taskrobot_mapping.shape[1]
-    num_tasks = taskrobot_mapping.shape[0]
-    task_list = [None]*(len(dim_input))
-    robot_list = [None]*(len(dim_output))
-    for robot_number in range(num_robots):
-        for task_number in range(num_tasks):
-            if taskrobot_mapping[task_number][robot_number] is not None:
-                task_list[taskrobot_mapping[task_number][robot_number]] = task_number
-                robot_list[taskrobot_mapping[task_number][robot_number]] = robot_number
-
-    nnets = []
-    n_layers = 4
-    layer_size = 60
-    dim_hidden = (n_layers - 1)*[layer_size]
-    shared_weights = {}
-    dim_robot_specific_list = [12, 14]
-    dim_task_specific_list = [6, 16, 6]
-    dim_robot_output_list = [3, 4]
-    dim_diff = 20
-
-    for robot_number in range(num_robots):
-        #special case possible
-        dim_robot_output = dim_robot_output_list[robot_number]
-        dim_robot_specific = dim_robot_specific_list[robot_number]
-        shared_weights['w3_rn_' + str(robot_number)] = init_weights((dim_hidden[1], dim_hidden[2]), name='w3_rn_' + str(robot_number))
-        shared_weights['b3_rn_' + str(robot_number)] = init_bias((dim_hidden[2],), name='b3_rn_' + str(robot_number))
-        shared_weights['wdiff_rn_' + str(robot_number)] = init_weights((dim_robot_specific, dim_diff), name='wdiff_rn_' + str(robot_number))
-        shared_weights['bdiff_rn_' + str(robot_number)] = init_bias((dim_diff,), name='bdiff_rn_' + str(robot_number))
-        shared_weights['wout_rn_' + str(robot_number)] = init_weights((dim_hidden[2] + dim_diff, dim_robot_output), name='wout_rn_' + str(robot_number))
-        shared_weights['bout_rn_' + str(robot_number)] = init_bias((dim_robot_output,), name='bout_rn_' + str(robot_number))
-
-    for task_number in range(num_tasks):
-        dim_task_input = dim_task_specific_list[task_number]
-        shared_weights['w1_tn_' + str(task_number)] = init_weights((dim_task_input, dim_hidden[0]), name='w1_tn_' + str(task_number))
-        shared_weights['b1_tn_' + str(task_number)] = init_bias((dim_hidden[0],), name='b1_tn_' + str(task_number))
-        shared_weights['w2_tn_' + str(task_number)] = init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
-        shared_weights['b2_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
-
-    for robot_number, robot_params in enumerate(network_config):
-        robot_index = robot_list[robot_number]
-        task_index = task_list[robot_number]
-
-        nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
-
-        if robot_index == 0 and task_index == 0:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:9], nn_input[:, 12:15]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 9:12], nn_input[:, 15:]])
-        elif robot_index == 1 and task_index == 0:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:11], nn_input[:, 14:17]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 11:14], nn_input[:, 17:]])
-        elif robot_index == 0 and task_index == 1:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:3], nn_input[:, 5:8], nn_input[:, 10:13], nn_input[:, 19:22]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 3:5], nn_input[:, 8:10], nn_input[:, 13:19], nn_input[:, 22:]])
-        elif robot_index == 1 and task_index == 1:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:4], nn_input[:, 6:10], nn_input[:, 12:15], nn_input[:, 21:24]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 4:6], nn_input[:, 10:12], nn_input[:, 15:21], nn_input[:, 24:]])
-        elif robot_index == 0 and task_index == 2:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:9], nn_input[:, 12:15]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 9:12], nn_input[:, 15:]])
-        elif robot_index == 1 and task_index == 2:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:11], nn_input[:, 14:17]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 11:14], nn_input[:, 17:]])
-        print "task", task_index, "robot", robot_index
-        layer1 = tf.nn.relu(tf.matmul(task_input, shared_weights['w1_tn_' + str(task_index)]) + shared_weights['b1_tn_' + str(task_index)])
-        layer2 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2_tn_' + str(task_index)]) + shared_weights['b2_tn_' + str(task_index)])
-        layer3 = tf.nn.relu(tf.matmul(layer2, shared_weights['w3_rn_' + str(robot_index)]) + shared_weights['b3_rn_' + str(robot_index)])
-        layer_diff = tf.nn.relu(tf.matmul(robot_input, shared_weights['wdiff_rn_' + str(robot_index)]) + shared_weights['bdiff_rn_' + str(robot_index)])
-        lastlayer_input = tf.concat(axis=1, values=[layer3, layer_diff])
-        output = tf.matmul(lastlayer_input, shared_weights['wout_rn_' + str(robot_index)]) + shared_weights['bout_rn_' + str(robot_index)]
-
-        loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
-        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
-    return nnets, None, None, shared_weights, None
-
-def multitask_multirobot_fc(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
-    """
-    Args:
-        dim_input: Dimensionality of input.
-        dim_output: Dimensionality of the output.
-        batch_size: Batch size.
-        network_config: dictionary of network structure parameters
-    Returns:
-        a list of dictionaries containing inputs, outputs, and the loss function representing scalar loss.
-    """
-    # List of indices for state (vector) data and image (tensor) data in observation.
-    print 'making multi-input/output-network'
-    #need to create taskrobot_mapping
-    task_list = network_config['task_list']
-    robot_list = network_config['robot_list']
-    num_robots = max(robot_list)+1
-    num_tasks = max(task_list)+1
-    # tasks = [2]
-    # robots= [1]
-    tasks= range(num_tasks)
-    robots=range(num_robots)
-    nnets = []
-    n_layers = 6
-    layer_size = 40
-    dim_hidden = (n_layers - 1)*[layer_size]
-    shared_weights = {}
-    dim_diff = 20
-    dim_robot_specific_list = [None for r in range(num_robots)]
-    dim_task_specific_list = [None for t in range(num_tasks)]
-    dim_robot_output_list = [None for r in range(num_robots)]
-    for  agent_number, agent_params in enumerate(network_config['agent_params']):
-        print "agent", agent_number
-        robot_number = robot_list[agent_number]; task_number = task_list[agent_number]
-        if dim_robot_specific_list[robot_number] is not None:
-            assert (dim_robot_specific_list[robot_number] == len(agent_params['robot_specific_idx']) and
-                    dim_robot_output_list[robot_number] == agent_params['dim_output']), \
-                "Robot dimentions is not consistent between agent %d and the previous ones"%agent_number
-        if dim_task_specific_list[task_number] is not None:
-            assert dim_task_specific_list[task_number] == len(agent_params['task_specific_idx']), \
-                "Task dimentions is not consistent between agent %d and the previous ones"%agent_number
-        dim_robot_specific_list[robot_number] =  len(agent_params['robot_specific_idx'])
-        dim_robot_output_list[robot_number] = agent_params['dim_output']
-        dim_task_specific_list[task_number] = len(agent_params['task_specific_idx'])
-
-    for robot_number in robots:
-        #special case possible
-        dim_robot_output = dim_robot_output_list[robot_number]
-        dim_robot_specific = dim_robot_specific_list[robot_number]
-        shared_weights['w4_rn_' + str(robot_number)] = init_weights((dim_hidden[1] + dim_robot_specific, dim_hidden[3]), name='w4_rn_' + str(robot_number))
-        shared_weights['b4_rn_' + str(robot_number)] = init_bias((dim_hidden[3],), name='b4_rn_' + str(robot_number))
-        # shared_weights['wdiff_rn_' + str(robot_number)] = init_weights((dim_robot_specific, dim_diff), name='wdiff_rn_' + str(robot_number))
-        # shared_weights['bdiff_rn_' + str(robot_number)] = init_bias((dim_diff,), name='bdiff_rn_' + str(robot_number))
-        # shared_weights['w5_rn_' + str(robot_number)] = init_weights((dim_hidden[3], dim_hidden[4]), name='w5_rn_' + str(robot_number))
-        # shared_weights['b5_rn_' + str(robot_number)] = init_bias((dim_hidden[4],), name='b5_rn_' + str(robot_number))
-        shared_weights['wout_rn_' + str(robot_number)] = init_weights((dim_hidden[3], dim_robot_output), name='wout_rn_' + str(robot_number))
-        shared_weights['bout_rn_' + str(robot_number)] = init_bias((dim_robot_output,), name='bout_rn_' + str(robot_number))
-
-    for task_number in tasks:
-        dim_task_input = dim_task_specific_list[task_number]
-        shared_weights['w1_tn_' + str(task_number)] = init_weights((dim_task_input, dim_hidden[0]), name='w1_tn_' + str(task_number))
-        shared_weights['b1_tn_' + str(task_number)] = init_bias((dim_hidden[0],), name='b1_tn_' + str(task_number))
-        shared_weights['w2_tn_' + str(task_number)] = init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
-        shared_weights['b2_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
-        # shared_weights['w3_tn_' + str(task_number)] = init_weights((dim_hidden[1], dim_hidden[2]), name='w3_tn_' + str(task_number))
-        # shared_weights['b3_tn_' + str(task_number)] = init_bias((dim_hidden[2],), name='b3_tn_' + str(task_number))
-
-    for agent_number, agent_params in enumerate(network_config['agent_params']):
-        robot_index = robot_list[agent_number]
-        task_index = task_list[agent_number]
-
-        nn_input, action, precision = get_input_layer(dim_input[agent_number], dim_output[agent_number], agent_number)
-        robot_idx = tf.constant(agent_params['robot_specific_idx'])
-        task_idx = tf.constant(agent_params['task_specific_idx'])
-        nn_input_t = tf.transpose(nn_input, perm=[1,0])
-        robot_input = tf.transpose(tf.gather(nn_input_t, robot_idx), perm=[1,0])
-        task_input = tf.transpose(tf.gather(nn_input_t, task_idx), perm=[1,0])
-
-        print "task", task_index, "robot", robot_index
-        layer1 = tf.nn.relu(tf.matmul(task_input, shared_weights['w1_tn_' + str(task_index)]) + shared_weights['b1_tn_' + str(task_index)])
-        layer2 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2_tn_' + str(task_index)]) + shared_weights['b2_tn_' + str(task_index)])
-        # layer3 = tf.nn.relu(tf.matmul(layer2, shared_weights['w3_tn_' + str(task_index)]) + shared_weights['b3_tn_' + str(task_index)])
-        # layer_diff = tf.nn.relu(tf.matmul(robot_input, shared_weights['wdiff_rn_' + str(robot_index)]) + shared_weights['bdiff_rn_' + str(robot_index)])
-        lastlayer_input = tf.concat(axis=1, values=[layer2, robot_input])
-        layer4 = tf.nn.relu(tf.matmul(lastlayer_input, shared_weights['w4_rn_' + str(robot_index)]) + shared_weights['b4_rn_' + str(robot_index)])
-        # layer5 = tf.nn.relu(tf.matmul(layer4, shared_weights['w5_rn_' + str(robot_index)]) + shared_weights['b5_rn_' + str(robot_index)])
-        output = tf.matmul(layer4, shared_weights['wout_rn_' + str(robot_index)]) + shared_weights['bout_rn_' + str(robot_index)]
-        loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
-        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
-    return nnets, None, None, shared_weights, None
-
-def multitask_multirobot_fc_dropout(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
-    """
-    Args:
-        dim_input: Dimensionality of input.
-        dim_output: Dimensionality of the output.
-        batch_size: Batch size.
-        network_config: dictionary of network structure parameters
-    Returns:
-        a list of dictionaries containing inputs, outputs, and the loss function representing scalar loss.
-    """
-    # List of indices for state (vector) data and image (tensor) data in observation.
-    print 'making multi-input/output-network'
-    #need to create taskrobot_mapping
-    task_list = network_config['task_list']
-    robot_list = network_config['robot_list']
-    num_robots = max(robot_list)+1
-    num_tasks = max(task_list)+1
-    tasks = [0]
-    robots= [1]
-    # tasks= range(num_tasks)
-    # robots=range(num_robots)
-    nnets = []
-    keep_prob= 1.0
-    n_layers = 6
-    layer_size = 40
-    dim_hidden = (n_layers - 1)*[layer_size]
-    shared_weights = {}
-    dim_diff = 20
-    dim_robot_specific_list = [None for r in range(num_robots)]
-    dim_task_specific_list = [None for t in range(num_tasks)]
-    dim_robot_output_list = [None for r in range(num_robots)]
-    for  agent_number, agent_params in enumerate(network_config['agent_params']):
-        print "agent", agent_number
-        robot_number = robot_list[agent_number]; task_number = task_list[agent_number]
-        if dim_robot_specific_list[robot_number] is not None:
-            assert (dim_robot_specific_list[robot_number] == len(agent_params['robot_specific_idx']) and
-                    dim_robot_output_list[robot_number] == agent_params['dim_output']), \
-                "Robot dimentions is not consistent between agent %d and the previous ones"%agent_number
-        if dim_task_specific_list[task_number] is not None:
-            assert dim_task_specific_list[task_number] == len(agent_params['task_specific_idx']), \
-                "Task dimentions is not consistent between agent %d and the previous ones"%agent_number
-        dim_robot_specific_list[robot_number] =  len(agent_params['robot_specific_idx'])
-        dim_robot_output_list[robot_number] = agent_params['dim_output']
-        dim_task_specific_list[task_number] = len(agent_params['task_specific_idx'])
-
-    for robot_number in robots:
-        #special case possible
-        dim_robot_output = dim_robot_output_list[robot_number]
-        dim_robot_specific = dim_robot_specific_list[robot_number]
-        shared_weights['w4_rn_' + str(robot_number)] = init_weights((dim_hidden[2] + dim_diff, dim_hidden[3]), name='w4_rn_' + str(robot_number))
-        shared_weights['b4_rn_' + str(robot_number)] = init_bias((dim_hidden[3],), name='b4_rn_' + str(robot_number))
-        shared_weights['wdiff_rn_' + str(robot_number)] = init_weights((dim_robot_specific, dim_diff), name='wdiff_rn_' + str(robot_number))
-        shared_weights['bdiff_rn_' + str(robot_number)] = init_bias((dim_diff,), name='bdiff_rn_' + str(robot_number))
-        shared_weights['w5_rn_' + str(robot_number)] = init_weights((dim_hidden[3], dim_hidden[4]), name='w5_rn_' + str(robot_number))
-        shared_weights['b5_rn_' + str(robot_number)] = init_bias((dim_hidden[4],), name='b5_rn_' + str(robot_number))
-        shared_weights['wout_rn_' + str(robot_number)] = init_weights((dim_hidden[4], dim_robot_output), name='wout_rn_' + str(robot_number))
-        shared_weights['bout_rn_' + str(robot_number)] = init_bias((dim_robot_output,), name='bout_rn_' + str(robot_number))
-
-    for task_number in tasks:
-        dim_task_input = dim_task_specific_list[task_number]
-        shared_weights['w1_tn_' + str(task_number)] = init_weights((dim_task_input, dim_hidden[0]), name='w1_tn_' + str(task_number))
-        shared_weights['b1_tn_' + str(task_number)] = init_bias((dim_hidden[0],), name='b1_tn_' + str(task_number))
-        shared_weights['w2_tn_' + str(task_number)] = init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
-        shared_weights['b2_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
-        shared_weights['w3_tn_' + str(task_number)] = init_weights((dim_hidden[1], dim_hidden[2]), name='w3_tn_' + str(task_number))
-        shared_weights['b3_tn_' + str(task_number)] = init_bias((dim_hidden[2],), name='b3_tn_' + str(task_number))
-
-    for agent_number, agent_params in enumerate(network_config['agent_params']):
-        robot_index = robot_list[agent_number]
-        task_index = task_list[agent_number]
-
-        nn_input, action, precision = get_input_layer(dim_input[agent_number], dim_output[agent_number], agent_number)
-        robot_idx = tf.constant(agent_params['robot_specific_idx'])
-        task_idx = tf.constant(agent_params['task_specific_idx'])
-        nn_input_t = tf.transpose(nn_input, perm=[1,0])
-        robot_input = tf.transpose(tf.gather(nn_input_t, robot_idx), perm=[1,0])
-        task_input = tf.transpose(tf.gather(nn_input_t, task_idx), perm=[1,0])
-
-        print "task", task_index, "robot", robot_index
-        layer1 = tf.nn.dropout(tf.nn.relu(tf.matmul(task_input, shared_weights['w1_tn_' + str(task_index)]) + shared_weights['b1_tn_' + str(task_index)]),keep_prob)
-        layer2 = tf.nn.dropout(tf.nn.relu(tf.matmul(layer1, shared_weights['w2_tn_' + str(task_index)]) + shared_weights['b2_tn_' + str(task_index)]), keep_prob)
-        layer3 = tf.nn.dropout(tf.nn.relu(tf.matmul(layer2, shared_weights['w3_tn_' + str(task_index)]) + shared_weights['b3_tn_' + str(task_index)]), keep_prob)
-        layer_diff = tf.nn.dropout(tf.nn.relu(tf.matmul(robot_input, shared_weights['wdiff_rn_' + str(robot_index)]) + shared_weights['bdiff_rn_' + str(robot_index)]), keep_prob)
-        lastlayer_input = tf.concat(axis=1, values=[layer3, layer_diff])
-        layer4 = tf.nn.dropout(tf.nn.relu(tf.matmul(lastlayer_input, shared_weights['w4_rn_' + str(robot_index)]) + shared_weights['b4_rn_' + str(robot_index)]), keep_prob)
-        layer5 = tf.nn.dropout(tf.nn.relu(tf.matmul(layer4, shared_weights['w5_rn_' + str(robot_index)]) + shared_weights['b5_rn_' + str(robot_index)]), keep_prob)
-        output = tf.matmul(layer5, shared_weights['wout_rn_' + str(robot_index)]) + shared_weights['bout_rn_' + str(robot_index)]
-        loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
-        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
-    return nnets, None, None, shared_weights, None
-
-
-
-def multitask_multirobot_fc_forward(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
-    """
-    Args:
-        dim_input: Dimensionality of input.
-        dim_output: Dimensionality of the output.
-        batch_size: Batch size.
-        network_config: dictionary of network structure parameters
-    Returns:
-        a list of dictionaries containing inputs, outputs, and the loss function representing scalar loss.
-    """
-    # List of indices for state (vector) data and image (tensor) data in observation.
-    print 'making multi-input/output-network'
-    #need to create taskrobot_mapping
-    # taskrobot_mapping = np.asarray([[0, 1], [2, 3], [4, None]])
-    num_robots = 1#taskrobot_mapping.shape[1]
-    num_tasks = 1#taskrobot_mapping.shape[0]
-    # task_list = [None]*(len(dim_input))
-    # robot_list = [None]*(len(dim_output))
-    # for robot_number in range(num_robots):
-    #     for task_number in range(num_tasks):
-    #         if taskrobot_mapping[task_number][robot_number] is not None:
-    #             task_list[taskrobot_mapping[task_number][robot_number]] = task_number
-    #             robot_list[taskrobot_mapping[task_number][robot_number]] = robot_number
-    nnets = []
-    n_layers = 4
-    layer_size = 60
-    dim_hidden = (n_layers - 1)*[layer_size]
-    shared_weights = {}
-    dim_robot_specific_list = [12,14]
-    dim_task_specific_list = [6, 16,6]
-    dim_robot_output_list = [3,4]
-    dim_diff = 20
-    tensors= {}
-    robot_index =0# robot_list[robot_number]
-    task_index = 1#task_list[robot_number]
-
-    for robot_number in [robot_index]:
-        #special case possible
-        dim_robot_output = dim_robot_output_list[robot_number]
-        dim_robot_specific = dim_robot_specific_list[robot_number]
-        shared_weights['w3_rn_' + str(robot_number)] = init_weights((dim_hidden[1], dim_hidden[2]), name='w3_rn_' + str(robot_number))
-        shared_weights['b3_rn_' + str(robot_number)] = init_bias((dim_hidden[2],), name='b3_rn_' + str(robot_number))
-        shared_weights['wdiff_rn_' + str(robot_number)] = init_weights((dim_robot_specific, dim_diff), name='wdiff_rn_' + str(robot_number))
-        shared_weights['bdiff_rn_' + str(robot_number)] = init_bias((dim_diff,), name='bdiff_rn_' + str(robot_number))
-        shared_weights['wout_rn_' + str(robot_number)] = init_weights((dim_hidden[2] + dim_diff, dim_robot_output), name='wout_rn_' + str(robot_number))
-        shared_weights['bout_rn_' + str(robot_number)] = init_bias((dim_robot_output,), name='bout_rn_' + str(robot_number))
-
-    for task_number in [task_index]:
-        dim_task_input = dim_task_specific_list[task_number]
-        shared_weights['w1_tn_' + str(task_number)] = init_weights((dim_task_input, dim_hidden[0]), name='w1_tn_' + str(task_number))
-        shared_weights['b1_tn_' + str(task_number)] = init_bias((dim_hidden[0],), name='b1_tn_' + str(task_number))
-        shared_weights['w2_tn_' + str(task_number)] = init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
-        shared_weights['b2_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
-
-    for robot_number, robot_params in enumerate(network_config):
-        # robot_index =0# robot_list[robot_number]
-        # task_index = 2#task_list[robot_number]
-
-        nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
-
-        if robot_index == 0 and task_index == 0:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:9], nn_input[:, 12:15]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 9:12], nn_input[:, 15:]])
-        elif robot_index == 1 and task_index == 0:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:11], nn_input[:, 14:17]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 11:14], nn_input[:, 17:]])
-        elif robot_index == 0 and task_index == 1:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:3], nn_input[:, 5:8], nn_input[:, 10:13], nn_input[:, 19:22]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 3:5], nn_input[:, 8:10], nn_input[:, 13:19], nn_input[:, 22:]])
-        elif robot_index == 1 and task_index == 1:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:4], nn_input[:, 6:10], nn_input[:, 12:15], nn_input[:, 21:24]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 4:6], nn_input[:, 10:12], nn_input[:, 15:21], nn_input[:, 24:]])
-        elif robot_index == 0 and task_index == 2:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:9], nn_input[:, 12:15]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 9:12], nn_input[:, 15:]])
-        elif robot_index == 1 and task_index == 2:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:11], nn_input[:, 14:17]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 11:14], nn_input[:, 17:]])
-
-        layer1 = tf.nn.relu(tf.matmul(task_input, shared_weights['w1_tn_' + str(task_index)]) + shared_weights['b1_tn_' + str(task_index)])
-        layer2 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2_tn_' + str(task_index)]) + shared_weights['b2_tn_' + str(task_index)])
-        layer3 = tf.nn.relu(tf.matmul(layer2, shared_weights['w3_rn_' + str(robot_index)]) + shared_weights['b3_rn_' + str(robot_index)])
-        layer_diff = tf.nn.relu(tf.matmul(robot_input, shared_weights['wdiff_rn_' + str(robot_index)]) + shared_weights['bdiff_rn_' + str(robot_index)])
-        lastlayer_input = tf.concat(axis=1, values=[layer3, layer_diff])
-        output = tf.matmul(lastlayer_input, shared_weights['wout_rn_' + str(robot_index)]) + shared_weights['bout_rn_' + str(robot_index)]
-
-        # tensors['layer1_tn'+str(task_index)+'_rn_'+str(robot_index)] = layer1
-        # tensors['layer2_tn'+str(task_index)+'_rn_'+str(robot_index)] = layer2
-        # tensors['layer3_tn'+str(task_index)+'_rn_'+str(robot_index)] = layer3
-        # tensors['layer3_tn'+str(task_index)+'_rn_'+str(robot_index)] = layer3
-        # tensors['layer_diff_tn'+str(task_index)+'_rn_'+str(robot_index)] = layer_diff
-        # tensors['output_tn'+str(task_index)+'_rn_'+str(robot_index)] = output
-
-        loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
-        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output],  [loss]))
-    return nnets, None, None, shared_weights, None
-
-def multitask_forward(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
-    """
-    Args:
-        dim_input: Dimensionality of input.
-        dim_output: Dimensionality of the output.
-        batch_size: Batch size.
-        network_config: dictionary of network structure parameters
-    Returns:
-        a list of dictionaries containing inputs, outputs, and the loss function representing scalar loss.
-    """
-    # List of indices for state (vector) data and image (tensor) data in observation.
-    print 'making multi-input/output-network'
-    #need to create taskrobot_mapping
-
-    num_robots = 1
-    num_tasks = 1
-    nnets = []
-    n_layers = 4
-    layer_size = 60
-    dim_hidden = (n_layers - 1)*[layer_size]
-    shared_weights = {}
-    dim_robot_specific_list = [12, 14]
-    dim_task_specific_list = [6, 16, 6]
-    dim_robot_output_list = [3, 4]
-    dim_diff = 20
-
-    for robot_number in range(1,2):
-        #special case possible
-        dim_robot_output = dim_robot_output_list[robot_number]
-        dim_robot_specific = dim_robot_specific_list[robot_number]
-        shared_weights['w3_rn_' + str(robot_number)] = init_weights((dim_hidden[1], dim_hidden[2]), name='w3_rn_' + str(robot_number))
-        shared_weights['b3_rn_' + str(robot_number)] = init_bias((dim_hidden[2],), name='b3_rn_' + str(robot_number))
-        shared_weights['wdiff_rn_' + str(robot_number)] = init_weights((dim_robot_specific, dim_diff), name='wdiff_rn_' + str(robot_number))
-        shared_weights['bdiff_rn_' + str(robot_number)] = init_bias((dim_diff,), name='bdiff_rn_' + str(robot_number))
-        shared_weights['wout_rn_' + str(robot_number)] = init_weights((dim_hidden[2] + dim_diff, dim_robot_output), name='wout_rn_' + str(robot_number))
-        shared_weights['bout_rn_' + str(robot_number)] = init_bias((dim_robot_output,), name='bout_rn_' + str(robot_number))
-
-    for task_number in range(2,3):
-        dim_task_input = dim_task_specific_list[task_number]
-        shared_weights['w1_tn_' + str(task_number)] = init_weights((dim_task_input, dim_hidden[0]), name='w1_tn_' + str(task_number))
-        shared_weights['b1_tn_' + str(task_number)] = init_bias((dim_hidden[0],), name='b1_tn_' + str(task_number))
-        shared_weights['w2_tn_' + str(task_number)] = init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
-        shared_weights['b2_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
-
-    for robot_number, robot_params in enumerate(network_config):
-        robot_index = 1
-        task_index = 2
-
-        nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
-
-        if robot_index == 0 and task_index == 0:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:9], nn_input[:, 12:15]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 9:12], nn_input[:, 15:]])
-        elif robot_index == 1 and task_index == 0:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:11], nn_input[:, 14:17]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 11:14], nn_input[:, 17:]])
-        elif robot_index == 0 and task_index == 1:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:3], nn_input[:, 5:8], nn_input[:, 10:13], nn_input[:, 19:22]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 3:5], nn_input[:, 8:10], nn_input[:, 13:19], nn_input[:, 22:]])
-        elif robot_index == 1 and task_index == 1:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:4], nn_input[:, 6:10], nn_input[:, 12:15], nn_input[:, 21:24]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 4:6], nn_input[:, 10:12], nn_input[:, 15:21], nn_input[:, 24:]])
-        elif robot_index == 0 and task_index == 2:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:9], nn_input[:, 12:15]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 9:12], nn_input[:, 15:]])
-        elif robot_index == 1 and task_index == 2:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:11], nn_input[:, 14:17]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 11:14], nn_input[:, 17:]])
-
-        layer1 = tf.nn.relu(tf.matmul(task_input, shared_weights['w1_tn_' + str(task_index)]) + shared_weights['b1_tn_' + str(task_index)])
-        layer2 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2_tn_' + str(task_index)]) + shared_weights['b2_tn_' + str(task_index)])
-        layer3 = tf.nn.relu(tf.matmul(layer2, shared_weights['w3_rn_' + str(robot_index)]) + shared_weights['b3_rn_' + str(robot_index)])
-        layer_diff = tf.nn.relu(tf.matmul(robot_input, shared_weights['wdiff_rn_' + str(robot_index)]) + shared_weights['bdiff_rn_' + str(robot_index)])
-        lastlayer_input = tf.concat(axis=1, values=[layer3, layer_diff])
-        output = tf.matmul(lastlayer_input, shared_weights['wout_rn_' + str(robot_index)]) + shared_weights['bout_rn_' + str(robot_index)]
-
-        loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
-        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
-    return nnets, None, None, shared_weights, None
-
-
-
-def blockpushnet(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
-    """
-    Args:
-        dim_input: Dimensionality of input.
-        dim_output: Dimensionality of the output.
-        batch_size: Batch size.
-        network_config: dictionary of network structure parameters
-    Returns:
-        a list of dictionaries containing inputs, outputs, and the loss function representing scalar loss.
-    """
-    # List of indices for state (vector) data and image (tensor) data in observation.
-    print 'making multi-input/output-network'
-    #need to create taskrobot_mapping
-
-    num_robots = 1
-    num_tasks = 1
-    nnets = []
-    n_layers = 4
-    layer_size = 60
-    dim_hidden = (n_layers - 1)*[layer_size]
-    shared_weights = {}
-    dim_robot_specific_list = [12, 14]
-    dim_task_specific_list = [6, 16, 6]
-    dim_robot_output_list = [3, 4]
-    dim_diff = 20
-
-    for robot_number in range(1,2):
-        #special case possible
-        dim_robot_output = dim_robot_output_list[robot_number]
-        dim_robot_specific = dim_robot_specific_list[robot_number]
-        shared_weights['w3_rn_' + str(robot_number)] = init_weights((dim_hidden[1], dim_hidden[2]), name='w3_rn_' + str(robot_number))
-        shared_weights['b3_rn_' + str(robot_number)] = init_bias((dim_hidden[2],), name='b3_rn_' + str(robot_number))
-        shared_weights['wdiff_rn_' + str(robot_number)] = init_weights((dim_robot_specific, dim_diff), name='wdiff_rn_' + str(robot_number))
-        shared_weights['bdiff_rn_' + str(robot_number)] = init_bias((dim_diff,), name='bdiff_rn_' + str(robot_number))
-        shared_weights['wout_rn_' + str(robot_number)] = init_weights((dim_hidden[2] + dim_diff, dim_robot_output), name='wout_rn_' + str(robot_number))
-        shared_weights['bout_rn_' + str(robot_number)] = init_bias((dim_robot_output,), name='bout_rn_' + str(robot_number))
-
-    for task_number in range(1,2):
-        dim_task_input = dim_task_specific_list[task_number]
-        shared_weights['w1_tn_' + str(task_number)] = init_weights((dim_task_input, dim_hidden[0]), name='w1_tn_' + str(task_number))
-        shared_weights['b1_tn_' + str(task_number)] = init_bias((dim_hidden[0],), name='b1_tn_' + str(task_number))
-        shared_weights['w2_tn_' + str(task_number)] = init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
-        shared_weights['b2_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
-
-    for robot_number, robot_params in enumerate(network_config):
-        robot_index = 1
-        task_index = 1
-
-        nn_input, action, precision = get_input_layer(dim_input[robot_number], dim_output[robot_number], robot_number)
-
-        if robot_index == 0 and task_index == 0:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:9], nn_input[:, 12:15]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 9:12], nn_input[:, 15:]])
-        elif robot_index == 1 and task_index == 0:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:11], nn_input[:, 14:17]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 11:14], nn_input[:, 17:]])
-        elif robot_index == 0 and task_index == 1:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:3], nn_input[:, 5:8], nn_input[:, 10:13], nn_input[:, 19:22]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 3:5], nn_input[:, 8:10], nn_input[:, 13:19], nn_input[:, 22:]])
-        elif robot_index == 1 and task_index == 1:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:4], nn_input[:, 6:10], nn_input[:, 12:15], nn_input[:, 21:24]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 4:6], nn_input[:, 10:12], nn_input[:, 15:21], nn_input[:, 24:]])
-        elif robot_index == 0 and task_index == 2:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:9], nn_input[:, 12:15]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 9:12], nn_input[:, 15:]])
-        elif robot_index == 1 and task_index == 2:
-            robot_input = tf.concat(axis=1, values=[nn_input[:, 0:11], nn_input[:, 14:17]])
-            task_input = tf.concat(axis=1, values=[nn_input[:, 11:14], nn_input[:, 17:]])
-
-        layer1 = tf.nn.relu(tf.matmul(task_input, shared_weights['w1_tn_' + str(task_index)]) + shared_weights['b1_tn_' + str(task_index)])
-        layer2 = tf.nn.relu(tf.matmul(layer1, shared_weights['w2_tn_' + str(task_index)]) + shared_weights['b2_tn_' + str(task_index)])
-        layer3 = tf.nn.relu(tf.matmul(layer2, shared_weights['w3_rn_' + str(robot_index)]) + shared_weights['b3_rn_' + str(robot_index)])
-        layer_diff = tf.nn.relu(tf.matmul(robot_input, shared_weights['wdiff_rn_' + str(robot_index)]) + shared_weights['bdiff_rn_' + str(robot_index)])
-        lastlayer_input = tf.concat(axis=1, values=[layer3, layer_diff])
-        output = tf.matmul(lastlayer_input, shared_weights['wout_rn_' + str(robot_index)]) + shared_weights['bout_rn_' + str(robot_index)]
-
-        loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
-        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss]))
-    return nnets, None, None, shared_weights, None
-
-
 def conv2d(img, w, b):
     #print img.get_shape().dims[3].value
     return tf.nn.relu(tf.nn.bias_add(tf.nn.conv2d(img, w, strides=[1, 1, 1, 1], padding='SAME'), b))
@@ -1238,7 +543,7 @@ def conv2d(img, w, b):
 def max_pool(img, k):
     return tf.nn.max_pool(img, ksize=[1, k, k, 1], strides=[1, k, k, 1], padding='SAME')
 
-def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
+def multitask_multirobot_fc_supervised(is_testing, task_out_size,dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None):
     """
     Args:
         dim_input: Dimensionality of input.
@@ -1356,7 +661,338 @@ def multitask_multirobot_fc_supervised(dim_input=[27, 27], dim_output=[7, 7], ba
     shared_weights.update(task_weights)
     return nnets, robot_weights.values(), task_weights.values(), shared_weights, tensors
 
+def multitask_multirobot_fc_unsupervised(is_testing, task_out_size, dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None, use_image=True):
+    """
+    Args:
+        dim_input: Dimensionality of input.
+        dim_output: Dimensionality of the output.
+        batch_size: Batch size.
+        network_config: dictionary of network structure parameters
+    Returns:
+        a list of dictionaries containing inputs, outputs, and the loss function representing scalar loss.
+    """
+    # List of indices for state (vector) data and image (tensor) data in observation.
+    print 'making multi-input/output-network'
+    #need to create taskrobot_mapping
+    task_list = network_config['task_list']
+    robot_list = network_config['robot_list']
+    regularizer = network_config['regularizer']
+    num_robots = max(robot_list)+1 #- min(robot_list)
+    num_tasks = max(task_list)+1 #- min(task_list)
+    if True:#is_testing:
+        tasks = task_list
+        robots = robot_list
+        ###assert len(tasks) == 1 and len(robots) == 1
+    else:
+       tasks= range(num_tasks)
+       robots=range(num_robots)
+    nnets = []
+    n_layers = 6
+    layer_size = 80
+    dim_hidden = (n_layers - 1)*[layer_size]
+    robot_weights = {}
+    task_weights = {}
+    dim_diff = 20
+    keep_prob = tf.placeholder(tf.float32)
+    dim_robot_specific_list = [None for r in range(num_robots)]
+    dim_task_specific_list = [None for t in range(num_tasks)]
+    dim_robot_output_list = [None for r in range(num_robots)]
+    pool_size = 2
+    filter_size = 3
+    # image goes through 3 convnet layers
+    for  agent_number, agent_params in enumerate(network_config['agent_params']):
+        print "agent", agent_number
+        robot_number = robot_list[agent_number]; task_number = task_list[agent_number]
+        if dim_robot_specific_list[robot_number] is not None:
+            assert (dim_robot_specific_list[robot_number] == len(agent_params['robot_specific_idx']) and
+                    dim_robot_output_list[robot_number] == agent_params['dim_output']), \
+                "Robot dimentions is not consistent between agent %d and the previous ones"%agent_number
+        if dim_task_specific_list[task_number] is not None:
+            print dim_task_specific_list
+            print  len(agent_params['task_specific_idx'])
+            assert dim_task_specific_list[task_number] == len(agent_params['task_specific_idx']), \
+                "Task dimentions is not consistent between agent %d and the previous ones"%agent_number
+        dim_robot_specific_list[robot_number] =  len(agent_params['robot_specific_idx'])
+        dim_robot_output_list[robot_number] = agent_params['dim_output']
+        dim_task_specific_list[task_number] = len(agent_params['task_specific_idx'])
 
+    for robot_number in robots:
+        #special case possible
+        dim_robot_output = dim_robot_output_list[robot_number]
+        dim_robot_specific = dim_robot_specific_list[robot_number]
+        robot_weights['w4_rn_' + str(robot_number)] = init_weights((task_out_size+ dim_robot_specific, dim_hidden[3]), name='w4_rn_' + str(robot_number))
+        robot_weights['b4_rn_' + str(robot_number)] = init_bias((dim_hidden[3],), name='b4_rn_' + str(robot_number))
+        robot_weights['w5_rn_' + str(robot_number)] = init_weights((dim_hidden[3], dim_hidden[4]), name='w5_rn_' + str(robot_number))
+        robot_weights['b5_rn_' + str(robot_number)] = init_bias((dim_hidden[4],), name='b5_rn_' + str(robot_number))
+        robot_weights['wout_rn_' + str(robot_number)] = init_weights((dim_hidden[4], dim_robot_output), name='wout_rn_' + str(robot_number))
+        robot_weights['bout_rn_' + str(robot_number)] = init_bias((dim_robot_output,), name='bout_rn_' + str(robot_number))
+
+    for task_number in tasks:
+        #May not be reasonable to do
+        tm = 0
+        dim_task_input = dim_task_specific_list[task_number]
+        task_weights['w1_tn_' + str(task_number)] = init_weights((dim_task_input, dim_hidden[0]), name='w1_tn_' + str(task_number))
+        task_weights['b1_tn_' + str(task_number)] = init_bias((dim_hidden[0],), name='b1_tn_' + str(task_number))
+        task_weights['w2_tn_' + str(task_number)] = init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
+        task_weights['b2_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
+
+        task_weights['w3_tn_' + str(task_number)] = init_weights(((2*num_filters[1] if use_image else 0) + dim_task_input, dim_hidden[1]), name='w3_tn_' + str(task_number))
+        task_weights['b3_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b3_tn_' + str(task_number))
+        task_weights['taskout_tn_' + str(task_number)] = init_weights((dim_hidden[2], task_out_size), name='taskout_tn_' + str(task_number))
+        task_weights['taskout_b_tn_' + str(task_number)] = init_bias((task_out_size,), name='task_out_tn_' + str(task_number))
+        task_weights['task_weights_tn_' + str(task_number)] = init_ones((task_out_size,), name='task_weights_' + str(task_number))
+        if regularizer == GAUSSIAN:
+            task_weights['taskout_sig_b_tn_' + str(task_number)] = init_bias((task_out_size,), name='task_out_tn_' + str(task_number))
+            task_weights['taskout_sig_tn_' + str(task_number)] = init_weights((dim_hidden[2], task_out_size), name='taskout_tn_' + str(task_number))
+            # task_weights['task_weights_tn_' + str(task_number)] = init_ones((task_out_size,), name='task_weights_' + str(task_number))
+
+    tensors = {}
+    tensors['keep_prob'] = keep_prob
+    tensors['task_loss'] =[]
+    tensors['ee_input'] =[]
+    tensors['task_output'] =[]
+    for agent_number, agent_params in enumerate(network_config['agent_params']):
+        x_idx, img_idx, i = [], [], 0
+        for sensor in network_config['agent_params'][agent_number]['obs_include']:
+            dim = network_config['agent_params'][agent_number]['sensor_dims'][sensor]
+            if sensor in network_config['agent_params'][agent_number]['obs_image_data']:
+                img_idx = img_idx + list(range(i, i+dim))
+            else:
+                x_idx = x_idx + list(range(i, i+dim))
+            i += dim
+
+        ee_input = tf.placeholder("float", [None, 6], name='ee_input' + str(agent_number))
+        nn_input, action, precision = get_input_layer(dim_input[agent_number], dim_output[agent_number], agent_number)
+        state_input = nn_input[:, 0:x_idx[-1]+1]
+        robot_idx = tf.constant(agent_params['robot_specific_idx'])
+        task_idx = tf.constant(agent_params['task_specific_idx'])
+        state_input_t = tf.transpose(state_input, perm=[1,0])
+        robot_input = tf.transpose(tf.gather(state_input_t, robot_idx), perm=[1,0])
+        task_input = tf.transpose(tf.gather(state_input_t, task_idx), perm=[1,0])
+        robot_index = robot_list[agent_number]
+        task_index = task_list[agent_number]
+        print "task", task_index, "robot", robot_index
+        layer1 = tf.nn.dropout(tf.nn.relu(tf.matmul(task_input, task_weights['w1_tn_' + str(task_index)]) + task_weights['b1_tn_' + str(task_index)]), keep_prob)
+        layer2 = tf.nn.dropout(tf.nn.relu(tf.matmul(layer1, task_weights['w2_tn_' + str(task_index)]) + task_weights['b2_tn_' + str(task_index)]), keep_prob)
+        # layer3 = tf.nn.dropout(tf.nn.relu(tf.matmul(layer2, task_weights['w3_tn_' + str(task_index)]) + task_weights['b3_tn_' + str(task_index)]), keep_prob)
+        pre_taskout = tf.matmul(layer2, task_weights['taskout_tn_'+str(task_index)]) + task_weights['taskout_b_tn_'+str(task_index)]
+        if regularizer == DROPOUT:
+            taskout = tf.nn.relu(tf.nn.dropout(pre_taskout, keep_prob))
+            reg_loss = 0
+        elif regularizer == GAUSSIAN:
+            sigma_taskout = tf.matmul(fc_layer3, task_weights['taskout_sig_tn_'+str(task_index)]) + task_weights['taskout_sig_b_tn_'+str(task_index)]
+            taskout, reg_loss, mu, sig, epsilon = gaussian_reg(pre_taskout, sigma_taskout)
+            tensors['mu'] = mu
+            tensors['sig'] = sig
+            tensors['epsilon'] = epsilon
+        tensors['reg_loss' ]= reg_loss
+        lastlayer_input = tf.concat(axis=1, values=[taskout, robot_input])
+
+        layer3_input = tf.concat(axis=1, values=([fp] if use_image else []) + [task_input])
+        fc_layer3 = tf.nn.relu(tf.nn.dropout(tf.matmul(layer3_input, task_weights['w3_tn_'+str(task_index)]) + task_weights['b3_tn_'+str(task_index)], keep_prob))
+        pre_taskout = tf.matmul(fc_layer3, task_weights['taskout_tn_'+str(task_index)]) + task_weights['taskout_b_tn_'+str(task_index)]
+        if regularizer == DROPOUT:
+            taskout = tf.nn.relu(tf.nn.dropout(pre_taskout, keep_prob))
+            reg_loss = 0
+        elif regularizer == GAUSSIAN:
+            sigma_taskout = tf.matmul(fc_layer3, task_weights['taskout_sig_tn_'+str(task_index)]) + task_weights['taskout_sig_b_tn_'+str(task_index)]
+            taskout, reg_loss, mu, sig, epsilon = gaussian_reg(pre_taskout, sigma_taskout)
+            tensors['mu'] = mu
+            tensors['sig'] = sig
+            tensors['epsilon'] = epsilon
+        tensors['reg_loss' ]= reg_loss
+        lastlayer_input = tf.concat(axis=1, values=[taskout, robot_input])
+
+        layer4 = tf.nn.dropout(tf.nn.relu(tf.matmul(lastlayer_input, robot_weights['w4_rn_' + str(robot_index)]) + robot_weights['b4_rn_' + str(robot_index)]), keep_prob)
+        layer5 = tf.nn.dropout(tf.nn.relu(tf.matmul(layer4, robot_weights['w5_rn_' + str(robot_index)]) + robot_weights['b5_rn_' + str(robot_index)]), keep_prob)
+        output = tf.matmul(layer5, robot_weights['wout_rn_' + str(robot_index)]) + robot_weights['bout_rn_' + str(robot_index)]
+        loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
+        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss+reg_loss]))
+        tensors['ee_input'].append(ee_input)
+        tensors['task_output'].append(taskout)
+
+    shared_weights = {}
+    shared_weights.update(robot_weights)
+    shared_weights.update(task_weights)
+    return nnets, robot_weights.values(), task_weights.values(), shared_weights, tensors
+
+
+def multitask_multirobot_conv_unsupervised(is_testing, task_out_size, dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None, use_image=True):
+    """
+    Args:
+        dim_input: Dimensionality of input.
+        dim_output: Dimensionality of the output.
+        batch_size: Batch size.
+        network_config: dictionary of network structure parameters
+    Returns:
+        a list of dictionaries containing inputs, outputs, and the loss function representing scalar loss.
+    """
+    # List of indices for state (vector) data and image (tensor) data in observation.
+    print 'making multi-input/output-network'
+    #need to create taskrobot_mapping
+    task_list = network_config['task_list']
+    robot_list = network_config['robot_list']
+    regularizer = network_config['regularizer']
+    num_robots = max(robot_list)+1 #- min(robot_list)
+    num_tasks = max(task_list)+1 #- min(task_list)
+    if True:#is_testing:
+        tasks = task_list
+        robots = robot_list
+        ###assert len(tasks) == 1 and len(robots) == 1
+    else:
+       tasks= range(num_tasks)
+       robots=range(num_robots)
+    nnets = []
+    n_layers = 6
+    layer_size = 80
+    dim_hidden = (n_layers - 1)*[layer_size]
+    robot_weights = {}
+    task_weights = {}
+    dim_diff = 20
+    keep_prob = tf.placeholder(tf.float32)
+    dim_robot_specific_list = [None for r in range(num_robots)]
+    dim_task_specific_list = [None for t in range(num_tasks)]
+    dim_robot_output_list = [None for r in range(num_robots)]
+    pool_size = 2
+    filter_size = 3
+    # image goes through 3 convnet layers
+    for  agent_number, agent_params in enumerate(network_config['agent_params']):
+        print "agent", agent_number
+        robot_number = robot_list[agent_number]; task_number = task_list[agent_number]
+        if dim_robot_specific_list[robot_number] is not None:
+            assert (dim_robot_specific_list[robot_number] == len(agent_params['robot_specific_idx']) and
+                    dim_robot_output_list[robot_number] == agent_params['dim_output']), \
+                "Robot dimentions is not consistent between agent %d and the previous ones"%agent_number
+        if dim_task_specific_list[task_number] is not None:
+            print dim_task_specific_list
+            print  len(agent_params['task_specific_idx'])
+            assert dim_task_specific_list[task_number] == len(agent_params['task_specific_idx']), \
+                "Task dimentions is not consistent between agent %d and the previous ones"%agent_number
+        dim_robot_specific_list[robot_number] =  len(agent_params['robot_specific_idx'])
+        dim_robot_output_list[robot_number] = agent_params['dim_output']
+        dim_task_specific_list[task_number] = len(agent_params['task_specific_idx'])
+
+    for robot_number in robots:
+        #special case possible
+        dim_robot_output = dim_robot_output_list[robot_number]
+        dim_robot_specific = dim_robot_specific_list[robot_number]
+        robot_weights['w4_rn_' + str(robot_number)] = init_weights((task_out_size+ dim_robot_specific, dim_hidden[3]), name='w4_rn_' + str(robot_number))
+        robot_weights['b4_rn_' + str(robot_number)] = init_bias((dim_hidden[3],), name='b4_rn_' + str(robot_number))
+        robot_weights['w5_rn_' + str(robot_number)] = init_weights((dim_hidden[3], dim_hidden[4]), name='w5_rn_' + str(robot_number))
+        robot_weights['b5_rn_' + str(robot_number)] = init_bias((dim_hidden[4],), name='b5_rn_' + str(robot_number))
+        robot_weights['wout_rn_' + str(robot_number)] = init_weights((dim_hidden[4], dim_robot_output), name='wout_rn_' + str(robot_number))
+        robot_weights['bout_rn_' + str(robot_number)] = init_bias((dim_robot_output,), name='bout_rn_' + str(robot_number))
+
+    for task_number in tasks:
+        #May not be reasonable to do
+        tm = 0
+        num_filters = network_config['agent_params'][tm]['num_filters']
+        if use_image:
+            im_height = network_config['agent_params'][tm]['image_height']
+            im_width = network_config['agent_params'][tm]['image_width']
+            num_channels = network_config['agent_params'][tm]['image_channels']
+        dim_task_input = dim_task_specific_list[task_number]
+        if use_image:
+            task_weights['w1_tn_' + str(task_number)] = get_xavier_weights([filter_size, filter_size, num_channels, num_filters[0]], (pool_size, pool_size), name='w1_tn_' + str(task_number)) #init_weights((dim_task_input, dim_hidden[0]), name='w1_tn_' + str(task_number))
+            task_weights['b1_tn_' + str(task_number)] = init_bias([num_filters[0]], name='b1_tn_' + str(task_number)) #init_bias((dim_hidden[0],), name='b1_tn_' + str(task_number))
+            task_weights['w2_tn_' + str(task_number)] = get_xavier_weights([filter_size, filter_size, num_filters[0], num_filters[1]], (pool_size, pool_size), name='w2_tn_' + str(task_number)) #init_weights((dim_hidden[0], dim_hidden[1]), name='w2_tn_' + str(task_number))
+            task_weights['b2_tn_' + str(task_number)] = init_bias([num_filters[1]], name='b2_tn_' + str(task_number)) #init_bias((dim_hidden[1],), name='b2_tn_' + str(task_number))
+        #import IPython; IPython.embed()
+        #print "task", task_number
+        task_weights['w3_tn_' + str(task_number)] = init_weights(((2*num_filters[1] if use_image else 0) + dim_task_input, dim_hidden[1]), name='w3_tn_' + str(task_number))
+        task_weights['b3_tn_' + str(task_number)] = init_bias((dim_hidden[1],), name='b3_tn_' + str(task_number))
+        task_weights['taskout_tn_' + str(task_number)] = init_weights((dim_hidden[2], task_out_size), name='taskout_tn_' + str(task_number))
+        task_weights['taskout_b_tn_' + str(task_number)] = init_bias((task_out_size,), name='task_out_tn_' + str(task_number))
+        task_weights['task_weights_tn_' + str(task_number)] = init_ones((task_out_size,), name='task_weights_' + str(task_number))
+        if regularizer == GAUSSIAN:
+            task_weights['taskout_sig_b_tn_' + str(task_number)] = init_bias((task_out_size,), name='task_out_tn_' + str(task_number))
+            task_weights['taskout_sig_tn_' + str(task_number)] = init_weights((dim_hidden[2], task_out_size), name='taskout_tn_' + str(task_number))
+            # task_weights['task_weights_tn_' + str(task_number)] = init_ones((task_out_size,), name='task_weights_' + str(task_number))
+
+    tensors = {}
+    tensors['keep_prob'] = keep_prob
+    tensors['task_loss'] =[]
+    tensors['ee_input'] =[]
+    tensors['task_output'] =[]
+    for agent_number, agent_params in enumerate(network_config['agent_params']):
+        x_idx, img_idx, i = [], [], 0
+        for sensor in network_config['agent_params'][agent_number]['obs_include']:
+            dim = network_config['agent_params'][agent_number]['sensor_dims'][sensor]
+            if sensor in network_config['agent_params'][agent_number]['obs_image_data']:
+                img_idx = img_idx + list(range(i, i+dim))
+            else:
+                x_idx = x_idx + list(range(i, i+dim))
+            i += dim
+
+        ee_input = tf.placeholder("float", [None, 6], name='ee_input' + str(agent_number))
+        nn_input, action, precision = get_input_layer(dim_input[agent_number], dim_output[agent_number], agent_number)
+        state_input = nn_input[:, 0:x_idx[-1]+1]
+        if use_image:
+            image_input = nn_input[:, x_idx[-1]+1:img_idx[-1]+1]
+        robot_idx = tf.constant(agent_params['robot_specific_idx'])
+        task_idx = tf.constant(agent_params['task_specific_idx'])
+        state_input_t = tf.transpose(state_input, perm=[1,0])
+        robot_input = tf.transpose(tf.gather(state_input_t, robot_idx), perm=[1,0])
+        task_input = tf.transpose(tf.gather(state_input_t, task_idx), perm=[1,0])
+        if use_image:
+            image_input = tf.reshape(image_input, [-1, num_channels, im_width, im_height])
+            image_input = tf.transpose(image_input, perm=[0,3,2,1])
+        robot_index = robot_list[agent_number]
+        task_index = task_list[agent_number]
+        print "task", task_index, "robot", robot_index
+
+        if use_image:
+            conv_layer_1 = conv2d(img=image_input, w=task_weights['w1_tn_' + str(task_index)], b=task_weights['b1_tn_' + str(task_index)])
+            conv_layer_2 = conv2d(img=conv_layer_1, w=task_weights['w2_tn_' + str(task_index)], b=task_weights['b2_tn_' + str(task_index)])
+
+            #==================
+            #spatial softmax
+            _, num_rows, num_cols, num_fp = conv_layer_2.get_shape()
+            num_rows, num_cols, num_fp = [int(x) for x in [num_rows, num_cols, num_fp]]
+            x_map = np.empty([num_rows, num_cols], np.float32)
+            y_map = np.empty([num_rows, num_cols], np.float32)
+            for i in range(num_rows):
+                for j in range(num_cols):
+                    x_map[i, j] = (i - num_rows / 2.0) / num_rows
+                    y_map[i, j] = (j - num_cols / 2.0) / num_cols
+            x_map = tf.convert_to_tensor(x_map)
+            y_map = tf.convert_to_tensor(y_map)
+            x_map = tf.reshape(x_map, [num_rows * num_cols])
+            y_map = tf.reshape(y_map, [num_rows * num_cols])
+            # rearrange features to be [batch_size, num_fp, num_rows, num_cols]
+            features = tf.reshape(tf.transpose(conv_layer_2, [0,3,1,2]),
+                                  [-1, num_rows*num_cols])
+            softmax = tf.nn.softmax(features)
+            fp_x = tf.reduce_sum(tf.multiply(x_map, softmax), [1], keep_dims=True)
+            fp_y = tf.reduce_sum(tf.multiply(y_map, softmax), [1], keep_dims=True)
+            fp = tf.reshape(tf.concat(axis=1, values=[fp_x, fp_y]), [-1, num_fp*2])
+        layer3_input = tf.concat(axis=1, values=([fp] if use_image else []) + [task_input])
+        fc_layer3 = tf.nn.relu(tf.nn.dropout(tf.matmul(layer3_input, task_weights['w3_tn_'+str(task_index)]) + task_weights['b3_tn_'+str(task_index)], keep_prob))
+        pre_taskout = tf.matmul(fc_layer3, task_weights['taskout_tn_'+str(task_index)]) + task_weights['taskout_b_tn_'+str(task_index)]
+        if regularizer == DROPOUT:
+            taskout = tf.nn.relu(tf.nn.dropout(pre_taskout, keep_prob))
+            reg_loss = 0
+        elif regularizer == GAUSSIAN:
+            sigma_taskout = tf.matmul(fc_layer3, task_weights['taskout_sig_tn_'+str(task_index)]) + task_weights['taskout_sig_b_tn_'+str(task_index)]
+            taskout, reg_loss, mu, sig, epsilon = gaussian_reg(pre_taskout, sigma_taskout)
+            tensors['mu'] = mu
+            tensors['sig'] = sig
+            tensors['epsilon'] = epsilon
+        tensors['reg_loss' ]= reg_loss
+        lastlayer_input = tf.concat(axis=1, values=[taskout, robot_input])
+
+        layer4 = tf.nn.dropout(tf.nn.relu(tf.matmul(lastlayer_input, robot_weights['w4_rn_' + str(robot_index)]) + robot_weights['b4_rn_' + str(robot_index)]), keep_prob)
+        layer5 = tf.nn.dropout(tf.nn.relu(tf.matmul(layer4, robot_weights['w5_rn_' + str(robot_index)]) + robot_weights['b5_rn_' + str(robot_index)]), keep_prob)
+        output = tf.matmul(layer5, robot_weights['wout_rn_' + str(robot_index)]) + robot_weights['bout_rn_' + str(robot_index)]
+        loss = euclidean_loss_layer(a=action, b=output, precision=precision, batch_size=batch_size)
+        nnets.append(TfMap.init_from_lists([nn_input, action, precision], [output], [loss+reg_loss]))
+        tensors['ee_input'].append(ee_input)
+        tensors['task_output'].append(taskout)
+
+    shared_weights = {}
+    shared_weights.update(robot_weights)
+    shared_weights.update(task_weights)
+    return nnets, robot_weights.values(), task_weights.values(), shared_weights, tensors
 
 def multitask_multirobot_conv_supervised(is_testing, task_out_size, dim_input=[27, 27], dim_output=[7, 7], batch_size=25, network_config=None, use_image=True):
     """

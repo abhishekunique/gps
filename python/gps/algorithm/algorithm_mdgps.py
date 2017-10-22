@@ -28,12 +28,17 @@ class AlgorithmMDGPS(Algorithm):
             self.cur[m].pol_info = PolicyInfo(self._hyperparams)
             self.cur[m].pol_info.policy_prior = \
                     policy_prior['type'](policy_prior)
-
-        self.policy_opt = self._hyperparams['policy_opt']['type'](
-            self._hyperparams['policy_opt'], self.dO, self.dU
-        )
-
-    def iteration(self, sample_lists):
+        print
+        print "USING MDGPS"
+        print
+        # self.policy_opt = self._hyperparams['policy_opt']['type'](
+        #     self._hyperparams['policy_opt'], self.dO, self.dU
+        # )
+    def iteration(self, sample_lists, itr):
+        lklkjj
+        print "IN ITERATION#######################################################"
+        return
+    def iteration_start(self, sample_lists, itr=0):
         """
         Run iteration of MDGPS-based guided policy search.
 
@@ -43,7 +48,7 @@ class AlgorithmMDGPS(Algorithm):
         # Store the samples and evaluate the costs.
         for m in range(self.M):
             self.cur[m].sample_list = sample_lists[m]
-            self._eval_cost(m)
+            self._eval_cost(m, itr)
 
         # Update dynamics linearizations.
         self._update_dynamics()
@@ -53,8 +58,9 @@ class AlgorithmMDGPS(Algorithm):
             self.new_traj_distr = [
                 self.cur[cond].traj_distr for cond in range(self.M)
             ]
-            self._update_policy()
+            #self._update_policy()
 
+    def iteration_middle(self, sample_lists, itr=0):
         # Update policy linearizations.
         for m in range(self.M):
             self._update_policy_fit(m)
@@ -65,8 +71,9 @@ class AlgorithmMDGPS(Algorithm):
         self._update_trajectories()
 
         # S-step
-        self._update_policy()
+        # self._update_policy()
 
+    def end_iteration(self):
         # Prepare for next iteration
         self._advance_iteration_variables()
 
@@ -96,7 +103,8 @@ class AlgorithmMDGPS(Algorithm):
             tgt_prc = np.concatenate((tgt_prc, prc))
             tgt_wt = np.concatenate((tgt_wt, wt))
             obs_data = np.concatenate((obs_data, samples.get_obs()))
-        self.policy_opt.update(obs_data, tgt_mu, tgt_prc, tgt_wt)
+        return obs_data, tgt_mu, tgt_prc, tgt_wt
+        #self.policy_opt.update(obs_data, tgt_mu, tgt_prc, tgt_wt)
 
     def _update_policy_fit(self, m):
         """
@@ -112,14 +120,19 @@ class AlgorithmMDGPS(Algorithm):
         pol_info = self.cur[m].pol_info
         X = samples.get_X()
         obs = samples.get_obs().copy()
-        pol_mu, pol_sig = self.policy_opt.prob(obs)[:2]
+        pol_mu, pol_sig = self.policy_opt.prob(obs, robot_number=self.robot_number)[:2]
         pol_info.pol_mu, pol_info.pol_sig = pol_mu, pol_sig
 
         # Update policy prior.
         policy_prior = pol_info.policy_prior
         samples = SampleList(self.cur[m].sample_list)
         mode = self._hyperparams['policy_sample_mode']
-        policy_prior.update(samples, self.policy_opt, mode)
+        self.cur[m].pol_info.policy_prior.update(
+            samples, self.policy_opt,
+            SampleList(self.cur[m].pol_info.policy_samples), robot_number=self.robot_number
+        )
+
+        # policy_prior.update(samples, self.policy_opt,al mode, robot_number=self.robot_number)
 
         # Fit linearization and store in pol_info.
         pol_info.pol_K, pol_info.pol_k, pol_info.pol_S = \

@@ -227,16 +227,15 @@ class AlgorithmBADMM(Algorithm):
 
         # Update policy prior.
         policy_prior = pol_info.policy_prior
-        if init:
-            self.cur[m].pol_info.policy_prior.update(
-                samples, self.policy_opt,
-                SampleList(self.cur[m].pol_info.policy_samples), robot_number=self.robot_number
-            )
-        else:
-            self.cur[m].pol_info.policy_prior.update(
-                SampleList([]), self.policy_opt,
-                SampleList(self.cur[m].pol_info.policy_samples), robot_number=self.robot_number
-            )
+        self.cur[m].pol_info.policy_prior.update(
+            samples, self.policy_opt,
+            SampleList(self.cur[m].pol_info.policy_samples), robot_number=self.robot_number
+        )
+        # else:
+        #     self.cur[m].pol_info.policy_prior.update(
+        #         samples, self.policy_opt,
+        #         SampleList(self.cur[m].pol_info.policy_samples), robot_number=self.robot_number
+        #     )
         # Collapse policy covariances. This is not really correct, but
         # it works fine so long as the policy covariance doesn't depend
         # on state.

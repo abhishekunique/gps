@@ -8,6 +8,7 @@ import operator
 from gps.agent.mjc.agent_mjc import AgentMuJoCo
 from gps.agent.recorded.agent_recorded import AgentRecorded
 from gps.algorithm.algorithm_badmm import AlgorithmBADMM
+from gps.algorithm.algorithm_mdgps import AlgorithmMDGPS
 from gps.algorithm.algorithm_traj_opt import AlgorithmTrajOpt
 from gps.algorithm.cost.cost_fk import CostFK
 from gps.algorithm.cost.cost_state import CostState
@@ -19,7 +20,6 @@ from gps.algorithm.dynamics.dynamics_prior_gmm import DynamicsPriorGMM
 from gps.algorithm.traj_opt.traj_opt_lqr_python import TrajOptLQRPython
 from gps.algorithm.policy.lin_gauss_init import init_pd
 from gps.algorithm.policy.policy_prior_gmm import PolicyPriorGMM
-from gps.algorithm.policy_opt.tf_model_example_multirobot import multitask_multirobot_fc
 
 from enum import Enum
 
@@ -129,6 +129,26 @@ class BlockPush(object):
 
 def to_cartesian(r, theta, z_location=0):
     return np.array([np.cos(theta), z_location, np.sin(theta)]) * r
+
+class BlockHug(BlockPush):
+    def task_specific_cost(self, offset_generator, train_conditions):
+        return [[{
+            'type': CostFK,
+            'target_end_effector': np.concatenate([np.array([0,0,0]),
+                                                   offset_generator(i)[1 + RYG.index(self.color)]*0,
+                                                   np.zeros(9)]),
+            'wp': np.array([0] * 3 + [1] * 3 + [0] * 9),
+            'l1': 0.1,
+            'l2': 10.0,
+            'alpha': 1e-5,
+        }, {
+            'type': CostFKBlock,
+            'wp': np.array([0] * 3 + [1] * 3 + [0] * 9),
+            'l1': 0.1,
+            'l2': 10.0,
+            'alpha': 1e-5,
+        }] for i in train_conditions]
+
 
 class BlockVelocityPush(BlockPush):
     COLOR_ORDER = "red", "green", "yellow"
@@ -596,6 +616,19 @@ def reacher_by_color_and_type(robot_number, num_robots, is_3d, offsets, vert_off
             'sample_decrease_var': 0.05,
             'sample_increase_var': 0.1,
             'init_pol_wt': 0.005,
+        }
+    elif ALG=='mdgps':
+        agent_dict['algorithm'] = {
+            'type': AlgorithmMDGPS,
+            'conditions': agent_dict['agent']['conditions'],
+            'train_conditions': agent_dict['agent']['train_conditions'],
+            'test_conditions': agent_dict['agent']['test_conditions'],
+            'num_robots': num_robots,
+            'iterations': 99,
+            'kl_step': 1.0,
+            'min_step_mult': 0.5,
+            'max_step_mult': 3.0,
+            'sample_on_policy': False,
         }
     else:
         agent_dict['algorithm'] ={

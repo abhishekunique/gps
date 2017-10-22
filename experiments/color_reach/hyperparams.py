@@ -9,7 +9,7 @@ from itertools import product
 from gps import __file__ as gps_filepath
 gps_filepath = os.path.abspath(gps_filepath)
 from gps.algorithm.policy_opt.policy_opt_tf import PolicyOptTf
-from gps.algorithm.policy_opt.tf_model_example_multirobot import multitask_multirobot_conv_supervised
+from gps.algorithm.policy_opt.tf_model_example_multirobot import multitask_multirobot_conv_unsupervised
 
 from gps.proto.gps_pb2 import JOINT_ANGLES, JOINT_VELOCITIES, \
         END_EFFECTOR_POINTS, END_EFFECTOR_POINT_VELOCITIES, RGB_IMAGE, RGB_IMAGE_SIZE, ACTION
@@ -35,7 +35,7 @@ IMAGE_CHANNELS = 3
 PASS_ENVIRONMENT_EFFECTORS_TO_ROBOT = False # False for mixing blockpush and color reachers. True to load old models
 LEGACY_BLOCK_POSITIONS = False
 LOAD_OLD_WEIGHTS = True
-NEURAL_NET_ITERATIONS = 20000
+NEURAL_NET_ITERATIONS = 10000
 ITERATIONS = 100
 DONE_AFTER_SUCCESSES = False
 TASKOUT_SIZE = 12
@@ -140,8 +140,8 @@ elif GRID=='color_reach':
     grid_testing = [8,15,25]
     # grid_testing =  [8,15,25]
 elif GRID=='peggy_push_vel':
-    grid_training = [9]
-    grid_testing= [9]
+    grid_training = [12]
+    grid_testing= [12]
 elif GRID=='peggy_push':
     grid_training = [9]
     grid_testing= [9]
@@ -152,13 +152,15 @@ elif GRID=='spherepush':
     grid_training = [18]#, 19, 20]
     grid_testing = [18]
 elif GRID=='spherestrike':
-    grid_training = [21]#, 19, 20]
+    grid_training = [23]#, 19, 20]
 elif GRID=='noreach':
     grid_training = [0,1,2,3,4,5,9,10,11,12,13, 18,23,30,31,32]
     grid_testing = [14,19,20,21,22,27,28,29]
 elif GRID =='pr2_reach':
     grid_training=[6,7,8]
     grid_testing=[6,7,8]
+elif GRID == '47strike':
+    grid_training = [30]
 else:
     raise RuntimeError
 
@@ -208,7 +210,7 @@ common = {
     'num_robots':len(agents),
     'policy_opt': {
         'type': PolicyOptTf,
-        'network_model': lambda *args, **kwargs: multitask_multirobot_conv_supervised(*args, task_out_size=TASKOUT_SIZE, use_image=USE_IMAGES, is_testing=IS_TESTING, **kwargs),
+        'network_model': lambda *args, **kwargs: multitask_multirobot_conv_unsupervised(*args, task_out_size=TASKOUT_SIZE, use_image=USE_IMAGES, is_testing=IS_TESTING, **kwargs),
         'network_params': {
             'task_list': task_values,
             'robot_list': robot_values,

@@ -88,6 +88,7 @@ class Algorithm(object):
         Instantiate dynamics objects and update prior. Fit dynamics to
         current samples.
         """
+        print "UPDATEING dynamics"
         for m in range(self.M):
             cur_data = self.cur[m].sample_list
             X = cur_data.get_X()
@@ -111,21 +112,24 @@ class Algorithm(object):
                 mu0, Phi, priorm, n0 = prior.initial_state()
                 N = len(cur_data)
                 self.cur[m].traj_info.x0sigma += \
-                        Phi + (N*priorm) / (N+priorm) * \
-                        np.outer(x0mu-mu0, x0mu-mu0) / (N+n0)
+                                                Phi + (N*priorm) / (N+priorm) * \
+                                                np.outer(x0mu-mu0, x0mu-mu0) / (N+n0)
 
     def _update_trajectories(self):
         """
         Compute new linear Gaussian controllers.
         """
+        print "UDPATING TRAJ"
         if not hasattr(self, 'new_traj_distr'):
             self.new_traj_distr = [
                 self.cur[cond].traj_distr for cond in range(self.M)
             ]
         for cond in range(self.M):
             self.new_traj_distr[cond], self.cur[cond].eta = \
-                    self.traj_opt.update(cond, self)
-
+                                                            self.traj_opt.update(cond, self)
+        print "NEW TRAJ DISTR"
+        print self.cur[0].traj_distr.K[0][0]
+        print self.new_traj_distr[0].K[0][0]
     def _eval_cost(self, cond, itr):
         """
         Evaluate costs for all samples for a condition.
@@ -178,6 +182,7 @@ class Algorithm(object):
         Move all 'cur' variables to 'prev', and advance iteration
         counter.
         """
+        print "Advancing variable!"
         self.iteration_count += 1
         self.prev = copy.deepcopy(self.cur)
         # TODO: change IterationData to reflect new stuff better
